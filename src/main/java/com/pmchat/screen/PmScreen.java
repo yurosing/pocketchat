@@ -1040,6 +1040,7 @@ public class PmScreen extends Screen {
 
         List<String> names = new ArrayList<>();
         for (String name : history.conversationNames()) {
+            if (PmChatClient.isLocalChat(name)) continue; // §saved закреплён отдельно
             if (query.isEmpty() || history.matches(name, query)) {
                 names.add(name);
             }
@@ -1079,6 +1080,24 @@ public class PmScreen extends Screen {
                 context.drawText(textRenderer, trim(preview, LEFT_W - 14), px + 7, y + 14, PREVIEW_TEXT, false);
             }
             rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, PmChatClient.GLOBAL});
+            y += ROW_H;
+        }
+
+        // Закреплённое «Избранное» (личный чат с собой)
+        {
+            boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + ROW_H;
+            boolean isSel = PmChatClient.SAVED.equals(selected);
+            if (isSel) context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_SELECTED);
+            else if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_HOVER);
+            context.drawText(textRenderer, "✦", px + 7, y + 4, 0xFFF0C34E, false);
+            context.drawText(textRenderer, trim(Text.translatable("pmchat.saved").getString(), LEFT_W - 26),
+                    px + 18, y + 4, NAME_TEXT, false);
+            PmMessage last = history.lastMessage(PmChatClient.SAVED);
+            if (last != null) {
+                context.drawText(textRenderer, trim(PmChatClient.previewOf(last.text != null ? last.text : ""), LEFT_W - 14),
+                        px + 7, y + 14, PREVIEW_TEXT, false);
+            }
+            rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, PmChatClient.SAVED});
             y += ROW_H;
         }
 
@@ -1175,21 +1194,24 @@ public class PmScreen extends Screen {
         String header;
         if (PmChatClient.GLOBAL.equals(selected)) {
             header = Text.translatable("pmchat.global").getString();
+        } else if (PmChatClient.SAVED.equals(selected)) {
+            header = "✦ " + Text.translatable("pmchat.saved").getString();
         } else if (channelId() != null) {
             com.pmchat.client.PmConfig.PmChannel channel = PmChatClient.channelById(channelId());
             header = "# " + (channel != null ? channel.label : channelId());
         } else {
             header = trim(selected, PANEL_W - LEFT_W - 132);
         }
+        boolean localChat = PmChatClient.isLocalChat(selected);
         int headerX = px + LEFT_W + 8;
-        if (!isGlobal) {
+        if (!isGlobal && !localChat) {
             // Индикатор мода собеседника в шапке
             boolean hasMod = config.isModUser(selected);
             context.drawText(textRenderer, "●", headerX, py + 8, hasMod ? 0xFF6FBF8B : SUBTLE, false);
             headerX += 9;
         }
         context.drawText(textRenderer, header, headerX, py + 8, TITLE, false);
-        if (!isGlobal && PmChatClient.isTyping(selected)) {
+        if (!isGlobal && !localChat && PmChatClient.isTyping(selected)) {
             int dots = (int) ((System.currentTimeMillis() / 350) % 4);
             String typing = Text.translatable("pmchat.typing").getString() + ".".repeat(dots);
             context.drawText(textRenderer, typing,
@@ -1910,6 +1932,11 @@ public class PmScreen extends Screen {
                     } else if (action.equals("forward")) {
                         forwardBuffer = msg;
                         forwardFromNick = senderOfMessage(msg);
+                    } else if (action.equals("save")) {
+                        PmChatClient.saveToFavorites(msg);
+                        copiedAt = System.currentTimeMillis();
+                        copiedX = rx;
+                        copiedY = ry;
                     } else if (action.equals("pin") && !global && selected != null) {
                         PmChatClient.setPin(selected, PmHistory.msgHash(msg.text), true);
                     } else if (action.equals("unpin") && !global && selected != null) {
@@ -2113,6 +2140,9 @@ public class PmScreen extends Screen {
         List<String[]> items = new ArrayList<>();
         if (!global) items.add(new String[]{"reply", "↩ " + Text.translatable("pmchat.menu.reply").getString()});
         items.add(new String[]{"forward", "⤶ " + Text.translatable("pmchat.menu.forward").getString()});
+        if (!PmChatClient.SAVED.equals(selected)) {
+            items.add(new String[]{"save", "✦ " + Text.translatable("pmchat.menu.save").getString()});
+        }
         if (ctxMsg.text != null && !ctxMsg.text.isBlank()) {
             items.add(new String[]{"copy", "⧉ " + Text.translatable("pmchat.menu.copy").getString()});
         }

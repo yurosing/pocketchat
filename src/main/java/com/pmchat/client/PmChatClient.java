@@ -42,6 +42,23 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Сентинел «диалога» общего чата. */
     public static final String GLOBAL = "§global";
+    /** Сентинел «Избранное» — личный чат с собой, только локально. */
+    public static final String SAVED = "§saved";
+
+    /** Локальные диалоги (не отправляются на сервер): начинаются с §. */
+    public static boolean isLocalChat(String name) {
+        return name != null && name.startsWith("§");
+    }
+
+    /** Сохранить сообщение в Избранное (копия локально). */
+    public static void saveToFavorites(PmMessage src) {
+        String content = src.text != null ? src.text : "";
+        if (content.isEmpty() && src.money <= 0) return;
+        PmMessage m = history.add(SAVED, true, content, src.money);
+        applyPoll(m, content);
+        if (src.forwardFrom != null) m.forwardFrom = src.forwardFrom;
+        history.save();
+    }
     private static final int GLOBAL_LIMIT = 300;
     private static final java.util.List<PmMessage> globalChat =
             java.util.Collections.synchronizedList(new java.util.ArrayList<>());
@@ -542,6 +559,15 @@ public class PmChatClient implements ClientModInitializer {
         if (client.player == null || target.isBlank()) return;
         String inner = msg.text != null ? msg.text : "";
 
+        // Пересылка в Избранное — локальная копия, без сети
+        if (isLocalChat(target)) {
+            PmMessage local = history.add(target, true, inner, 0);
+            applyPoll(local, inner);
+            local.forwardFrom = fromNick;
+            history.save();
+            return;
+        }
+
         if (config.isModUser(target)) {
             String wire = PmWire.forward(fromNick, inner);
             client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
@@ -588,6 +614,12 @@ public class PmChatClient implements ClientModInitializer {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target.isBlank() || question.isBlank() || options.size() < 2) return;
         String wire = PmWire.poll(multi, question, options);
+        if (isLocalChat(target)) {
+            PmMessage m = history.add(target, true, wire, 0);
+            applyPoll(m, wire);
+            history.save();
+            return;
+        }
         client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
         synchronized (pendingEcho) {
             pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
@@ -698,6 +730,15 @@ public class PmChatClient implements ClientModInitializer {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target.isBlank() || text.isBlank()) return null;
 
+        // Локальный чат (Избранное) — только сохраняем, ничего не шлём на сервер
+        if (isLocalChat(target)) {
+            PmMessage m = history.add(target, true, text, 0);
+            applyPoll(m, text);
+            if (replyToHash != null) m.replyTo = replyToHash;
+            history.save();
+            return m;
+        }
+
         // Маркер цитаты уходит по сети только модовым получателям
         String wire = (replyToHash != null && config.isModUser(target))
                 ? PmWire.reply(replyToHash, text)
@@ -747,6 +788,7 @@ public class PmChatClient implements ClientModInitializer {
     public static PmMessage sendMoney(String target, long amount) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target.isBlank() || amount <= 0) return null;
+        if (isLocalChat(target)) return null; // в Избранное деньги не переводим
         client.player.networkHandler.sendChatCommand(config.payCommand + " " + target + " " + amount);
         return history.add(target, true, "", amount);
     }

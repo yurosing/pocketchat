@@ -102,5 +102,7 @@
   "pmchat.sticker.tab.stickers": "Стикеры",
   "pmchat.sticker.tab.gifs": "Гифки",
   "pmchat.sticker.norecent": "Недавних нет",
-  "pmchat.sticker.empty": "Пусто — киньте png/gif в pmchat-stickers"
+  "pmchat.sticker.empty": "Пусто — киньте png/gif в pmchat-stickers",
+  "pmchat.saved": "Избранное",
+  "pmchat.menu.save": "В избранное"
 }

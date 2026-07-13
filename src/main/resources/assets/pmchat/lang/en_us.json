@@ -102,5 +102,7 @@
   "pmchat.sticker.tab.stickers": "Stickers",
   "pmchat.sticker.tab.gifs": "GIFs",
   "pmchat.sticker.norecent": "No recent",
-  "pmchat.sticker.empty": "Empty — drop png/gif into pmchat-stickers"
+  "pmchat.sticker.empty": "Empty — drop png/gif into pmchat-stickers",
+  "pmchat.saved": "Saved Messages",
+  "pmchat.menu.save": "Save"
 }
