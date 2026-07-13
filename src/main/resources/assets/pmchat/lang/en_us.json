@@ -87,5 +87,12 @@
   "pmchat.set.mention.on": "On",
   "pmchat.set.mention.off": "Off",
   "pmchat.contact.add": "★ Add to contacts",
-  "pmchat.contact.remove": "★ Remove from contacts"
+  "pmchat.contact.remove": "★ Remove from contacts",
+  "pmchat.poll.title": "New poll",
+  "pmchat.poll.q": "Question",
+  "pmchat.poll.opt": "Option",
+  "pmchat.poll.multi.on": "☑ Multiple answers",
+  "pmchat.poll.multi.off": "☐ Single answer",
+  "pmchat.poll.create": "Create",
+  "pmchat.poll.cancel": "Cancel"
 }

@@ -204,6 +204,7 @@ public class PmScreen extends Screen {
     private final List<Object[]> rowRects = new ArrayList<>(); // x,y,w,h,name
     private final List<Object[]> shotRects = new ArrayList<>(); // x,y,w,h,path,isSticker
     private final List<Object[]> bubbleRects = new ArrayList<>(); // x,y,w,h,msg
+    private final List<Object[]> pollOptRects = new ArrayList<>(); // x,y,w,h,msg,optIndex
     private final List<Object[]> emojiRects = new ArrayList<>(); // x,y,w,h,emoji
     private final List<Object[]> emojiCatRects = new ArrayList<>(); // x,y,w,h,catIndex
     private int replyCancelX = -1, replyCancelY = -1;
@@ -223,6 +224,62 @@ public class PmScreen extends Screen {
     private String flashHash = null; // хэш сообщения для вспышки при переходе
     private long flashUntil = 0;
     private int pinnedOffsetFromBottom = -1; // позиция закреплённого от низа (для перехода)
+
+    // Композер опроса (только личный чат)
+    private boolean pollMode = false;
+    private boolean pollMulti = false;
+    private TextFieldWidget pollQ;
+    private final TextFieldWidget[] pollOpts = new TextFieldWidget[4];
+
+    private void buildPollComposer() {
+        int cx = px + LEFT_W + 8;
+        int cw = PANEL_W - LEFT_W - 16;
+        int y = py + 40;
+        pollQ = new TextFieldWidget(textRenderer, cx, y, cw, 16, Text.translatable("pmchat.poll.q"));
+        pollQ.setMaxLength(80);
+        pollQ.setSuggestion(pollQ.getText().isEmpty() ? Text.translatable("pmchat.poll.q").getString() : "");
+        pollQ.setChangedListener(s -> pollQ.setSuggestion(s.isEmpty() ? Text.translatable("pmchat.poll.q").getString() : ""));
+        addDrawableChild(pollQ);
+        y += 20;
+        for (int i = 0; i < pollOpts.length; i++) {
+            int fi = i;
+            pollOpts[i] = new TextFieldWidget(textRenderer, cx, y, cw, 14,
+                    Text.literal(Text.translatable("pmchat.poll.opt").getString() + " " + (i + 1)));
+            pollOpts[i].setMaxLength(48);
+            String hint = Text.translatable("pmchat.poll.opt").getString() + " " + (i + 1);
+            pollOpts[i].setSuggestion(hint);
+            pollOpts[i].setChangedListener(s -> pollOpts[fi].setSuggestion(s.isEmpty() ? hint : ""));
+            addDrawableChild(pollOpts[i]);
+            y += 17;
+        }
+        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 110, 14,
+                Text.translatable(pollMulti ? "pmchat.poll.multi.on" : "pmchat.poll.multi.off"),
+                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
+                    pollMulti = !pollMulti;
+                    rebuild();
+                }));
+        y += 18;
+        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 90, 16,
+                Text.translatable("pmchat.poll.create"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT,
+                btn -> createPoll()));
+        addDrawableChild(FlatButton.centered(textRenderer, cx + 96, y, 60, 16,
+                Text.translatable("pmchat.poll.cancel"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT,
+                btn -> { pollMode = false; rebuild(); }));
+    }
+
+    private void createPoll() {
+        if (pollQ == null || selected == null) return;
+        String q = pollQ.getText().trim();
+        List<String> opts = new ArrayList<>();
+        for (TextFieldWidget f : pollOpts) {
+            if (f != null && !f.getText().trim().isEmpty()) opts.add(f.getText().trim());
+        }
+        if (q.isEmpty() || opts.size() < 2) return;
+        PmChatClient.sendPoll(selected, pollMulti, q, opts);
+        pollMode = false;
+        msgScroll = 0;
+        rebuild();
+    }
 
     /** Ник исходного автора сообщения (для пересылки). */
     private String senderOfMessage(PmMessage msg) {
@@ -302,6 +359,12 @@ public class PmScreen extends Screen {
 
         boolean isGlobal = isFeedTab();
         if (selected != null && !statsMode && !isGlobal) {
+            // Опрос (только личный чат)
+            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 132, py + 6, 18, 14,
+                    Text.literal("▤"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
+                        pollMode = !pollMode;
+                        rebuild();
+                    }));
             // Кнопки в шапке чата: голос, фото/стикеры, деньги, статистика
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 110, py + 6, 18, 14,
                     Text.literal(com.pmchat.client.PmVoice.isRecording() ? "■" : "●"),
@@ -363,6 +426,10 @@ public class PmScreen extends Screen {
                 addDrawableChild(inputField);
                 addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 32, inputY, 24, 16,
                         Text.literal("➤"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> doSend()));
+            }
+
+            if (pollMode) {
+                buildPollComposer();
             }
         }
 
@@ -1010,6 +1077,13 @@ public class PmScreen extends Screen {
             return;
         }
 
+        if (pollMode) {
+            context.fill(px + LEFT_W + 1, areaTop, px + PANEL_W - 1, py + PANEL_H - 2, PANEL_BG);
+            context.drawText(textRenderer, Text.translatable("pmchat.poll.title"),
+                    px + LEFT_W + 8, areaTop + 2, 0xFF9CC4DC, false);
+            return;
+        }
+
         if (uploading) {
             context.drawText(textRenderer, Text.translatable("pmchat.image.uploading"),
                     px + LEFT_W + 8, areaBottom - 8, 0xFFF0C34E, false);
@@ -1066,6 +1140,7 @@ public class PmScreen extends Screen {
 
         // Пузыри снизу вверх (со scissor — ничего не вылезает за область чата)
         bubbleRects.clear();
+        pollOptRects.clear();
         context.enableScissor(px + LEFT_W + 1, areaTop, px + PANEL_W, areaBottom + 2);
         SimpleDateFormat timeFmt = new SimpleDateFormat("HH:mm");
         SimpleDateFormat dateFmt = new SimpleDateFormat("dd.MM.yyyy");
@@ -1080,7 +1155,11 @@ public class PmScreen extends Screen {
             List<String> lines;
             int textW;
             int bh;
-            if (img != null) {
+            if (msg.isPoll()) {
+                lines = List.of();
+                textW = BUBBLE_MAX_TEXT_W;
+                bh = 12 + msg.pollOptions.size() * 13 + 10;
+            } else if (img != null) {
                 lines = List.of();
                 int[] size = imageSize(img);
                 textW = size[0];
@@ -1202,7 +1281,29 @@ public class PmScreen extends Screen {
             }
 
             // Содержимое
-            if (img != null) {
+            if (msg.isPoll()) {
+                int fg = msg.out ? OUT_TEXT : IN_TEXT;
+                int pyy = y + dy + quoteShift + 3;
+                context.drawText(textRenderer, "▤ " + trim(msg.pollQuestion, bw - 16), bx + dx + 6, pyy, applyAlpha(fg, alpha), false);
+                pyy += 12;
+                int total = msg.pollOptions.size();
+                int votesAll = 0;
+                for (int oi = 0; oi < total; oi++) votesAll += msg.pollCount(oi);
+                for (int oi = 0; oi < total; oi++) {
+                    int cnt = msg.pollCount(oi);
+                    boolean mine = msg.pollMyVotes != null && msg.pollMyVotes.contains(oi);
+                    int barMax = bw - 12;
+                    int bar = votesAll > 0 ? Math.max(0, cnt * barMax / Math.max(1, votesAll)) : 0;
+                    int oy = pyy + oi * 13;
+                    // Фон-полоса результата
+                    context.fill(bx + dx + 6, oy, bx + dx + 6 + bar, oy + 11, applyAlpha(mine ? 0xFF4C8A66 : 0xFF2A4A5C, alpha * 0.5f));
+                    context.drawText(textRenderer, (mine ? "◉ " : "○ ") + trim(msg.pollOptions.get(oi), bw - 40),
+                            bx + dx + 8, oy + 2, applyAlpha(fg, alpha), false);
+                    String c = String.valueOf(cnt);
+                    context.drawText(textRenderer, c, bx + dx + bw - 6 - textRenderer.getWidth(c), oy + 2, applyAlpha(fg, alpha), false);
+                    pollOptRects.add(new Object[]{bx, oy, bw, 11, msg, oi});
+                }
+            } else if (img != null) {
                 if (img.state == PmImages.State.READY && img.currentTexture() != null) {
                     int[] size = imageSize(img);
                     context.drawTexture(RenderPipelines.GUI_TEXTURED, img.currentTexture(), bx + dx + 6, y + dy + 3 + quoteShift,
@@ -1760,6 +1861,18 @@ public class PmScreen extends Screen {
                 flashUntil = System.currentTimeMillis() + 1400;
             }
             return true;
+        }
+        // Голосование в опросе
+        if (!imageMode && !statsMode && click.button() == 0) {
+            for (Object[] r : pollOptRects) {
+                int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
+                if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
+                    if (selected != null && !isFeedTab()) {
+                        PmChatClient.castVote(selected, (PmMessage) r[4], (int) r[5]);
+                    }
+                    return true;
+                }
+            }
         }
         // Клики по пузырям: ЛКМ — голосовое играть, ПКМ — ответить цитатой
         if (!imageMode && !statsMode) {

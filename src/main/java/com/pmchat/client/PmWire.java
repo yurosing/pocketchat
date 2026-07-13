@@ -29,6 +29,12 @@ public final class PmWire {
     private static final Pattern FWD = Pattern.compile("^pmc fwd (\\S{1,20}) (.+)$", Pattern.DOTALL);
     // Закреп: pmc pin <hash> (пусто hash = открепить)
     private static final Pattern PIN = Pattern.compile("^pmc pin ([0-9a-fA-F]{1,8}|-)$");
+    // Опрос: pmc poll <multi> вопрос // вариант1 // вариант2 ...
+    private static final Pattern POLL = Pattern.compile("^pmc poll ([01]) (.+)$", Pattern.DOTALL);
+    // Голос: pmc pvote <pollHash> <индексы через запятую или ->
+    private static final Pattern PVOTE = Pattern.compile("^pmc pvote ([0-9a-fA-F]{1,8}) ([-0-9,]+)$");
+
+    public static final String POLL_DELIM = " // ";
 
     public static final String TYPING = "pmc typ";
     public static final String SEEN = "pmc seen";
@@ -70,6 +76,46 @@ public final class PmWire {
 
     public static String pin(String hash) {
         return "pmc pin " + (hash == null || hash.isEmpty() ? "-" : hash);
+    }
+
+    public static String poll(boolean multi, String question, java.util.List<String> options) {
+        StringBuilder sb = new StringBuilder("pmc poll ").append(multi ? "1" : "0").append(" ");
+        sb.append(question.replace(POLL_DELIM, " / "));
+        for (String o : options) sb.append(POLL_DELIM).append(o.replace(POLL_DELIM, " / "));
+        return sb.toString();
+    }
+
+    public static String pvote(String pollHash, java.util.List<Integer> indices) {
+        String csv = indices.isEmpty() ? "-" : indices.stream().map(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(","));
+        return "pmc pvote " + pollHash + " " + csv;
+    }
+
+    /** {multi("0"/"1"), вопрос, вариант1, вариант2, ...} или null. */
+    public static String[] parsePoll(String text) {
+        if (text == null) return null;
+        Matcher m = POLL.matcher(text.trim());
+        if (!m.matches()) return null;
+        String[] parts = m.group(2).split(java.util.regex.Pattern.quote(POLL_DELIM), -1);
+        if (parts.length < 3) return null; // вопрос + минимум 2 варианта
+        String[] out = new String[parts.length + 1];
+        out[0] = m.group(1);
+        System.arraycopy(parts, 0, out, 1, parts.length);
+        return out;
+    }
+
+    /** {pollHash, список индексов} или null. */
+    public static Object[] parseVote(String text) {
+        if (text == null) return null;
+        Matcher m = PVOTE.matcher(text.trim());
+        if (!m.matches()) return null;
+        java.util.List<Integer> idx = new java.util.ArrayList<>();
+        if (!m.group(2).equals("-")) {
+            for (String s : m.group(2).split(",")) {
+                try { idx.add(Integer.parseInt(s.trim())); } catch (NumberFormatException ignored) {}
+            }
+        }
+        return new Object[]{m.group(1), idx};
     }
 
     /** {откуда, исходное содержимое} или null. */
@@ -152,6 +198,10 @@ public final class PmWire {
 
     public static boolean isPinMeta(String text) {
         return parsePin(text) != null;
+    }
+
+    public static boolean isVoteMeta(String text) {
+        return parseVote(text) != null;
     }
 
     /** Любое структурированное сообщение мода — признак, что у отправителя стоит мод. */

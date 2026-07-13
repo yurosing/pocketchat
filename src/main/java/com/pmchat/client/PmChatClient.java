@@ -403,6 +403,18 @@ public class PmChatClient implements ClientModInitializer {
             config.save();
             return 2;
         }
+        Object[] vote = PmWire.parseVote(text);
+        if (vote != null) {
+            config.addModUser(sender);
+            @SuppressWarnings("unchecked")
+            java.util.List<Integer> idx = (java.util.List<Integer>) vote[1];
+            PmMessage poll = history.findByHash(sender, (String) vote[0]);
+            if (poll != null && poll.isPoll()) {
+                poll.pollOtherVotes = idx;
+                history.save();
+            }
+            return 2;
+        }
 
         // Структурированные сообщения (фото/голос/цитата) — точно от мода
         if (PmWire.isStructured(text)) {
@@ -431,7 +443,8 @@ public class PmChatClient implements ClientModInitializer {
         PmMessage msg = history.add(sender, false, text, 0);
         if (replyTo != null) msg.replyTo = replyTo;
         if (forwardFrom != null) msg.forwardFrom = forwardFrom;
-        if (replyTo != null || forwardFrom != null) history.save();
+        applyPoll(msg, text);
+        if (replyTo != null || forwardFrom != null || msg.isPoll()) history.save();
 
         MinecraftClient client = MinecraftClient.getInstance();
         boolean viewing = client.currentScreen instanceof PmScreen screen && screen.isViewing(sender);
@@ -465,6 +478,10 @@ public class PmChatClient implements ClientModInitializer {
         }
         if (PmWire.parseVoice(text) != null) {
             return Text.translatable("pmchat.voice.label").getString();
+        }
+        String[] poll = PmWire.parsePoll(text);
+        if (poll != null) {
+            return "▤ " + poll[1];
         }
         return text;
     }
@@ -541,6 +558,56 @@ public class PmChatClient implements ClientModInitializer {
         return selfName();
     }
 
+    // ---------- Опросы (только личные чаты) ----------
+
+    /** Разбирает pmc poll в поля сообщения. */
+    static void applyPoll(PmMessage msg, String text) {
+        String[] p = PmWire.parsePoll(text);
+        if (p == null) return;
+        msg.pollMulti = p[0].equals("1");
+        msg.pollQuestion = p[1];
+        msg.pollOptions = new java.util.ArrayList<>();
+        for (int i = 2; i < p.length; i++) msg.pollOptions.add(p[i]);
+        msg.pollMyVotes = new java.util.ArrayList<>();
+        msg.pollOtherVotes = new java.util.ArrayList<>();
+    }
+
+    /** Создать опрос в личном диалоге (в глобал/каналы нельзя). */
+    public static void sendPoll(String target, boolean multi, String question, java.util.List<String> options) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null || target.isBlank() || question.isBlank() || options.size() < 2) return;
+        String wire = PmWire.poll(multi, question, options);
+        client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+        synchronized (pendingEcho) {
+            pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
+        }
+        PmMessage msg = history.add(target, true, wire, 0);
+        applyPoll(msg, wire);
+        history.save();
+    }
+
+    /** Проголосовать/переголосовать; собеседнику с модом уходит pmc pvote. */
+    public static void castVote(String target, PmMessage poll, int optionIndex) {
+        if (!poll.isPoll() || poll.text == null) return;
+        if (poll.pollMyVotes == null) poll.pollMyVotes = new java.util.ArrayList<>();
+        if (poll.pollMulti) {
+            if (poll.pollMyVotes.contains(optionIndex)) poll.pollMyVotes.remove((Integer) optionIndex);
+            else poll.pollMyVotes.add(optionIndex);
+        } else {
+            poll.pollMyVotes.clear();
+            poll.pollMyVotes.add(optionIndex);
+        }
+        history.save();
+        if (config.enableMeta && config.isModUser(target)) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player != null) {
+                String hash = PmHistory.msgHash(poll.text);
+                client.player.networkHandler.sendChatCommand(
+                        config.msgCommand + " " + target + " " + PmWire.pvote(hash, poll.pollMyVotes));
+            }
+        }
+    }
+
     /** Упоминают ли тебя: свой ник или доп. слова из настроек. */
     public static boolean mentionsMe(String text, String senderIfKnown) {
         if (!config.mentionEnabled || text == null) return false;
@@ -576,7 +643,8 @@ public class PmChatClient implements ClientModInitializer {
     /** Эхо нашей отправки через мод пропускаем, чужие (набранные руками /m) — записываем. */
     private static int onOutgoingEcho(String target, String text) {
         if (PmWire.isTyping(text) || PmWire.isSeen(text) || PmWire.isHi(text)
-                || PmWire.parseReaction(text) != null || PmWire.isPinMeta(text)) {
+                || PmWire.parseReaction(text) != null || PmWire.isPinMeta(text)
+                || PmWire.isVoteMeta(text)) {
             return 2; // эхо собственной меты — прячем, в историю не пишем
         }
         long now = System.currentTimeMillis();

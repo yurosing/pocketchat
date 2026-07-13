@@ -27,6 +27,25 @@ public class PmMessage {
     /** Ник исходного автора, если сообщение переслано. */
     public String forwardFrom;
 
+    /** Опрос (если сообщение — опрос). */
+    public String pollQuestion;
+    public java.util.List<String> pollOptions;
+    public boolean pollMulti;
+    public java.util.List<Integer> pollMyVotes;    // мой выбор
+    public java.util.List<Integer> pollOtherVotes; // выбор собеседника
+
+    public boolean isPoll() {
+        return pollQuestion != null && pollOptions != null;
+    }
+
+    /** Голосов за вариант i (я + собеседник). */
+    public int pollCount(int i) {
+        int c = 0;
+        if (pollMyVotes != null && pollMyVotes.contains(i)) c++;
+        if (pollOtherVotes != null && pollOtherVotes.contains(i)) c++;
+        return c;
+    }
+
     public transient long clientAddedAt;
 
     public PmMessage() {

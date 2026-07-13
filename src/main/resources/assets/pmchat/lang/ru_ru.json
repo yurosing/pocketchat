@@ -87,5 +87,12 @@
   "pmchat.set.mention.on": "Вкл",
   "pmchat.set.mention.off": "Выкл",
   "pmchat.contact.add": "★ В контакты",
-  "pmchat.contact.remove": "★ Убрать из контактов"
+  "pmchat.contact.remove": "★ Убрать из контактов",
+  "pmchat.poll.title": "Новый опрос",
+  "pmchat.poll.q": "Вопрос",
+  "pmchat.poll.opt": "Вариант",
+  "pmchat.poll.multi.on": "☑ Несколько ответов",
+  "pmchat.poll.multi.off": "☐ Один ответ",
+  "pmchat.poll.create": "Создать",
+  "pmchat.poll.cancel": "Отмена"
 }
