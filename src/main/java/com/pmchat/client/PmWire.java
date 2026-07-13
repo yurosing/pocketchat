@@ -25,6 +25,10 @@ public final class PmWire {
 
     // Реакция: pmc rx <hash> <index>
     private static final Pattern RX = Pattern.compile("^pmc rx ([0-9a-fA-F]{1,8}) (\\d{1,2})$");
+    // Пересылка: pmc fwd <откуда> <исходное содержимое>
+    private static final Pattern FWD = Pattern.compile("^pmc fwd (\\S{1,20}) (.+)$", Pattern.DOTALL);
+    // Закреп: pmc pin <hash> (пусто hash = открепить)
+    private static final Pattern PIN = Pattern.compile("^pmc pin ([0-9a-fA-F]{1,8}|-)$");
 
     public static final String TYPING = "pmc typ";
     public static final String SEEN = "pmc seen";
@@ -58,6 +62,28 @@ public final class PmWire {
 
     public static String reaction(String hash, int index) {
         return "pmc rx " + hash + " " + index;
+    }
+
+    public static String forward(String from, String innerContent) {
+        return "pmc fwd " + from + " " + innerContent;
+    }
+
+    public static String pin(String hash) {
+        return "pmc pin " + (hash == null || hash.isEmpty() ? "-" : hash);
+    }
+
+    /** {откуда, исходное содержимое} или null. */
+    public static String[] parseForward(String text) {
+        if (text == null) return null;
+        Matcher m = FWD.matcher(text.trim());
+        return m.matches() ? new String[]{m.group(1), m.group(2).trim()} : null;
+    }
+
+    /** hash закрепа, "-" = открепить, null = не pin-метка. */
+    public static String parsePin(String text) {
+        if (text == null) return null;
+        Matcher m = PIN.matcher(text.trim());
+        return m.matches() ? m.group(1) : null;
     }
 
     // ---------- Разбор ----------
@@ -122,6 +148,10 @@ public final class PmWire {
     /** Рукопожатие «у меня стоит мод» — шлётся один раз на контакт. */
     public static boolean isHi(String text) {
         return text.trim().equals(HI);
+    }
+
+    public static boolean isPinMeta(String text) {
+        return parsePin(text) != null;
     }
 
     /** Любое структурированное сообщение мода — признак, что у отправителя стоит мод. */

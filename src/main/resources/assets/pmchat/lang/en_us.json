@@ -77,5 +77,10 @@
   "pmchat.set.globalprefix": "Global chat prefix",
   "pmchat.set.globalprefix.none": "none",
   "pmchat.set.wallpaper": "Chat wallpaper",
-  "pmchat.set.wallpaper.none": "none"
+  "pmchat.set.wallpaper.none": "none",
+  "pmchat.menu.forward": "Forward",
+  "pmchat.menu.pin": "Pin",
+  "pmchat.menu.unpin": "Unpin",
+  "pmchat.fwd.from": "from",
+  "pmchat.fwd.pick": "Forward: pick a chat"
 }

@@ -160,6 +160,9 @@ public class PmConfig {
     /** Кэш загруженных стикеров: имя файла -> id на хостинге. */
     public Map<String, String> stickerCache = new HashMap<>();
 
+    /** Закреплённое сообщение в диалоге: ник собеседника -> хэш текста. */
+    public Map<String, String> pins = new HashMap<>();
+
     public boolean isModUser(String name) {
         return modUsers.stream().anyMatch(n -> n.equalsIgnoreCase(name));
     }
@@ -193,6 +196,7 @@ public class PmConfig {
                     if (cfg.modUsers == null) cfg.modUsers = new ArrayList<>();
                     if (cfg.hiSent == null) cfg.hiSent = new ArrayList<>();
                     if (cfg.stickerCache == null) cfg.stickerCache = new HashMap<>();
+                    if (cfg.pins == null) cfg.pins = new HashMap<>();
                     if (cfg.hostOverrides == null) cfg.hostOverrides = new HashMap<>();
                     if (cfg.uploadOrder == null || cfg.uploadOrder.isBlank()
                             || cfg.uploadOrder.equals("q,l,x,c")

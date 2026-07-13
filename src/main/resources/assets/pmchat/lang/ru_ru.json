@@ -77,5 +77,10 @@
   "pmchat.set.globalprefix": "Префикс глобал-чата",
   "pmchat.set.globalprefix.none": "нет",
   "pmchat.set.wallpaper": "Обои чата",
-  "pmchat.set.wallpaper.none": "нет"
+  "pmchat.set.wallpaper.none": "нет",
+  "pmchat.menu.forward": "Переслать",
+  "pmchat.menu.pin": "Закрепить",
+  "pmchat.menu.unpin": "Открепить",
+  "pmchat.fwd.from": "от",
+  "pmchat.fwd.pick": "Пересылка: выберите чат"
 }

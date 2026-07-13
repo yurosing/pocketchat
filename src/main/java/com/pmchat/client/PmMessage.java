@@ -24,6 +24,9 @@ public class PmMessage {
     public String reactMine;
     public String reactOther;
 
+    /** Ник исходного автора, если сообщение переслано. */
+    public String forwardFrom;
+
     public transient long clientAddedAt;
 
     public PmMessage() {

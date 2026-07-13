@@ -216,6 +216,21 @@ public class PmScreen extends Screen {
     // Просмотр фото на весь экран
     private PmImages.Entry fullscreenImg = null;
 
+    // Пересылка: выбранное сообщение ждёт, пока кликнут диалог-получатель
+    private PmMessage forwardBuffer = null;
+    private String forwardFromNick = "";
+    private int[] pinBarRect = null; // x,y,w,h полоски закрепа (клик по × открепляет)
+
+    /** Ник исходного автора сообщения (для пересылки). */
+    private String senderOfMessage(PmMessage msg) {
+        if (msg.forwardFrom != null) return msg.forwardFrom; // уже переслано — сохраняем первоисточник
+        if (isFeedTab() && msg.sender != null) {
+            return msg.sender.contains(" [") ? msg.sender.substring(0, msg.sender.indexOf(" [")) : msg.sender;
+        }
+        if (msg.out) return PmChatClient.selfNamePublic();
+        return selected != null ? selected : "?";
+    }
+
     public PmScreen() {
         super(Text.translatable("screen.pmchat.title"));
     }
@@ -689,6 +704,15 @@ public class PmScreen extends Screen {
             }
         }
 
+        // Подсказка режима пересылки
+        if (forwardBuffer != null) {
+            Text hint = Text.translatable("pmchat.fwd.pick");
+            int hw = textRenderer.getWidth(hint) + 12;
+            int hx = px + (PANEL_W - hw) / 2;
+            context.fill(hx, py - 16, hx + hw, py - 3, 0xF03A6FB0);
+            context.drawText(textRenderer, hint, hx + 6, py - 13, 0xFFFFFFFF, false);
+        }
+
         // Фото на весь экран — поверх всего
         if (fullscreenImg != null) {
             renderFullscreenImage(context);
@@ -933,6 +957,25 @@ public class PmScreen extends Screen {
         int areaTop = py + 26;
         int areaBottom = py + PANEL_H - 30;
 
+        // Закреплённое сообщение — полоска сверху
+        pinBarRect = null;
+        if (!isGlobal && selected != null) {
+            String pinHash = config.pins.get(selected);
+            if (pinHash != null) {
+                PmMessage pinned = history.findByHash(selected, pinHash);
+                if (pinned != null) {
+                    int by = areaTop;
+                    context.fill(px + LEFT_W + 2, by, px + PANEL_W - 2, by + 12, 0x33F0C34E);
+                    context.fill(px + LEFT_W + 2, by, px + LEFT_W + 3, by + 12, 0xFFF0C34E);
+                    String label = "⚑ " + PmChatClient.previewOf(pinned.text != null ? pinned.text : "");
+                    context.drawText(textRenderer, trim(label, PANEL_W - LEFT_W - 24), px + LEFT_W + 7, by + 2, 0xFFF0C34E, false);
+                    context.drawText(textRenderer, "×", px + PANEL_W - 10, by + 2, 0xFFE07A6A, false);
+                    pinBarRect = new int[]{px + LEFT_W + 2, by, PANEL_W - LEFT_W - 4, 12};
+                    areaTop += 14;
+                }
+            }
+        }
+
         drawWallpaper(context, px + LEFT_W + 1, areaTop, px + PANEL_W - 1, areaBottom);
 
         if (imageMode) {
@@ -1038,6 +1081,13 @@ public class PmScreen extends Screen {
                 bh += 11;
                 textW = Math.max(textW, Math.min(BUBBLE_MAX_TEXT_W, textRenderer.getWidth(quoted) + 8));
             }
+            // Шапка «переслано от X»
+            String fwdLabel = msg.forwardFrom != null
+                    ? "⤶ " + Text.translatable("pmchat.fwd.from").getString() + " " + msg.forwardFrom : null;
+            if (fwdLabel != null) {
+                bh += 10;
+                textW = Math.max(textW, Math.min(BUBBLE_MAX_TEXT_W, textRenderer.getWidth(fwdLabel) + 4));
+            }
             // Автор в общем чате
             String senderName = isGlobal && !msg.out && msg.sender != null ? msg.sender : null;
             boolean senderHasMod = senderName != null && config.isModUser(senderName);
@@ -1069,12 +1119,20 @@ public class PmScreen extends Screen {
             }
 
             int bx = msg.out ? px + PANEL_W - 8 - bw : px + LEFT_W + 8;
-            int quoteShift = (quoted != null ? 11 : 0) + (senderName != null ? 10 : 0);
+            int quoteShift = (quoted != null ? 11 : 0) + (senderName != null ? 10 : 0)
+                    + (fwdLabel != null ? 10 : 0);
             int bg = msg.money > 0 ? MONEY_BG : (msg.out ? OUT_BG : IN_BG);
 
             // Фон пузыря
             context.fill(bx + dx + 1, y + dy, bx + dx + bw - 1, y + dy + bh, applyAlpha(bg, alpha));
             context.fill(bx + dx, y + dy + 1, bx + dx + bw, y + dy + bh - 1, applyAlpha(bg, alpha));
+
+            // Шапка пересылки
+            if (fwdLabel != null) {
+                int fc = msg.out ? 0xFFA8D8BC : 0xFF3A7AB0;
+                context.drawText(textRenderer, trim(fwdLabel, bw - 8), bx + dx + 5, y + dy + 3,
+                        applyAlpha(fc, alpha), false);
+            }
 
             // Автор (общий чат) — аватарка-голова + ник цветом; точка если есть мод
             if (senderName != null) {
@@ -1092,11 +1150,12 @@ public class PmScreen extends Screen {
                         applyAlpha(nameColor(senderName), alpha), false);
             }
 
-            // Цитата
+            // Цитата (ниже шапки пересылки, если она есть)
             if (quoted != null) {
+                int qy = y + dy + 3 + (fwdLabel != null ? 10 : 0);
                 int qc = msg.out ? 0xFFA8D8BC : 0xFF9A9A9A;
-                context.fill(bx + dx + 4, y + dy + 3, bx + dx + 5, y + dy + 11, applyAlpha(qc, alpha));
-                context.drawText(textRenderer, trim(quoted, bw - 14), bx + dx + 8, y + dy + 3,
+                context.fill(bx + dx + 4, qy, bx + dx + 5, qy + 8, applyAlpha(qc, alpha));
+                context.drawText(textRenderer, trim(quoted, bw - 14), bx + dx + 8, qy,
                         applyAlpha(qc, alpha), false);
             }
 
@@ -1541,10 +1600,18 @@ public class PmScreen extends Screen {
                     } else if (action.equals("reply") && !global) {
                         replyTarget = msg;
                     } else if (action.equals("copy") && msg.text != null) {
-                        MinecraftClient.getInstance().keyboard.setClipboard(msg.text);
+                        MinecraftClient.getInstance().keyboard.setClipboard(
+                                PmChatClient.previewOf(msg.text));
                         copiedAt = System.currentTimeMillis();
                         copiedX = rx;
                         copiedY = ry;
+                    } else if (action.equals("forward")) {
+                        forwardBuffer = msg;
+                        forwardFromNick = senderOfMessage(msg);
+                    } else if (action.equals("pin") && !global && selected != null) {
+                        PmChatClient.setPin(selected, PmHistory.msgHash(msg.text), true);
+                    } else if (action.equals("unpin") && !global && selected != null) {
+                        PmChatClient.setPin(selected, null, true);
                     } else if (action.equals("delete")) {
                         if (PmChatClient.GLOBAL.equals(selected)) {
                             PmChatClient.getGlobalChat().remove(msg);
@@ -1566,6 +1633,18 @@ public class PmScreen extends Screen {
         for (Object[] r : rowRects) {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
             if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
+                String tab = (String) r[4];
+                // Пересылка: клик по диалогу-получателю
+                if (forwardBuffer != null && !PmChatClient.GLOBAL.equals(tab)
+                        && !tab.startsWith(PmChatClient.CHANNEL_PREFIX)) {
+                    PmChatClient.forwardMessage(tab, forwardFromNick, forwardBuffer);
+                    forwardBuffer = null;
+                    selected = tab;
+                    msgScroll = 0;
+                    statsMode = false;
+                    rebuild();
+                    return true;
+                }
                 boolean hadUnread = history.unreadCount((String) r[4]) > 0;
                 selected = (String) r[4];
                 history.clearUnread(selected);
@@ -1623,6 +1702,13 @@ public class PmScreen extends Screen {
         if (replyCancelX >= 0 && click.x() >= replyCancelX && click.x() < replyCancelX + 12
                 && click.y() >= replyCancelY && click.y() < replyCancelY + 12) {
             replyTarget = null;
+            return true;
+        }
+        // Клик по × закреплённого сообщения — открепить
+        if (pinBarRect != null && selected != null && click.x() >= pinBarRect[0] + pinBarRect[2] - 14
+                && click.x() < pinBarRect[0] + pinBarRect[2]
+                && click.y() >= pinBarRect[1] && click.y() < pinBarRect[1] + pinBarRect[3]) {
+            PmChatClient.setPin(selected, null, true);
             return true;
         }
         // Клики по пузырям: ЛКМ — голосовое играть, ПКМ — ответить цитатой
@@ -1685,8 +1771,16 @@ public class PmScreen extends Screen {
 
         List<String[]> items = new ArrayList<>();
         if (!global) items.add(new String[]{"reply", "↩ " + Text.translatable("pmchat.menu.reply").getString()});
+        items.add(new String[]{"forward", "⤶ " + Text.translatable("pmchat.menu.forward").getString()});
         if (ctxMsg.text != null && !ctxMsg.text.isBlank()) {
             items.add(new String[]{"copy", "⧉ " + Text.translatable("pmchat.menu.copy").getString()});
+        }
+        // Закрепить/открепить — только в личных диалогах
+        if (!global && selected != null && ctxMsg.text != null && !ctxMsg.text.isBlank()) {
+            boolean isPinned = PmHistory.msgHash(ctxMsg.text).equals(config.pins.get(selected));
+            items.add(isPinned
+                    ? new String[]{"unpin", "⚐ " + Text.translatable("pmchat.menu.unpin").getString()}
+                    : new String[]{"pin", "⚑ " + Text.translatable("pmchat.menu.pin").getString()});
         }
         items.add(new String[]{"delete", "✖ " + Text.translatable("pmchat.menu.delete").getString()});
 

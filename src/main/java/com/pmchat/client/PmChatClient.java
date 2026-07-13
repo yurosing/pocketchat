@@ -388,6 +388,14 @@ public class PmChatClient implements ClientModInitializer {
             }
             return 2;
         }
+        String pinHash = PmWire.parsePin(text);
+        if (pinHash != null) {
+            config.addModUser(sender);
+            if (pinHash.equals("-")) config.pins.remove(sender);
+            else config.pins.put(sender, pinHash);
+            config.save();
+            return 2;
+        }
 
         // Структурированные сообщения (фото/голос/цитата) — точно от мода
         if (PmWire.isStructured(text)) {
@@ -405,11 +413,18 @@ public class PmChatClient implements ClientModInitializer {
             text = reply[1];
         }
 
-        PmMessage msg = history.add(sender, false, text, 0);
-        if (replyTo != null) {
-            msg.replyTo = replyTo;
-            history.save();
+        // Пересылка: pmc fwd <откуда> <содержимое>
+        String forwardFrom = null;
+        String[] fwd = PmWire.parseForward(text);
+        if (fwd != null) {
+            forwardFrom = fwd[0];
+            text = fwd[1];
         }
+
+        PmMessage msg = history.add(sender, false, text, 0);
+        if (replyTo != null) msg.replyTo = replyTo;
+        if (forwardFrom != null) msg.forwardFrom = forwardFrom;
+        if (replyTo != null || forwardFrom != null) history.save();
 
         MinecraftClient client = MinecraftClient.getInstance();
         boolean viewing = client.currentScreen instanceof PmScreen screen && screen.isViewing(sender);
@@ -469,10 +484,60 @@ public class PmChatClient implements ClientModInitializer {
         }
     }
 
+    /** Закрепить/открепить сообщение: локально + собеседнику с модом. */
+    public static void setPin(String target, String hashOrNull, boolean forBoth) {
+        if (hashOrNull == null) config.pins.remove(target);
+        else config.pins.put(target, hashOrNull);
+        config.save();
+        if (forBoth && config.enableMeta && config.isModUser(target)) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player != null) {
+                client.player.networkHandler.sendChatCommand(
+                        config.msgCommand + " " + target + " " + PmWire.pin(hashOrNull));
+            }
+        }
+    }
+
+    /**
+     * Переслать сообщение в диалог target. Мод-получателю уходит структурно
+     * (шапка «переслано от X»), обычному игроку — текстом «X » текст».
+     */
+    public static void forwardMessage(String target, String fromNick, PmMessage msg) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null || target.isBlank()) return;
+        String inner = msg.text != null ? msg.text : "";
+
+        if (config.isModUser(target)) {
+            String wire = PmWire.forward(fromNick, inner);
+            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+            synchronized (pendingEcho) {
+                pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
+            }
+            PmMessage local = history.add(target, true, inner, 0);
+            local.forwardFrom = fromNick;
+            history.save();
+        } else {
+            // Без мода: медиа бесполезно, шлём человекочитаемо
+            String body = previewOf(inner);
+            String plain = fromNick + " » " + body;
+            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + plain);
+            synchronized (pendingEcho) {
+                pendingEcho.add(new String[]{target, plain, String.valueOf(System.currentTimeMillis() + 5000)});
+            }
+            PmMessage local = history.add(target, true, plain, 0);
+            local.forwardFrom = fromNick;
+            history.save();
+        }
+    }
+
+    public static String selfNamePublic() {
+        return selfName();
+    }
+
     /** Эхо нашей отправки через мод пропускаем, чужие (набранные руками /m) — записываем. */
     private static int onOutgoingEcho(String target, String text) {
         if (PmWire.isTyping(text) || PmWire.isSeen(text) || PmWire.isHi(text)
-                || PmWire.parseReaction(text) != null) {
+                || PmWire.parseReaction(text) != null || PmWire.isPinMeta(text)) {
             return 2; // эхо собственной меты — прячем, в историю не пишем
         }
         long now = System.currentTimeMillis();
