@@ -220,6 +220,9 @@ public class PmScreen extends Screen {
     private PmMessage forwardBuffer = null;
     private String forwardFromNick = "";
     private int[] pinBarRect = null; // x,y,w,h полоски закрепа (клик по × открепляет)
+    private String flashHash = null; // хэш сообщения для вспышки при переходе
+    private long flashUntil = 0;
+    private int pinnedOffsetFromBottom = -1; // позиция закреплённого от низа (для перехода)
 
     /** Ник исходного автора сообщения (для пересылки). */
     private String senderOfMessage(PmMessage msg) {
@@ -390,6 +393,19 @@ public class PmScreen extends Screen {
                         clearConfirm = false;
                         rebuild();
                     }));
+
+            // В контакты / из контактов (личный диалог)
+            if (selected != null && !isFeedTab()) {
+                boolean isC = config.isContact(selected);
+                addDrawableChild(FlatButton.centered(textRenderer,
+                        px + LEFT_W + 10, py + PANEL_H - 44, PANEL_W - LEFT_W - 20, 16,
+                        Text.translatable(isC ? "pmchat.contact.remove" : "pmchat.contact.add"),
+                        isC ? 0xFF5A4A1A : WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
+                        0xFFF0C34E, btn -> {
+                            config.toggleContact(selected);
+                            rebuild();
+                        }));
+            }
 
             // Очистка диалога — с подтверждением вторым кликом
             if (selected != null) {
@@ -812,6 +828,12 @@ public class PmScreen extends Screen {
                 names.add(name);
             }
         }
+        // Контакты — вверх списка (сохраняя порядок по свежести внутри групп)
+        names.sort((a, b) -> {
+            boolean ca = config.isContact(a), cb = config.isContact(b);
+            if (ca != cb) return ca ? -1 : 1;
+            return 0;
+        });
 
         int top = py + 42;
         int bottom = py + PANEL_H - 24;
@@ -895,9 +917,14 @@ public class PmScreen extends Screen {
             // Индикатор мода: зелёная точка в углу аватарки
             boolean hasMod = config.isModUser(name);
             context.fill(px + 16, y + 14, px + 20, y + 18, hasMod ? 0xFF6FBF8B : SUBTLE);
-            int nameMax = LEFT_W - 30 - (unread > 0 ? 16 : 0);
-            String shownName = trim(name, nameMax);
-            context.drawText(textRenderer, shownName, px + 23, y + 3, NAME_TEXT, false);
+            boolean contact = config.isContact(name);
+            int nameX = px + 23;
+            if (contact) {
+                context.drawText(textRenderer, "★", nameX, y + 3, 0xFFF0C34E, false);
+                nameX += 8;
+            }
+            int nameMax = LEFT_W - (nameX - px) - 7 - (unread > 0 ? 16 : 0);
+            context.drawText(textRenderer, trim(name, nameMax), nameX, y + 3, NAME_TEXT, false);
 
             PmMessage last = history.lastMessage(name);
             if (last != null) {
@@ -1104,6 +1131,12 @@ public class PmScreen extends Screen {
             y -= bh + gap;
             contentH += bh + gap;
 
+            // Запоминаем позицию закреплённого сообщения для перехода
+            if (!isGlobal && selected != null && msg.text != null
+                    && PmHistory.msgHash(msg.text).equals(config.pins.get(selected))) {
+                pinnedOffsetFromBottom = contentH;
+            }
+
             if (y + bh < areaTop || y > areaBottom) continue;
 
             // Анимация появления
@@ -1126,6 +1159,15 @@ public class PmScreen extends Screen {
             // Фон пузыря
             context.fill(bx + dx + 1, y + dy, bx + dx + bw - 1, y + dy + bh, applyAlpha(bg, alpha));
             context.fill(bx + dx, y + dy + 1, bx + dx + bw, y + dy + bh - 1, applyAlpha(bg, alpha));
+
+            // Подсветка упоминания (жёлтая рамка) и вспышка перехода к закрепу
+            boolean mentioned = !msg.out && PmChatClient.mentionsMe(msg.text, senderName);
+            boolean flash = flashHash != null && msg.text != null && PmHistory.msgHash(msg.text).equals(flashHash)
+                    && System.currentTimeMillis() < flashUntil;
+            if (mentioned || flash) {
+                int mc = flash ? 0xFFF0C34E : 0xFFE0B040;
+                context.drawStrokedRectangle(bx + dx, y + dy, bw, bh, applyAlpha(mc, alpha));
+            }
 
             // Шапка пересылки
             if (fwdLabel != null) {
@@ -1704,11 +1746,19 @@ public class PmScreen extends Screen {
             replyTarget = null;
             return true;
         }
-        // Клик по × закреплённого сообщения — открепить
-        if (pinBarRect != null && selected != null && click.x() >= pinBarRect[0] + pinBarRect[2] - 14
-                && click.x() < pinBarRect[0] + pinBarRect[2]
+        // Клик по закреплённому сообщению
+        if (pinBarRect != null && selected != null
+                && click.x() >= pinBarRect[0] && click.x() < pinBarRect[0] + pinBarRect[2]
                 && click.y() >= pinBarRect[1] && click.y() < pinBarRect[1] + pinBarRect[3]) {
-            PmChatClient.setPin(selected, null, true);
+            if (click.x() >= pinBarRect[0] + pinBarRect[2] - 14) {
+                PmChatClient.setPin(selected, null, true); // × — открепить
+            } else if (pinnedOffsetFromBottom > 0) {
+                // Переход: прокручиваем чат к закреплённому + вспышка
+                int areaH = (py + PANEL_H - 30) - (py + 40);
+                msgScroll = Math.max(0, Math.min(msgMaxScroll, pinnedOffsetFromBottom - areaH / 2));
+                flashHash = config.pins.get(selected);
+                flashUntil = System.currentTimeMillis() + 1400;
+            }
             return true;
         }
         // Клики по пузырям: ЛКМ — голосовое играть, ПКМ — ответить цитатой

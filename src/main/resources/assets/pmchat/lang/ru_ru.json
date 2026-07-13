@@ -82,5 +82,10 @@
   "pmchat.menu.pin": "Закрепить",
   "pmchat.menu.unpin": "Открепить",
   "pmchat.fwd.from": "от",
-  "pmchat.fwd.pick": "Пересылка: выберите чат"
+  "pmchat.fwd.pick": "Пересылка: выберите чат",
+  "pmchat.set.mention": "Упоминания",
+  "pmchat.set.mention.on": "Вкл",
+  "pmchat.set.mention.off": "Выкл",
+  "pmchat.contact.add": "★ В контакты",
+  "pmchat.contact.remove": "★ Убрать из контактов"
 }

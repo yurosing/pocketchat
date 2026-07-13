@@ -82,5 +82,10 @@
   "pmchat.menu.pin": "Pin",
   "pmchat.menu.unpin": "Unpin",
   "pmchat.fwd.from": "from",
-  "pmchat.fwd.pick": "Forward: pick a chat"
+  "pmchat.fwd.pick": "Forward: pick a chat",
+  "pmchat.set.mention": "Mentions",
+  "pmchat.set.mention.on": "On",
+  "pmchat.set.mention.off": "Off",
+  "pmchat.contact.add": "★ Add to contacts",
+  "pmchat.contact.remove": "★ Remove from contacts"
 }

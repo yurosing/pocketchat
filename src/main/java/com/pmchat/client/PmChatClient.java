@@ -257,6 +257,7 @@ public class PmChatClient implements ClientModInitializer {
                     && screen.isViewing(CHANNEL_PREFIX + channel.id);
             if (!viewing && !msg.out) {
                 channelUnread.merge(channel.id, 1, Integer::sum);
+                if (mentionsMe(text, name) && !config.dnd) notifyMention(client, name, text);
             }
             return true;
         }
@@ -329,6 +330,12 @@ public class PmChatClient implements ClientModInitializer {
         // Озвучка общего чата системным голосом (свои сообщения не читаем)
         if (config.ttsGlobal && !msg.out) {
             speak(sender + ": " + previewOf(text));
+        }
+        // Упоминание в общем чате — пинг + тост
+        if (!msg.out && mentionsMe(text, sender)) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            boolean viewing = client.currentScreen instanceof PmScreen s && s.isViewing(GLOBAL);
+            if (!viewing && !config.dnd) notifyMention(client, sender, text);
         }
     }
 
@@ -532,6 +539,38 @@ public class PmChatClient implements ClientModInitializer {
 
     public static String selfNamePublic() {
         return selfName();
+    }
+
+    /** Упоминают ли тебя: свой ник или доп. слова из настроек. */
+    public static boolean mentionsMe(String text, String senderIfKnown) {
+        if (!config.mentionEnabled || text == null) return false;
+        String lower = text.toLowerCase(Locale.ROOT);
+        String self = selfName().toLowerCase(Locale.ROOT);
+        // Не считаем упоминанием свои же сообщения
+        if (senderIfKnown != null && senderIfKnown.equalsIgnoreCase(selfName())) return false;
+        if (!self.isBlank() && containsWord(lower, self)) return true;
+        for (String w : config.mentionExtra.split(",")) {
+            w = w.trim().toLowerCase(Locale.ROOT);
+            if (!w.isEmpty() && containsWord(lower, w)) return true;
+        }
+        return false;
+    }
+
+    private static boolean containsWord(String haystack, String word) {
+        int idx = haystack.indexOf(word);
+        while (idx >= 0) {
+            boolean lok = idx == 0 || !Character.isLetterOrDigit(haystack.charAt(idx - 1));
+            int end = idx + word.length();
+            boolean rok = end >= haystack.length() || !Character.isLetterOrDigit(haystack.charAt(end));
+            if (lok && rok) return true;
+            idx = haystack.indexOf(word, idx + 1);
+        }
+        return false;
+    }
+
+    private static void notifyMention(MinecraftClient client, String sender, String text) {
+        client.getToastManager().add(new PmToast("@ " + sender, text));
+        playNotifySound(client);
     }
 
     /** Эхо нашей отправки через мод пропускаем, чужие (набранные руками /m) — записываем. */

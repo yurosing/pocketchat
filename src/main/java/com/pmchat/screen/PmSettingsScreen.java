@@ -48,7 +48,7 @@ public class PmSettingsScreen extends Screen {
     protected void init() {
         optionLabels.clear();
         clearChildren();
-        int rows = 15;
+        int rows = 16;
         panelH = 26 + rows * ROW_H + 28;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
@@ -88,6 +88,11 @@ public class PmSettingsScreen extends Screen {
                     default -> "S";
                 }),
                 VALUE, () -> config.uiScale = (config.uiScale + 1) % 3);
+
+        y = addOption(y, "pmchat.set.mention",
+                () -> Text.translatable(config.mentionEnabled ? "pmchat.set.mention.on" : "pmchat.set.mention.off"),
+                () -> config.mentionEnabled ? 0xFFF0C34E : VALUE,
+                () -> config.mentionEnabled = !config.mentionEnabled);
 
         y = addOption(y, "pmchat.set.dnd",
                 () -> Text.translatable(config.dnd ? "pmchat.set.dnd.on" : "pmchat.set.dnd.off"),
