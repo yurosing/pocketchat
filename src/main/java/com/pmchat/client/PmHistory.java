@@ -1,0 +1,211 @@
+package com.pmchat.client;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import net.fabricmc.loader.api.FabricLoader;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * Локальная история переписки: config/pmchat-history.json.
+ * Ключ — ник собеседника, значение — сообщения по времени.
+ */
+public class PmHistory {
+
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("pmchat-history.json");
+    private static final Type TYPE = new TypeToken<LinkedHashMap<String, List<PmMessage>>>() {}.getType();
+
+    private LinkedHashMap<String, List<PmMessage>> conversations = new LinkedHashMap<>();
+
+    /** Непрочитанные (не сохраняются между сессиями). */
+    private final Map<String, Integer> unread = new HashMap<>();
+
+    public static PmHistory load() {
+        PmHistory history = new PmHistory();
+        if (Files.exists(FILE)) {
+            try (Reader reader = Files.newBufferedReader(FILE)) {
+                LinkedHashMap<String, List<PmMessage>> data = GSON.fromJson(reader, TYPE);
+                if (data != null) {
+                    history.conversations = data;
+                }
+            } catch (IOException ignored) {
+            }
+        }
+        return history;
+    }
+
+    public void save() {
+        try (Writer writer = Files.newBufferedWriter(FILE)) {
+            GSON.toJson(conversations, TYPE, writer);
+        } catch (IOException ignored) {
+        }
+    }
+
+    public PmMessage add(String player, boolean out, String text, long money) {
+        PmMessage msg = new PmMessage(out, text, System.currentTimeMillis(), money);
+        conversations.computeIfAbsent(player, k -> new ArrayList<>()).add(msg);
+        save();
+        return msg;
+    }
+
+    public List<PmMessage> messages(String player) {
+        return conversations.getOrDefault(player, List.of());
+    }
+
+    /** Ники диалогов, свежие сверху. */
+    public List<String> conversationNames() {
+        List<String> names = new ArrayList<>(conversations.keySet());
+        names.sort(Comparator.comparingLong(this::lastTime).reversed());
+        return names;
+    }
+
+    public long lastTime(String player) {
+        List<PmMessage> list = conversations.get(player);
+        return list == null || list.isEmpty() ? 0 : list.get(list.size() - 1).time;
+    }
+
+    public PmMessage lastMessage(String player) {
+        List<PmMessage> list = conversations.get(player);
+        return list == null || list.isEmpty() ? null : list.get(list.size() - 1);
+    }
+
+    /** Короткий хэш текста — общий у обеих сторон, служит id для цитат. */
+    public static String msgHash(String text) {
+        return Integer.toHexString(text == null ? 0 : text.hashCode());
+    }
+
+    /** Последнее сообщение диалога с данным хэшем текста (для цитаты). */
+    public PmMessage findByHash(String player, String hash) {
+        List<PmMessage> list = messages(player);
+        for (int i = list.size() - 1; i >= 0; i--) {
+            if (msgHash(list.get(i).text).equals(hash)) {
+                return list.get(i);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Essentials доставил другому игроку (фаззи-матч ника): переносим
+     * последнее наше сообщение из набранного диалога в фактический.
+     */
+    public PmMessage moveLastOutgoing(String from, String to, String text) {
+        List<PmMessage> src = conversations.get(from);
+        if (src == null) return null;
+        for (int i = src.size() - 1; i >= 0; i--) {
+            PmMessage msg = src.get(i);
+            if (msg.out && text.equals(msg.text)) {
+                src.remove(i);
+                if (src.isEmpty()) {
+                    conversations.remove(from);
+                }
+                conversations.computeIfAbsent(to, k -> new ArrayList<>()).add(msg);
+                save();
+                return msg;
+            }
+        }
+        return null;
+    }
+
+    /** Пометить все наши сообщения в диалоге прочитанными (пришло [seen]). */
+    public void markAllOutgoingRead(String player) {
+        boolean changed = false;
+        for (PmMessage msg : messages(player)) {
+            if (msg.out && !msg.read) {
+                msg.read = true;
+                changed = true;
+            }
+        }
+        if (changed) save();
+    }
+
+    /** Удалить одно сообщение из диалога (локально). */
+    public void deleteMessage(String player, PmMessage msg) {
+        List<PmMessage> list = conversations.get(player);
+        if (list != null && list.remove(msg)) {
+            if (list.isEmpty()) {
+                conversations.remove(player);
+            }
+            save();
+        }
+    }
+
+    /** Полностью удалить диалог с игроком. */
+    public void clearConversation(String player) {
+        conversations.remove(player);
+        unread.remove(player);
+        save();
+    }
+
+    // ---------- Непрочитанные ----------
+
+    public void markUnread(String player) {
+        unread.merge(player, 1, Integer::sum);
+    }
+
+    public void clearUnread(String player) {
+        unread.remove(player);
+    }
+
+    public int unreadCount(String player) {
+        return unread.getOrDefault(player, 0);
+    }
+
+    public int totalUnread() {
+        return unread.values().stream().mapToInt(Integer::intValue).sum();
+    }
+
+    // ---------- Статистика ----------
+
+    public int totalMessages() {
+        return conversations.values().stream().mapToInt(List::size).sum();
+    }
+
+    public int countIn(String player, boolean out) {
+        return (int) messages(player).stream().filter(m -> m.out == out).count();
+    }
+
+    public long moneySent(String player) {
+        return messages(player).stream().filter(m -> m.out && m.money > 0).mapToLong(m -> m.money).sum();
+    }
+
+    public long firstTime(String player) {
+        List<PmMessage> list = conversations.get(player);
+        return list == null || list.isEmpty() ? 0 : list.get(0).time;
+    }
+
+    /** Топ собеседников по числу сообщений. */
+    public List<Map.Entry<String, Integer>> topContacts(int limit) {
+        List<Map.Entry<String, Integer>> top = new ArrayList<>();
+        for (Map.Entry<String, List<PmMessage>> e : conversations.entrySet()) {
+            top.add(Map.entry(e.getKey(), e.getValue().size()));
+        }
+        top.sort(Map.Entry.<String, Integer>comparingByValue().reversed());
+        return top.subList(0, Math.min(limit, top.size()));
+    }
+
+    /** Поиск: есть ли совпадение в нике или сообщениях диалога. */
+    public boolean matches(String player, String queryLower) {
+        if (player.toLowerCase(Locale.ROOT).contains(queryLower)) return true;
+        for (PmMessage msg : messages(player)) {
+            if (msg.text != null && msg.text.toLowerCase(Locale.ROOT).contains(queryLower)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

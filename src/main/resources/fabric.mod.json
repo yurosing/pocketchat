@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "pmchat",
+  "version": "${version}",
+  "name": "PM Messenger",
+  "description": "Клиентский мессенджер поверх /m: история, поиск, статистика, отправка денег",
+  "authors": ["PmChatDev"],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.pmchat.client.PmChatClient"],
+    "modmenu": ["com.pmchat.client.PmModMenu"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21.11",
+    "java": ">=21"
+  }
+}
