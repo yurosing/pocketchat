@@ -42,6 +42,17 @@ public final class PmWire {
 
     /** Набор реакций (BMP-символы, есть в шрифте игры). */
     public static final String[] REACTIONS = {"❤", "★", "☺", "☹", "⚡", "✔"};
+    /** Цвета реакций (в тон символам). */
+    public static final int[] REACTION_COLORS = {
+            0xFFE8698B, 0xFFF0C34E, 0xFF6FBF8B, 0xFF7E9AAB, 0xFF5AB0E0, 0xFF8FD8A8
+    };
+
+    public static int reactionColor(String symbol) {
+        for (int i = 0; i < REACTIONS.length; i++) {
+            if (REACTIONS[i].equals(symbol)) return REACTION_COLORS[i];
+        }
+        return 0xFFEDF3F0;
+    }
 
     private PmWire() {
     }

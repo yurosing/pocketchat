@@ -94,5 +94,9 @@
   "pmchat.poll.multi.on": "☑ Несколько ответов",
   "pmchat.poll.multi.off": "☐ Один ответ",
   "pmchat.poll.create": "Создать",
-  "pmchat.poll.cancel": "Отмена"
+  "pmchat.poll.cancel": "Отмена",
+  "pmchat.set.closedmg": "Закрывать при уроне",
+  "pmchat.set.copynick": "Копировать с ником",
+  "pmchat.set.on": "Вкл",
+  "pmchat.set.off": "Выкл"
 }

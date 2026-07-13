@@ -94,5 +94,9 @@
   "pmchat.poll.multi.on": "☑ Multiple answers",
   "pmchat.poll.multi.off": "☐ Single answer",
   "pmchat.poll.create": "Create",
-  "pmchat.poll.cancel": "Cancel"
+  "pmchat.poll.cancel": "Cancel",
+  "pmchat.set.closedmg": "Close on damage",
+  "pmchat.set.copynick": "Copy with nick",
+  "pmchat.set.on": "On",
+  "pmchat.set.off": "Off"
 }

@@ -48,7 +48,7 @@ public class PmSettingsScreen extends Screen {
     protected void init() {
         optionLabels.clear();
         clearChildren();
-        int rows = 16;
+        int rows = 18;
         panelH = 26 + rows * ROW_H + 28;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
@@ -149,6 +149,16 @@ public class PmSettingsScreen extends Screen {
                         ? Text.translatable("pmchat.set.wallpaper.none").getString()
                         : config.wallpaper.length() > 12 ? config.wallpaper.substring(0, 11) + "…" : config.wallpaper),
                 VALUE, this::cycleWallpaper);
+
+        y = addOption(y, "pmchat.set.closedmg",
+                () -> Text.translatable(config.closeOnDamage ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> config.closeOnDamage ? 0xFFE07A6A : VALUE,
+                () -> config.closeOnDamage = !config.closeOnDamage);
+
+        y = addOption(y, "pmchat.set.copynick",
+                () -> Text.translatable(config.mentionOnCopy ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> config.mentionOnCopy ? 0xFF8FD8A8 : VALUE,
+                () -> config.mentionOnCopy = !config.mentionOnCopy);
 
         y = addOption(y, "pmchat.set.badge",
                 () -> Text.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),

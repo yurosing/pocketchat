@@ -171,6 +171,12 @@ public class PmConfig {
     /** Доп. слова-триггеры через запятую (помимо своего ника). */
     public String mentionExtra = "";
 
+    /** Закрывать меню при получении урона. */
+    public boolean closeOnDamage = false;
+
+    /** При копировании текста добавлять «ник: » в начало. */
+    public boolean mentionOnCopy = false;
+
     public boolean isContact(String name) {
         return contacts.stream().anyMatch(n -> n.equalsIgnoreCase(name));
     }

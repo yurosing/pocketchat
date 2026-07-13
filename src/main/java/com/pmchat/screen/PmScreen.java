@@ -1346,7 +1346,7 @@ public class PmScreen extends Screen {
                         applyAlpha(tc, alpha), false);
             }
 
-            // Чип реакций — внизу пузыря, как в Telegram
+            // Чип реакций — внизу пузыря, как в Telegram (цветные символы)
             if (!reacts.isEmpty()) {
                 int cw = textRenderer.getWidth(reacts) + 8;
                 int cy = y + dy + bh - 3;
@@ -1354,7 +1354,13 @@ public class PmScreen extends Screen {
                 context.fill(cx + 1, cy, cx + cw - 1, cy + 12, CHIP_BG);
                 context.fill(cx, cy + 1, cx + cw, cy + 11, CHIP_BG);
                 context.drawStrokedRectangle(cx, cy, cw, 12, DIVIDER);
-                context.drawText(textRenderer, reacts, cx + 4, cy + 2, NAME_TEXT, false);
+                int rxx = cx + 4;
+                for (int ci = 0; ci < reacts.length(); ci++) {
+                    String sym = String.valueOf(reacts.charAt(ci));
+                    context.drawText(textRenderer, sym, rxx, cy + 2,
+                            applyAlpha(com.pmchat.client.PmWire.reactionColor(sym), alpha), false);
+                    rxx += textRenderer.getWidth(sym);
+                }
             }
 
             // Время сообщения — сбоку от пузыря
@@ -1743,8 +1749,7 @@ public class PmScreen extends Screen {
                     } else if (action.equals("reply") && !global) {
                         replyTarget = msg;
                     } else if (action.equals("copy") && msg.text != null) {
-                        MinecraftClient.getInstance().keyboard.setClipboard(
-                                PmChatClient.previewOf(msg.text));
+                        MinecraftClient.getInstance().keyboard.setClipboard(copyText(msg));
                         copiedAt = System.currentTimeMillis();
                         copiedX = rx;
                         copiedY = ry;
@@ -1911,7 +1916,7 @@ public class PmScreen extends Screen {
                             }
                             return true;
                         }
-                        MinecraftClient.getInstance().keyboard.setClipboard(msg.text);
+                        MinecraftClient.getInstance().keyboard.setClipboard(copyText(msg));
                         copiedAt = System.currentTimeMillis();
                         copiedX = (int) click.x();
                         copiedY = (int) click.y();
@@ -1977,7 +1982,8 @@ public class PmScreen extends Screen {
                 if (hovered) {
                     context.fill(rx, y, rx + cell, y + 14, ROW_SELECTED);
                 }
-                context.drawText(textRenderer, com.pmchat.client.PmWire.REACTIONS[i], rx + 3, y + 3, NAME_TEXT, false);
+                context.drawText(textRenderer, com.pmchat.client.PmWire.REACTIONS[i], rx + 3, y + 3,
+                        com.pmchat.client.PmWire.REACTION_COLORS[i], false);
                 ctxRects.add(new Object[]{rx, y, cell, 14, "react" + i});
                 rx += cell;
             }
@@ -2065,11 +2071,8 @@ public class PmScreen extends Screen {
             doPay();
             return true;
         }
-        KeyBinding key = PmChatClient.getOpenKey();
-        if (key != null && key.matchesKey(input) && !anyFieldFocused()) {
-            close();
-            return true;
-        }
+        // Клавишу открытия НЕ используем для закрытия (коллизия с русской «о» на J).
+        // Меню закрывается по Esc (ниже) или крестику.
         return super.keyPressed(input);
     }
 
@@ -2080,6 +2083,16 @@ public class PmScreen extends Screen {
     }
 
     // ---------- Утилиты ----------
+
+    /** Текст для копирования: с ником, если включено в настройках. */
+    private String copyText(PmMessage msg) {
+        String body = PmChatClient.previewOf(msg.text);
+        if (config.mentionOnCopy) {
+            String nick = senderOfMessage(msg);
+            return nick + ": " + body;
+        }
+        return body;
+    }
 
     private int nameColor(String name) {
         int[] palette = com.pmchat.client.PmPalettes.NAMES;

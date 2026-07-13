@@ -38,6 +38,7 @@ public class PmChatClient implements ClientModInitializer {
     private static Pattern incoming;
     private static Pattern outgoing;
     private static Pattern global;
+    private static float lastHealth = 20f;
 
     /** Сентинел «диалога» общего чата. */
     public static final String GLOBAL = "§global";
@@ -73,12 +74,22 @@ public class PmChatClient implements ClientModInitializer {
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            // Только ОТКРЫВАЕМ по клавише (закрытие — Esc/крестик), иначе на русской
+            // раскладке клавиша J = «о» закрывала бы меню при вводе текста.
             while (openKey.wasPressed()) {
                 if (client.currentScreen == null) {
                     client.setScreen(new PmScreen());
-                } else if (client.currentScreen instanceof PmScreen) {
+                }
+            }
+            // Закрыть меню при получении урона (если включено в настройках)
+            if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
+                float hp = client.player.getHealth();
+                if (hp < lastHealth - 0.01f) {
                     client.setScreen(null);
                 }
+                lastHealth = hp;
+            } else if (client.player != null) {
+                lastHealth = client.player.getHealth();
             }
         });
 
