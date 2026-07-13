@@ -84,6 +84,15 @@ public class PmConfig {
     /** Озвучка сообщений общего чата системным голосом (TTS). */
     public boolean ttsGlobal = false;
 
+    /**
+     * Префикс для отправки в глобальный чат сервера (на многих RU-серверах
+     * это "!"). Пусто — отправлять как есть (если глобал по умолчанию).
+     */
+    public String globalPrefix = "!";
+
+    /** Обои фона чата: имя файла из config/pmchat-wallpapers/ или пусто. */
+    public String wallpaper = "";
+
     /** Язык распознавания речи: 0 — русский, 1 — английский. */
     public int sttLang = 0;
 

@@ -164,6 +164,24 @@ public final class PmImages {
         }
     }
 
+    /** Загружает локальный файл (обои/аватарка) как текстуру, кэш по ключу. */
+    public static Entry loadLocal(String key, Path file) {
+        return CACHE.computeIfAbsent("local|" + key, k -> {
+            Entry entry = new Entry();
+            try {
+                register(key, Files.readAllBytes(file), entry);
+            } catch (Exception e) {
+                entry.state = State.FAILED;
+            }
+            return entry;
+        });
+    }
+
+    /** Сбрасывает кэш локального файла (например при смене обоев). */
+    public static void forgetLocal(String key) {
+        CACHE.remove("local|" + key);
+    }
+
     /** Регистрирует картинку сразу из локальных байтов (своя загрузка). */
     public static void preload(String hostCode, String id, byte[] bytes) {
         String key = hostCode + "|" + id;

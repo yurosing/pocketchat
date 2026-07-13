@@ -73,5 +73,9 @@
   "pmchat.set.sttlang": "Speech language",
   "pmchat.set.sttlang.ru": "Russian",
   "pmchat.set.sttlang.en": "English",
-  "pmchat.image.close": "Click or Esc to close"
+  "pmchat.image.close": "Click or Esc to close",
+  "pmchat.set.globalprefix": "Global chat prefix",
+  "pmchat.set.globalprefix.none": "none",
+  "pmchat.set.wallpaper": "Chat wallpaper",
+  "pmchat.set.wallpaper.none": "none"
 }

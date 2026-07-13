@@ -73,5 +73,9 @@
   "pmchat.set.sttlang": "Язык распознавания",
   "pmchat.set.sttlang.ru": "Русский",
   "pmchat.set.sttlang.en": "English",
-  "pmchat.image.close": "Клик или Esc — закрыть"
+  "pmchat.image.close": "Клик или Esc — закрыть",
+  "pmchat.set.globalprefix": "Префикс глобал-чата",
+  "pmchat.set.globalprefix.none": "нет",
+  "pmchat.set.wallpaper": "Обои чата",
+  "pmchat.set.wallpaper.none": "нет"
 }

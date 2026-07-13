@@ -2,6 +2,7 @@ package com.pmchat.screen;
 
 import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
+import com.pmchat.client.PmImages;
 import com.pmchat.client.PmPalettes;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -47,7 +48,7 @@ public class PmSettingsScreen extends Screen {
     protected void init() {
         optionLabels.clear();
         clearChildren();
-        int rows = 13;
+        int rows = 15;
         panelH = 26 + rows * ROW_H + 28;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
@@ -114,6 +115,20 @@ public class PmSettingsScreen extends Screen {
                     com.pmchat.client.PmStt.onLanguageChanged();
                 });
 
+        y = addOption(y, "pmchat.set.globalprefix",
+                () -> Text.literal(config.globalPrefix == null || config.globalPrefix.isBlank()
+                        ? Text.translatable("pmchat.set.globalprefix.none").getString()
+                        : config.globalPrefix),
+                VALUE, () -> {
+                    String[] cycle = {"!", "@", "."};
+                    String cur = config.globalPrefix == null ? "" : config.globalPrefix;
+                    int idx = -1;
+                    for (int i = 0; i < cycle.length; i++) if (cycle[i].equals(cur)) idx = i;
+                    if (idx < 0) config.globalPrefix = cycle[0];
+                    else if (idx == cycle.length - 1) config.globalPrefix = "";
+                    else config.globalPrefix = cycle[idx + 1];
+                });
+
         y = addOption(y, "pmchat.set.tts",
                 () -> Text.translatable(config.ttsGlobal ? "pmchat.set.tts.on" : "pmchat.set.tts.off"),
                 () -> config.ttsGlobal ? 0xFF8FD8A8 : VALUE,
@@ -123,6 +138,12 @@ public class PmSettingsScreen extends Screen {
                         PmChatClient.speak(Text.translatable("pmchat.set.tts.preview").getString());
                     }
                 });
+
+        y = addOption(y, "pmchat.set.wallpaper",
+                () -> Text.literal(config.wallpaper == null || config.wallpaper.isBlank()
+                        ? Text.translatable("pmchat.set.wallpaper.none").getString()
+                        : config.wallpaper.length() > 12 ? config.wallpaper.substring(0, 11) + "…" : config.wallpaper),
+                VALUE, this::cycleWallpaper);
 
         y = addOption(y, "pmchat.set.badge",
                 () -> Text.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),
@@ -182,6 +203,27 @@ public class PmSettingsScreen extends Screen {
 
     private void reinit() {
         init();
+    }
+
+    /** Перебирает обои: none → файлы из config/pmchat-wallpapers/. */
+    private void cycleWallpaper() {
+        java.util.List<String> files = new java.util.ArrayList<>();
+        files.add(""); // "нет"
+        try (var stream = java.nio.file.Files.list(PmScreen.wallpapersDir())) {
+            stream.filter(java.nio.file.Files::isRegularFile)
+                    .map(p -> p.getFileName().toString())
+                    .filter(n -> {
+                        String l = n.toLowerCase(java.util.Locale.ROOT);
+                        return l.endsWith(".png") || l.endsWith(".jpg") || l.endsWith(".jpeg") || l.endsWith(".gif");
+                    })
+                    .sorted()
+                    .forEach(files::add);
+        } catch (Exception ignored) {
+        }
+        String cur = config.wallpaper == null ? "" : config.wallpaper;
+        int idx = files.indexOf(cur);
+        config.wallpaper = files.get((idx + 1 + files.size()) % files.size());
+        PmImages.forgetLocal(config.wallpaper);
     }
 
     private static int indexOf(int[] array, int value) {

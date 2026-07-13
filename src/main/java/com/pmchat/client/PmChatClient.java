@@ -351,11 +351,14 @@ public class PmChatClient implements ClientModInitializer {
         globalChat.clear();
     }
 
-    /** Сообщение в общий чат сервера; отобразится через серверное эхо. */
+    /** Сообщение в общий чат сервера; префикс из настроек (обычно "!"). */
     public static void sendGlobal(String text) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || text.isBlank()) return;
-        client.player.networkHandler.sendChatMessage(text);
+        String prefix = config.globalPrefix == null ? "" : config.globalPrefix.trim();
+        // Не дублируем префикс, если игрок уже его набрал
+        String out = (!prefix.isEmpty() && !text.startsWith(prefix)) ? prefix + text : text;
+        client.player.networkHandler.sendChatMessage(out);
     }
 
     private static int onIncoming(String sender, String text) {

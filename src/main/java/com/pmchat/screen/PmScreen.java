@@ -714,6 +714,43 @@ public class PmScreen extends Screen {
         context.drawText(textRenderer, hint, (width - textRenderer.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
     }
 
+    /** Папка обоев в конфиге мода. */
+    static java.nio.file.Path wallpapersDir() {
+        java.nio.file.Path dir = net.fabricmc.loader.api.FabricLoader.getInstance()
+                .getConfigDir().resolve("pmchat-wallpapers");
+        try {
+            java.nio.file.Files.createDirectories(dir);
+        } catch (Exception ignored) {
+        }
+        return dir;
+    }
+
+    /** Рисует обои фона чата (вписаны с заполнением) + затемнение для читаемости. */
+    private void drawWallpaper(DrawContext context, int x0, int y0, int x1, int y1) {
+        String wp = config.wallpaper;
+        if (wp == null || wp.isBlank()) return;
+        java.nio.file.Path file = wallpapersDir().resolve(wp);
+        if (!java.nio.file.Files.exists(file)) return;
+
+        PmImages.Entry e = PmImages.loadLocal(wp, file);
+        if (e.state != PmImages.State.READY || e.currentTexture() == null || e.width <= 0) return;
+
+        int aw = x1 - x0, ah = y1 - y0;
+        // cover: масштаб по большей стороне, обрезаем лишнее через scissor
+        float scale = Math.max((float) aw / e.width, (float) ah / e.height);
+        int w = Math.round(e.width * scale);
+        int h = Math.round(e.height * scale);
+        int ix = x0 + (aw - w) / 2;
+        int iy = y0 + (ah - h) / 2;
+
+        context.enableScissor(x0, y0, x1, y1);
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy,
+                0f, 0f, w, h, e.width, e.height, e.width, e.height);
+        // Затемнение под тему (светлая — светлее, тёмная — темнее)
+        context.fill(x0, y0, x1, y1, config.theme == 1 ? 0x99FFFFFF : 0xB0000000);
+        context.disableScissor();
+    }
+
     /**
      * Рисует голову-скин игрока (если он онлайн и скин загружен),
      * иначе — цветной квадрат с первой буквой ника.
@@ -896,6 +933,8 @@ public class PmScreen extends Screen {
         int areaTop = py + 26;
         int areaBottom = py + PANEL_H - 30;
 
+        drawWallpaper(context, px + LEFT_W + 1, areaTop, px + PANEL_W - 1, areaBottom);
+
         if (imageMode) {
             renderImagePicker(context, mouseX, mouseY, areaTop, areaBottom);
             return;
@@ -1005,7 +1044,7 @@ public class PmScreen extends Screen {
             if (senderName != null) {
                 bh += 10;
                 textW = Math.max(textW, Math.min(BUBBLE_MAX_TEXT_W,
-                        textRenderer.getWidth(senderName) + (senderHasMod ? 9 : 0)));
+                        textRenderer.getWidth(senderName) + 10 + (senderHasMod ? 9 : 0)));
             }
 
             int bw = textW + 12;
@@ -1037,14 +1076,19 @@ public class PmScreen extends Screen {
             context.fill(bx + dx + 1, y + dy, bx + dx + bw - 1, y + dy + bh, applyAlpha(bg, alpha));
             context.fill(bx + dx, y + dy + 1, bx + dx + bw, y + dy + bh - 1, applyAlpha(bg, alpha));
 
-            // Автор (общий чат) — цвет по нику; зелёная точка — у него есть мод
+            // Автор (общий чат) — аватарка-голова + ник цветом; точка если есть мод
             if (senderName != null) {
                 int nx = bx + dx + 6;
+                if (alpha > 0.95f) { // голову без прозрачности, чтобы не мигала при появлении
+                    String bare = senderName.contains(" [") ? senderName.substring(0, senderName.indexOf(" [")) : senderName;
+                    drawAvatar(context, bare, nx, y + dy + 2, 8);
+                    nx += 10;
+                }
                 if (senderHasMod) {
                     context.drawText(textRenderer, "●", nx, y + dy + 3, applyAlpha(0xFF6FBF8B, alpha), false);
                     nx += 9;
                 }
-                context.drawText(textRenderer, trim(senderName, bw - 12 - (senderHasMod ? 9 : 0)), nx, y + dy + 3,
+                context.drawText(textRenderer, trim(senderName, bx + dx + bw - 4 - nx), nx, y + dy + 3,
                         applyAlpha(nameColor(senderName), alpha), false);
             }
 
