@@ -98,5 +98,9 @@
   "pmchat.set.closedmg": "Close on damage",
   "pmchat.set.copynick": "Copy with nick",
   "pmchat.set.on": "On",
-  "pmchat.set.off": "Off"
+  "pmchat.set.off": "Off",
+  "pmchat.sticker.tab.stickers": "Stickers",
+  "pmchat.sticker.tab.gifs": "GIFs",
+  "pmchat.sticker.norecent": "No recent",
+  "pmchat.sticker.empty": "Empty — drop png/gif into pmchat-stickers"
 }

@@ -98,5 +98,9 @@
   "pmchat.set.closedmg": "Закрывать при уроне",
   "pmchat.set.copynick": "Копировать с ником",
   "pmchat.set.on": "Вкл",
-  "pmchat.set.off": "Выкл"
+  "pmchat.set.off": "Выкл",
+  "pmchat.sticker.tab.stickers": "Стикеры",
+  "pmchat.sticker.tab.gifs": "Гифки",
+  "pmchat.sticker.norecent": "Недавних нет",
+  "pmchat.sticker.empty": "Пусто — киньте png/gif в pmchat-stickers"
 }

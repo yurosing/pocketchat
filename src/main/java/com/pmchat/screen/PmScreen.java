@@ -359,6 +359,19 @@ public class PmScreen extends Screen {
 
         boolean isGlobal = isFeedTab();
         if (selected != null && !statsMode && !isGlobal) {
+            // Стикеры/гифки
+            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 154, py + 6, 18, 14,
+                    Text.literal("▦"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFE8A0C8, btn -> {
+                        stickerMode = !stickerMode;
+                        if (stickerMode) {
+                            loadStickerTabs();
+                            stickerScroll = 0;
+                            imageMode = false;
+                            pollMode = false;
+                            emojiMode = false;
+                        }
+                        rebuild();
+                    }));
             // Опрос (только личный чат)
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 132, py + 6, 18, 14,
                     Text.literal("▤"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
@@ -617,6 +630,139 @@ public class PmScreen extends Screen {
         }
     }
 
+    // ---------- Панель стикеров/гифок ----------
+
+    private boolean stickerMode = false;
+    private int stickerTab = 0;
+    private int stickerScroll = 0;
+    private final List<String> stickerTabs = new ArrayList<>();  // названия вкладок
+    private final List<Object[]> stickerCellRects = new ArrayList<>();
+    private final List<Object[]> stickerTabRects = new ArrayList<>();
+
+    private static Path stickersRoot() {
+        Path dir = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("pmchat-stickers");
+        try {
+            Files.createDirectories(dir);
+        } catch (Exception ignored) {
+        }
+        return dir;
+    }
+
+    private static boolean isSticker(Path p, boolean gif) {
+        String n = p.getFileName().toString().toLowerCase(Locale.ROOT);
+        return gif ? n.endsWith(".gif") : n.endsWith(".png");
+    }
+
+    /** Собирает список вкладок: Недавние, Стикеры, Гифки + подпапки-паки. */
+    private void loadStickerTabs() {
+        stickerTabs.clear();
+        stickerTabs.add("★");       // 0 — недавние
+        stickerTabs.add("stickers"); // 1 — png из корня
+        stickerTabs.add("gifs");     // 2 — gif из корня
+        try (Stream<Path> s = Files.list(stickersRoot())) {
+            s.filter(Files::isDirectory).map(p -> p.getFileName().toString()).sorted()
+                    .forEach(stickerTabs::add); // 3+ — паки
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Файлы для текущей вкладки. */
+    private List<Path> stickersForTab() {
+        List<Path> out = new ArrayList<>();
+        if (stickerTab == 0) { // недавние
+            for (String p : config.recentStickers) {
+                Path path = Path.of(p);
+                if (Files.exists(path)) out.add(path);
+            }
+            return out;
+        }
+        if (stickerTab == 1 || stickerTab == 2) { // стикеры / гифки из корня
+            boolean gif = stickerTab == 2;
+            try (Stream<Path> s = Files.list(stickersRoot())) {
+                s.filter(Files::isRegularFile).filter(p -> isSticker(p, gif)).sorted().forEach(out::add);
+            } catch (Exception ignored) {
+            }
+            return out;
+        }
+        // Пак-подпапка
+        String pack = stickerTabs.get(stickerTab);
+        try (Stream<Path> s = Files.list(stickersRoot().resolve(pack))) {
+            s.filter(Files::isRegularFile)
+                    .filter(p -> isSticker(p, false) || isSticker(p, true)).sorted().forEach(out::add);
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    /** Панель стикеров: вкладки сверху + сетка превью. */
+    private void renderStickerPanel(DrawContext context, int mouseX, int mouseY, int top, int bottom) {
+        stickerCellRects.clear();
+        stickerTabRects.clear();
+        int x0 = px + LEFT_W + 2;
+        int x1 = px + PANEL_W - 2;
+        context.fill(x0, top, x1, bottom, PANEL_BG);
+
+        // Ряд вкладок
+        int tx = x0 + 4;
+        int ty = top + 3;
+        for (int i = 0; i < stickerTabs.size(); i++) {
+            String label = switch (i) {
+                case 0 -> "★";
+                case 1 -> Text.translatable("pmchat.sticker.tab.stickers").getString();
+                case 2 -> Text.translatable("pmchat.sticker.tab.gifs").getString();
+                default -> stickerTabs.get(i);
+            };
+            int w = textRenderer.getWidth(label) + 8;
+            if (tx + w > x1 - 4) break;
+            boolean active = i == stickerTab;
+            context.fill(tx, ty, tx + w, ty + 12, active ? ROW_SELECTED : ROW_HOVER);
+            context.drawText(textRenderer, label, tx + 4, ty + 2, active ? 0xFFF0C34E : NAME_TEXT, false);
+            stickerTabRects.add(new Object[]{tx, ty, w, 12, i});
+            tx += w + 3;
+        }
+
+        // Сетка превью
+        List<Path> items = stickersForTab();
+        int cell = 30, pad = 4;
+        int cols = Math.max(1, (x1 - x0 - pad) / (cell + pad));
+        int gridTop = top + 18;
+        int rows = Math.max(0, (bottom - gridTop - pad) / (cell + pad));
+        int maxScroll = Math.max(0, (items.size() + cols - 1) / cols - rows);
+        stickerScroll = Math.max(0, Math.min(stickerScroll, maxScroll));
+
+        if (items.isEmpty()) {
+            context.drawText(textRenderer, Text.translatable(stickerTab == 0
+                    ? "pmchat.sticker.norecent" : "pmchat.sticker.empty"),
+                    x0 + 6, gridTop + 4, SUBTLE, false);
+            return;
+        }
+
+        int start = stickerScroll * cols;
+        int idx = start;
+        for (int r = 0; r < rows && idx < items.size(); r++) {
+            for (int c = 0; c < cols && idx < items.size(); c++, idx++) {
+                Path file = items.get(idx);
+                int cxp = x0 + pad + c * (cell + pad);
+                int cyp = gridTop + pad + r * (cell + pad);
+                boolean hov = mouseX >= cxp && mouseX < cxp + cell && mouseY >= cyp && mouseY < cyp + cell;
+                context.fill(cxp - 1, cyp - 1, cxp + cell + 1, cyp + cell + 1, hov ? ROW_SELECTED : 0xFF15303D);
+                PmImages.Entry e = PmImages.loadLocal(file.toAbsolutePath().toString(), file);
+                if (e.state == PmImages.State.READY && e.currentTexture() != null && e.width > 0) {
+                    float sc = Math.min((float) cell / e.width, (float) cell / e.height);
+                    int w = Math.max(1, Math.round(e.width * sc));
+                    int h = Math.max(1, Math.round(e.height * sc));
+                    context.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(),
+                            cxp + (cell - w) / 2, cyp + (cell - h) / 2, 0f, 0f, w, h, e.width, e.height, e.width, e.height);
+                }
+                stickerCellRects.add(new Object[]{cxp, cyp, cell, cell, file});
+            }
+        }
+        if (maxScroll > 0) {
+            String pg = (stickerScroll + 1) + "/" + (maxScroll + 1);
+            context.drawText(textRenderer, pg, x1 - 6 - textRenderer.getWidth(pg), top + 5, SUBTLE, false);
+        }
+    }
+
     private void loadStickers() {
         File dir = new File(MinecraftClient.getInstance().runDirectory, "config/pmchat-stickers");
         if (!dir.isDirectory()) {
@@ -639,6 +785,7 @@ public class PmScreen extends Screen {
     /** Стикер: одноразовая загрузка на хостинг с кэшем id в конфиге. */
     private void sendSticker(Path sticker) {
         String name = sticker.getFileName().toString();
+        config.pushRecentSticker(sticker.toAbsolutePath().toString());
         String cached = config.stickerCache.get(name);
         if (cached != null) {
             int sep = cached.indexOf('|');
@@ -646,6 +793,7 @@ public class PmScreen extends Screen {
             String id = sep > 0 ? cached.substring(sep + 1) : cached;
             PmChatClient.sendMessage(selected, com.pmchat.client.PmWire.img(code, id));
             imageMode = false;
+            stickerMode = false;
             msgScroll = 0;
             planeAt = System.currentTimeMillis();
             rebuild();
@@ -665,6 +813,7 @@ public class PmScreen extends Screen {
                         }
                         PmChatClient.sendMessage(target, com.pmchat.client.PmWire.img(res[0], res[1]));
                         imageMode = false;
+                        stickerMode = false;
                         msgScroll = 0;
                         planeAt = System.currentTimeMillis();
                     } else {
@@ -1081,6 +1230,11 @@ public class PmScreen extends Screen {
             context.fill(px + LEFT_W + 1, areaTop, px + PANEL_W - 1, py + PANEL_H - 2, PANEL_BG);
             context.drawText(textRenderer, Text.translatable("pmchat.poll.title"),
                     px + LEFT_W + 8, areaTop + 2, 0xFF9CC4DC, false);
+            return;
+        }
+
+        if (stickerMode) {
+            renderStickerPanel(context, mouseX, mouseY, areaTop, py + PANEL_H - 4);
             return;
         }
 
@@ -1867,6 +2021,25 @@ public class PmScreen extends Screen {
             }
             return true;
         }
+        // Панель стикеров: вкладки и ячейки
+        if (stickerMode) {
+            for (Object[] r : stickerTabRects) {
+                int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
+                if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
+                    stickerTab = (int) r[4];
+                    stickerScroll = 0;
+                    return true;
+                }
+            }
+            for (Object[] r : stickerCellRects) {
+                int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
+                if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
+                    if (!uploading) sendSticker((Path) r[4]);
+                    return true;
+                }
+            }
+            return true; // клик внутри панели — не пропускаем дальше
+        }
         // Голосование в опросе
         if (!imageMode && !statsMode && click.button() == 0) {
             for (Object[] r : pollOptRects) {
@@ -2019,6 +2192,11 @@ public class PmScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
         if (vertical != 0) {
+            if (stickerMode && mouseX >= px + LEFT_W) {
+                stickerScroll -= (int) Math.signum(vertical);
+                if (stickerScroll < 0) stickerScroll = 0;
+                return true;
+            }
             if (mouseX < px + LEFT_W && mouseX >= px) {
                 listScroll -= (int) Math.signum(vertical);
                 return true;

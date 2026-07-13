@@ -160,6 +160,16 @@ public class PmConfig {
     /** Кэш загруженных стикеров: имя файла -> id на хостинге. */
     public Map<String, String> stickerCache = new HashMap<>();
 
+    /** Недавно использованные стикеры/гифки (абсолютные пути), свежие в начале. */
+    public List<String> recentStickers = new ArrayList<>();
+
+    public void pushRecentSticker(String path) {
+        recentStickers.remove(path);
+        recentStickers.add(0, path);
+        while (recentStickers.size() > 20) recentStickers.remove(recentStickers.size() - 1);
+        save();
+    }
+
     /** Закреплённое сообщение в диалоге: ник собеседника -> хэш текста. */
     public Map<String, String> pins = new HashMap<>();
 
@@ -222,6 +232,7 @@ public class PmConfig {
                     if (cfg.stickerCache == null) cfg.stickerCache = new HashMap<>();
                     if (cfg.pins == null) cfg.pins = new HashMap<>();
                     if (cfg.contacts == null) cfg.contacts = new ArrayList<>();
+                    if (cfg.recentStickers == null) cfg.recentStickers = new ArrayList<>();
                     if (cfg.hostOverrides == null) cfg.hostOverrides = new HashMap<>();
                     if (cfg.uploadOrder == null || cfg.uploadOrder.isBlank()
                             || cfg.uploadOrder.equals("q,l,x,c")
