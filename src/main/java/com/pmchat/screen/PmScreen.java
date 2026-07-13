@@ -185,22 +185,36 @@ public class PmScreen extends Screen {
     // Ответ-цитата и эмодзи
     private PmMessage replyTarget = null;
     private boolean emojiMode = false;
-    private static final String[] EMOJIS = {
-            "☺", "☹", "❤", "★", "☀", "⚡", "♪", "♥",
-            "⚔", "☠", "✔", "✖", "✉", "☕", "❄", "☾",
-            "⛏", "⚒", "⚑", "☯", "♨", "⛄", "☄", "➤"
+    private int emojiCat = 0;
+    // Категории эмодзи (только BMP-символы, которые рендерит шрифт Minecraft)
+    private static final String[] EMOJI_CAT_ICONS = {"☺", "♥", "→", "☀", "⚙"};
+    private static final String[][] EMOJI_GROUPS = {
+            // Лица и жесты
+            {"☺", "☻", "☹", "✌", "✊", "✋", "✔", "✖", "♡", "♥", "❤", "❣", "☮", "☯", "웃", "유"},
+            // Сердца и звёзды
+            {"♥", "❤", "♡", "❣", "★", "☆", "✦", "✧", "✩", "✪", "✫", "✬", "✭", "✮", "✯", "✰"},
+            // Стрелки
+            {"←", "↑", "→", "↓", "↔", "↕", "↖", "↗", "↘", "↙", "⇐", "⇒", "⇑", "⇓", "➤", "➜"},
+            // Погода и природа
+            {"☀", "☁", "☂", "☃", "☄", "☾", "☽", "❄", "❅", "❆", "⚡", "✿", "❀", "⛄", "☘", "♨"},
+            // Разное
+            {"⚔", "☠", "⛏", "⚒", "⚑", "⚐", "✉", "☕", "♪", "♫", "♬", "⌛", "⚓", "⚙", "☎", "✈"}
     };
 
     private final List<Object[]> rowRects = new ArrayList<>(); // x,y,w,h,name
     private final List<Object[]> shotRects = new ArrayList<>(); // x,y,w,h,path,isSticker
     private final List<Object[]> bubbleRects = new ArrayList<>(); // x,y,w,h,msg
     private final List<Object[]> emojiRects = new ArrayList<>(); // x,y,w,h,emoji
+    private final List<Object[]> emojiCatRects = new ArrayList<>(); // x,y,w,h,catIndex
     private int replyCancelX = -1, replyCancelY = -1;
 
     // Контекстное меню (ПКМ по сообщению, как в Telegram)
     private PmMessage ctxMsg = null;
     private int ctxX, ctxY;
     private final List<Object[]> ctxRects = new ArrayList<>(); // x,y,w,h,action
+
+    // Просмотр фото на весь экран
+    private PmImages.Entry fullscreenImg = null;
 
     public PmScreen() {
         super(Text.translatable("screen.pmchat.title"));
@@ -674,6 +688,53 @@ public class PmScreen extends Screen {
                 copiedAt = -1;
             }
         }
+
+        // Фото на весь экран — поверх всего
+        if (fullscreenImg != null) {
+            renderFullscreenImage(context);
+        }
+    }
+
+    /** Затемнённый оверлей с картинкой, вписанной в окно. */
+    private void renderFullscreenImage(DrawContext context) {
+        PmImages.Entry e = fullscreenImg;
+        context.fill(0, 0, width, height, 0xE6000000);
+        if (e.state != PmImages.State.READY || e.currentTexture() == null || e.width <= 0 || e.height <= 0) {
+            return;
+        }
+        float scale = Math.min((width - 40f) / e.width, (height - 60f) / e.height);
+        scale = Math.min(scale, 6f); // не раздуваем крошечные картинки чрезмерно
+        int w = Math.max(1, Math.round(e.width * scale));
+        int h = Math.max(1, Math.round(e.height * scale));
+        int ix = (width - w) / 2;
+        int iy = (height - h) / 2;
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy,
+                0f, 0f, w, h, e.width, e.height, e.width, e.height);
+        Text hint = Text.translatable("pmchat.image.close");
+        context.drawText(textRenderer, hint, (width - textRenderer.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
+    }
+
+    /**
+     * Рисует голову-скин игрока (если он онлайн и скин загружен),
+     * иначе — цветной квадрат с первой буквой ника.
+     */
+    private void drawAvatar(DrawContext context, String name, int x, int y, int size) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        net.minecraft.client.network.PlayerListEntry entry =
+                mc.getNetworkHandler() != null ? mc.getNetworkHandler().getPlayerListEntry(name) : null;
+        if (entry != null && entry.getSkinTextures() != null) {
+            try {
+                net.minecraft.client.gui.PlayerSkinDrawer.draw(context, entry.getSkinTextures(), x, y, size);
+                return;
+            } catch (Throwable ignored) {
+            }
+        }
+        // Фолбэк: цветной фон + буква
+        int bg = nameColor(name);
+        context.fill(x, y, x + size, y + size, (0xFF << 24) | (bg & 0x00FFFFFF));
+        String letter = name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT);
+        context.drawText(textRenderer, letter,
+                x + size / 2 - textRenderer.getWidth(letter) / 2, y + size / 2 - 4, 0xFF1A1A1A, false);
     }
 
     private String query() {
@@ -768,12 +829,14 @@ public class PmScreen extends Screen {
             }
 
             int unread = history.unreadCount(name);
-            // Индикатор мода: зелёная точка — у игрока есть pmchat, серая — неизвестно
+            // Аватарка-голова слева
+            drawAvatar(context, name, px + 4, y + 4, 16);
+            // Индикатор мода: зелёная точка в углу аватарки
             boolean hasMod = config.isModUser(name);
-            context.drawText(textRenderer, "●", px + 6, y + 4, hasMod ? 0xFF6FBF8B : SUBTLE, false);
-            int nameMax = LEFT_W - 23 - (unread > 0 ? 16 : 0);
+            context.fill(px + 16, y + 14, px + 20, y + 18, hasMod ? 0xFF6FBF8B : SUBTLE);
+            int nameMax = LEFT_W - 30 - (unread > 0 ? 16 : 0);
             String shownName = trim(name, nameMax);
-            context.drawText(textRenderer, shownName, px + 15, y + 4, NAME_TEXT, false);
+            context.drawText(textRenderer, shownName, px + 23, y + 3, NAME_TEXT, false);
 
             PmMessage last = history.lastMessage(name);
             if (last != null) {
@@ -781,7 +844,7 @@ public class PmScreen extends Screen {
                         ? "$ " + groupDigits(last.money)
                         : PmChatClient.previewOf(last.text != null ? last.text : "");
                 String preview = (last.out ? "→ " : "") + body;
-                context.drawText(textRenderer, trim(preview, LEFT_W - 14), px + 7, y + 14, PREVIEW_TEXT, false);
+                context.drawText(textRenderer, trim(preview, LEFT_W - 30), px + 23, y + 14, PREVIEW_TEXT, false);
             }
 
             if (unread > 0) {
@@ -1134,25 +1197,45 @@ public class PmScreen extends Screen {
     /** Сетка эмодзи над полем ввода. */
     private void renderEmojiGrid(DrawContext context, int mouseX, int mouseY) {
         emojiRects.clear();
+        emojiCatRects.clear();
         if (!emojiMode || selected == null || moneyMode || statsMode || imageMode) return;
         int cols = 8;
         int cell = 13;
+        String[] group = EMOJI_GROUPS[Math.floorMod(emojiCat, EMOJI_GROUPS.length)];
+        int rows = (group.length + cols - 1) / cols;
         int gw = cols * cell + 6;
-        int gh = (EMOJIS.length / cols) * cell + 6;
+        int gh = 14 + rows * cell + 6; // 14 — ряд категорий
         int gx = px + LEFT_W + 8;
         int gy = py + PANEL_H - 28 - gh - (replyTarget != null ? 12 : 0);
 
         context.fill(gx, gy, gx + gw, gy + gh, EMOJI_BG);
         context.drawStrokedRectangle(gx, gy, gw, gh, DIVIDER);
-        for (int i = 0; i < EMOJIS.length; i++) {
+
+        // Ряд категорий
+        int catCell = gw / EMOJI_CAT_ICONS.length;
+        for (int c = 0; c < EMOJI_CAT_ICONS.length; c++) {
+            int cx = gx + c * catCell;
+            boolean active = c == Math.floorMod(emojiCat, EMOJI_GROUPS.length);
+            boolean hov = mouseX >= cx && mouseX < cx + catCell && mouseY >= gy && mouseY < gy + 13;
+            if (active || hov) {
+                context.fill(cx, gy, cx + catCell, gy + 13, active ? ROW_SELECTED : ROW_HOVER);
+            }
+            context.drawText(textRenderer, EMOJI_CAT_ICONS[c], cx + catCell / 2 - 3, gy + 3,
+                    active ? 0xFFF0C34E : NAME_TEXT, false);
+            emojiCatRects.add(new Object[]{cx, gy, catCell, 13, c});
+        }
+        context.fill(gx + 2, gy + 13, gx + gw - 2, gy + 14, DIVIDER);
+
+        // Сетка глифов текущей категории
+        for (int i = 0; i < group.length; i++) {
             int ex = gx + 3 + (i % cols) * cell;
-            int ey = gy + 3 + (i / cols) * cell;
+            int ey = gy + 16 + (i / cols) * cell;
             boolean hovered = mouseX >= ex && mouseX < ex + cell && mouseY >= ey && mouseY < ey + cell;
             if (hovered) {
                 context.fill(ex, ey, ex + cell, ey + cell, ROW_SELECTED);
             }
-            context.drawText(textRenderer, EMOJIS[i], ex + 2, ey + 2, 0xFFEDF3F0, false);
-            emojiRects.add(new Object[]{ex, ey, cell, cell, EMOJIS[i]});
+            context.drawText(textRenderer, group[i], ex + 2, ey + 2, 0xFFEDF3F0, false);
+            emojiRects.add(new Object[]{ex, ey, cell, cell, group[i]});
         }
     }
 
@@ -1395,6 +1478,11 @@ public class PmScreen extends Screen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
+        // Полноэкранное фото — любой клик закрывает
+        if (fullscreenImg != null) {
+            fullscreenImg = null;
+            return true;
+        }
         // Открытое контекстное меню перехватывает любой клик
         if (ctxMsg != null) {
             PmMessage msg = ctxMsg;
@@ -1468,6 +1556,14 @@ public class PmScreen extends Screen {
                 }
             }
         }
+        // Переключение категории эмодзи
+        for (Object[] r : emojiCatRects) {
+            int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
+            if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
+                emojiCat = (int) r[4];
+                return true;
+            }
+        }
         // Эмодзи — вставка в поле ввода
         for (Object[] r : emojiRects) {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
@@ -1496,6 +1592,15 @@ public class PmScreen extends Screen {
                         ctxMsg = msg;
                         ctxX = (int) click.x();
                         ctxY = (int) click.y();
+                        return true;
+                    }
+                    // Картинка — открыть на весь экран
+                    String[] imgRef = imageIdOf(msg);
+                    if (imgRef != null) {
+                        PmImages.Entry e = PmImages.get(imgRef[0], imgRef[1]);
+                        if (e.state == PmImages.State.READY && e.currentTexture() != null) {
+                            fullscreenImg = e;
+                        }
                         return true;
                     }
                     String[] voice = voiceOf(msg);
@@ -1621,6 +1726,11 @@ public class PmScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        // Esc закрывает полноэкранное фото, не выходя из чата
+        if (fullscreenImg != null && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
+            fullscreenImg = null;
+            return true;
+        }
         // Ctrl+V: если в буфере картинка — отправляем её как фото
         if (selected != null && !statsMode && !uploading
                 && input.getKeycode() == GLFW.GLFW_KEY_V

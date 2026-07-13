@@ -72,5 +72,6 @@
   "pmchat.stt.error": "Speech recognition error",
   "pmchat.set.sttlang": "Speech language",
   "pmchat.set.sttlang.ru": "Russian",
-  "pmchat.set.sttlang.en": "English"
+  "pmchat.set.sttlang.en": "English",
+  "pmchat.image.close": "Click or Esc to close"
 }
