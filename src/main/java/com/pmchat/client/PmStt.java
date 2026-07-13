@@ -188,6 +188,10 @@ public final class PmStt {
 
     /** Скачивает (при необходимости) и загружает модель в фоне. */
     public static void ensureModelAsync() {
+        // Если модель загружена для другого языка — сначала выгружаем её
+        if (state == State.READY && model != null && loadedLang != currentLang()) {
+            onLanguageChanged(); // переводит state в NONE
+        }
         if (state == State.READY || state == State.DOWNLOADING
                 || state == State.UNPACKING || state == State.LOADING) {
             return;
@@ -241,18 +245,43 @@ public final class PmStt {
         Files.createDirectories(root);
         Path zip = root.resolve("model.zip");
 
+        // Перебираем зеркала: GitHub первым, alphacephei запасным
+        String[] mirrors = modelUrl(lang).split(",");
+        Exception last = null;
+        for (String mirror : mirrors) {
+            mirror = mirror.trim();
+            if (mirror.isEmpty()) continue;
+            try {
+                downloadZip(mirror, zip);
+                validateZip(zip); // битый/обрезанный — исключение, идём к следующему зеркалу
+                unpackZip(zip, root);
+                Files.deleteIfExists(zip);
+                return;
+            } catch (Exception e) {
+                PmChatClient.LOGGER.warn("STT mirror failed [{}]: {}", mirror, e.toString());
+                last = e;
+                try {
+                    Files.deleteIfExists(zip);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        throw last != null ? last : new IllegalStateException("no model mirrors configured");
+    }
+
+    private static void downloadZip(String url, Path zip) throws Exception {
         HttpClient http = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
+                .connectTimeout(Duration.ofSeconds(15))
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
         HttpResponse<InputStream> response = http.send(HttpRequest.newBuilder()
-                        .uri(URI.create(modelUrl(lang)))
-                        .timeout(Duration.ofMinutes(10))
+                        .uri(URI.create(url))
+                        .timeout(Duration.ofMinutes(15))
                         .header("User-Agent", "pmchat-mod/1.0")
                         .GET().build(),
                 HttpResponse.BodyHandlers.ofInputStream());
         if (response.statusCode() != 200) {
-            throw new IllegalStateException("download HTTP " + response.statusCode());
+            throw new IllegalStateException("HTTP " + response.statusCode());
         }
         long total = response.headers().firstValueAsLong("Content-Length").orElse(-1);
 
@@ -273,7 +302,27 @@ public final class PmStt {
                 }
             }
         }
+    }
 
+    /** Проверяет, что скачан настоящий, полный zip (обрезанный/HTML — исключение). */
+    private static void validateZip(Path zip) throws Exception {
+        if (!Files.exists(zip) || Files.size(zip) < 1_000_000) {
+            throw new IllegalStateException("zip too small / not downloaded");
+        }
+        try (ZipInputStream zin = new ZipInputStream(new BufferedInputStream(Files.newInputStream(zip)))) {
+            int entries = 0;
+            byte[] skip = new byte[65536];
+            for (ZipEntry e; (e = zin.getNextEntry()) != null; ) {
+                while (zin.read(skip) > 0) { /* дочитываем — ловим обрыв в конце архива */ }
+                entries++;
+            }
+            if (entries == 0) {
+                throw new IllegalStateException("empty or corrupt zip");
+            }
+        }
+    }
+
+    private static void unpackZip(Path zip, Path root) throws Exception {
         setState(State.UNPACKING);
         try (ZipInputStream zin = new ZipInputStream(new BufferedInputStream(Files.newInputStream(zip)))) {
             ZipEntry entry;
@@ -288,7 +337,6 @@ public final class PmStt {
                 }
             }
         }
-        Files.deleteIfExists(zip);
     }
 
     // ---------- Распознавание ----------

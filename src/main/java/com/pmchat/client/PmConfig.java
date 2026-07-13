@@ -87,9 +87,16 @@ public class PmConfig {
     /** Язык распознавания речи: 0 — русский, 1 — английский. */
     public int sttLang = 0;
 
-    /** Модели Vosk по языкам (каждая качается один раз, ~40–45 МБ). */
-    public String sttModelUrlRu = "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip";
-    public String sttModelUrlEn = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip";
+    /**
+     * Модели Vosk по языкам — список зеркал через запятую (пробуются по
+     * порядку). GitHub-зеркало первым: alphacephei.com часто недоступен.
+     */
+    public String sttModelUrlRu =
+            "https://github.com/yurosing/pocketchat/releases/download/models/vosk-model-small-ru-0.22.zip,"
+            + "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip";
+    public String sttModelUrlEn =
+            "https://github.com/yurosing/pocketchat/releases/download/models/vosk-model-small-en-us-0.15.zip,"
+            + "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip";
 
     /** @deprecated Заменено на sttModelUrlRu/sttModelUrlEn. */
     @Deprecated
@@ -184,6 +191,13 @@ public class PmConfig {
                         cfg.uploadOrder = "k,x,q,c"; // миграция со старого порядка
                     }
                     if (cfg.channels == null || cfg.channels.isEmpty()) cfg.channels = defaultChannels();
+                    // Миграция: одиночный alphacephei-URL -> список зеркал с GitHub
+                    if (cfg.sttModelUrlRu == null || !cfg.sttModelUrlRu.contains(",")) {
+                        cfg.sttModelUrlRu = new PmConfig().sttModelUrlRu;
+                    }
+                    if (cfg.sttModelUrlEn == null || !cfg.sttModelUrlEn.contains(",")) {
+                        cfg.sttModelUrlEn = new PmConfig().sttModelUrlEn;
+                    }
                     if (cfg.textScalePct < 60 || cfg.textScalePct > 150) cfg.textScalePct = 100;
                     if (cfg.notifyVolume < 5 || cfg.notifyVolume > 100) cfg.notifyVolume = 100;
                     return cfg;
