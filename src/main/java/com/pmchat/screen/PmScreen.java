@@ -325,20 +325,17 @@ public class PmScreen extends Screen {
         py = (height - PANEL_H) / 2;
 
         // Смена размера окна
-        addDrawableChild(FlatButton.centered(textRenderer, px + LEFT_W - 22, py + 5, 16, 13,
-                Text.literal("⤢"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
-                    config.uiScale = (config.uiScale + 1) % SIZES.length;
-                    config.save();
-                    rebuild();
-                }));
+        addDrawableChild(icon(px + LEFT_W - 22, py + 5, 16, 13, PmIcons.SIZE, WBTN_TEXT, "pmchat.tip.size", btn -> {
+            config.uiScale = (config.uiScale + 1) % SIZES.length;
+            config.save();
+            rebuild();
+        }));
 
         // Настройки и «не беспокоить» (внизу слева)
-        addDrawableChild(FlatButton.centered(textRenderer, px + 6, py + PANEL_H - 19, 16, 13,
-                Text.literal("⚙"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn ->
-                        MinecraftClient.getInstance().setScreen(new PmSettingsScreen(this))));
-        addDrawableChild(FlatButton.centered(textRenderer, px + 26, py + PANEL_H - 19, 16, 13,
-                Text.literal("♪"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
-                config.dnd ? 0xFFE07A6A : 0xFF8FD8A8, btn -> {
+        addDrawableChild(icon(px + 6, py + PANEL_H - 19, 16, 13, PmIcons.SETTINGS, WBTN_TEXT, "pmchat.tip.settings", btn ->
+                MinecraftClient.getInstance().setScreen(new PmSettingsScreen(this))));
+        addDrawableChild(icon(px + 26, py + PANEL_H - 19, 16, 13, PmIcons.BELL,
+                config.dnd ? 0xFFE07A6A : 0xFF8FD8A8, "pmchat.tip.dnd", btn -> {
                     config.dnd = !config.dnd;
                     config.save();
                     rebuild();
@@ -360,50 +357,49 @@ public class PmScreen extends Screen {
         boolean isGlobal = isFeedTab();
         if (selected != null && !statsMode && !isGlobal) {
             // Стикеры/гифки
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 154, py + 6, 18, 14,
-                    Text.literal("▦"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFE8A0C8, btn -> {
-                        stickerMode = !stickerMode;
-                        if (stickerMode) {
-                            loadStickerTabs();
-                            stickerScroll = 0;
-                            imageMode = false;
-                            pollMode = false;
-                            emojiMode = false;
-                        }
-                        rebuild();
-                    }));
+            addDrawableChild(icon(px + PANEL_W - 154, py + 6, 18, 14, PmIcons.STICKERS, 0xFFE8A0C8, "pmchat.tip.stickers", btn -> {
+                boolean was = stickerMode;
+                closeModes();
+                stickerMode = !was;
+                if (stickerMode) {
+                    loadStickerTabs();
+                    stickerScroll = 0;
+                }
+                rebuild();
+            }));
             // Опрос (только личный чат)
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 132, py + 6, 18, 14,
-                    Text.literal("▤"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
-                        pollMode = !pollMode;
-                        rebuild();
-                    }));
+            addDrawableChild(icon(px + PANEL_W - 132, py + 6, 18, 14, PmIcons.POLL, 0xFF9CC4DC, "pmchat.tip.poll", btn -> {
+                boolean was = pollMode;
+                closeModes();
+                pollMode = !was;
+                rebuild();
+            }));
             // Кнопки в шапке чата: голос, фото/стикеры, деньги, статистика
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 110, py + 6, 18, 14,
-                    Text.literal(com.pmchat.client.PmVoice.isRecording() ? "■" : "●"),
-                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
-                    com.pmchat.client.PmVoice.isRecording() ? 0xFFE07A6A : 0xFFCB8A8A, btn -> toggleVoice()));
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 88, py + 6, 18, 14,
-                    Text.literal("✚"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B, btn -> {
-                        imageMode = !imageMode;
-                        uploadFailed = false;
-                        if (imageMode) {
-                            loadScreenshots();
-                            loadStickers();
-                        }
-                        rebuild();
-                    }));
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 66, py + 6, 18, 14,
-                    Text.literal("$"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFF0C34E, btn -> {
-                        moneyMode = !moneyMode;
-                        rebuild();
-                    }));
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 44, py + 6, 18, 14,
-                    Text.literal("≡"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
-                        statsMode = true;
-                        clearConfirm = false;
-                        rebuild();
-                    }));
+            addDrawableChild(icon(px + PANEL_W - 110, py + 6, 18, 14, PmIcons.VOICE,
+                    com.pmchat.client.PmVoice.isRecording() ? 0xFFE07A6A : 0xFFCB8A8A,
+                    "pmchat.tip.voice", btn -> toggleVoice()));
+            addDrawableChild(icon(px + PANEL_W - 88, py + 6, 18, 14, PmIcons.PHOTO, 0xFF6FBF8B, "pmchat.tip.photo", btn -> {
+                boolean was = imageMode;
+                closeModes();
+                imageMode = !was;
+                if (imageMode) {
+                    loadScreenshots();
+                    loadStickers();
+                }
+                rebuild();
+            }));
+            addDrawableChild(icon(px + PANEL_W - 66, py + 6, 18, 14, PmIcons.MONEY, 0xFFF0C34E, "pmchat.tip.money", btn -> {
+                boolean was = moneyMode;
+                closeModes();
+                moneyMode = !was;
+                rebuild();
+            }));
+            addDrawableChild(icon(px + PANEL_W - 44, py + 6, 18, 14, PmIcons.STATS, WBTN_TEXT, "pmchat.tip.stats", btn -> {
+                closeModes();
+                statsMode = true;
+                clearConfirm = false;
+                rebuild();
+            }));
 
             int inputY = py + PANEL_H - 24;
             if (moneyMode) {
@@ -418,10 +414,8 @@ public class PmScreen extends Screen {
                 addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 66, inputY, 58, 16,
                         Text.literal("$ ➤"), 0xFF8A6A20, 0xFF9A7826, 0xFFB9862E, MONEY_TEXT, btn -> doPay()));
             } else {
-                addDrawableChild(FlatButton.centered(textRenderer, px + LEFT_W + 8, inputY, 16, 16,
-                        Text.literal("☺"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFF0C34E, btn -> {
-                            emojiMode = !emojiMode;
-                        }));
+                addDrawableChild(icon(px + LEFT_W + 8, inputY, 16, 16, PmIcons.EMOJI, 0xFFF0C34E, "pmchat.tip.emoji",
+                        btn -> { boolean was = emojiMode; closeModes(); emojiMode = !was; rebuild(); }));
                 addSttButton(inputY);
                 inputField = new TextFieldWidget(textRenderer, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
                         Text.translatable("pmchat.input.hint"));
@@ -449,10 +443,8 @@ public class PmScreen extends Screen {
         if (isGlobal) {
             // Общий чат: только эмодзи + поле + отправка
             int inputY = py + PANEL_H - 24;
-            addDrawableChild(FlatButton.centered(textRenderer, px + LEFT_W + 8, inputY, 16, 16,
-                    Text.literal("☺"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFF0C34E, btn -> {
-                        emojiMode = !emojiMode;
-                    }));
+            addDrawableChild(icon(px + LEFT_W + 8, inputY, 16, 16, PmIcons.EMOJI, 0xFFF0C34E, "pmchat.tip.emoji",
+                    btn -> { boolean was = emojiMode; closeModes(); emojiMode = !was; rebuild(); }));
             addSttButton(inputY);
             inputField = new TextFieldWidget(textRenderer, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
                     Text.translatable("pmchat.input.hint"));
@@ -512,8 +504,7 @@ public class PmScreen extends Screen {
 
         // Очистка ленты общего чата (без подтверждения — это кэш сессии)
         if (isGlobal && !statsMode) {
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 28, py + 6, 20, 14,
-                    Text.literal("✖"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFE07A6A, btn -> {
+            addDrawableChild(icon(px + PANEL_W - 28, py + 6, 20, 14, PmIcons.CLEAR, 0xFFE07A6A, "pmchat.tip.clear", btn -> {
                         if (PmChatClient.GLOBAL.equals(selected)) {
                             PmChatClient.clearGlobalChat();
                         } else if (channelId() != null) {
@@ -527,6 +518,25 @@ public class PmScreen extends Screen {
     }
 
     private boolean clearConfirm = false;
+
+    /** Закрывает все режимы-композеры (фото/опрос/стикеры/деньги/эмодзи) — чтобы не накладывались. */
+    private void closeModes() {
+        imageMode = false;
+        pollMode = false;
+        stickerMode = false;
+        moneyMode = false;
+        emojiMode = false;
+        uploadFailed = false;
+    }
+
+    /** Кнопка со своей пиксельной иконкой (PmIcons) и всплывающей подсказкой. */
+    private FlatButton icon(int x, int y, int w, int h, String[] bmp, int color, String tipKey,
+                            FlatButton.PressAction act) {
+        FlatButton b = FlatButton.centered(textRenderer, x, y, w, h, Text.translatable(tipKey),
+                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, color, act).withIcon(bmp);
+        b.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable(tipKey)));
+        return b;
+    }
 
     /** Кнопка распознавания речи: V — готов, %/… — загрузка модели, ■ — идёт запись. */
     private void addSttButton(int inputY) {
@@ -1060,6 +1070,11 @@ public class PmScreen extends Screen {
 
         int y = top;
 
+        // Заголовок секции «Каналы» (общий чат, избранное, серверные каналы)
+        context.drawText(textRenderer, Text.translatable("pmchat.section.channels").getString().toUpperCase(Locale.ROOT),
+                px + 7, y + 1, SUBTLE, false);
+        y += 10;
+
         // Закреплённый общий чат
         {
             boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + ROW_H;
@@ -1133,6 +1148,13 @@ public class PmScreen extends Screen {
             }
             rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, tabId});
             y += ROW_H;
+        }
+
+        // Заголовок секции «Личные» (переписки с игроками)
+        if (!names.isEmpty() && y + 10 <= bottom) {
+            context.drawText(textRenderer, Text.translatable("pmchat.section.chats").getString().toUpperCase(Locale.ROOT),
+                    px + 7, y + 1, SUBTLE, false);
+            y += 10;
         }
 
         for (int i = listScroll; i < names.size() && y + ROW_H <= bottom + 2; i++) {
@@ -1986,9 +2008,7 @@ public class PmScreen extends Screen {
                 }
                 msgScroll = 0;
                 statsMode = false;
-                moneyMode = false;
-                imageMode = false;
-                emojiMode = false;
+                closeModes();
                 replyTarget = null;
                 clearConfirm = false;
                 rebuild();

@@ -104,5 +104,18 @@
   "pmchat.sticker.norecent": "Недавних нет",
   "pmchat.sticker.empty": "Пусто — киньте png/gif в pmchat-stickers",
   "pmchat.saved": "Избранное",
-  "pmchat.menu.save": "В избранное"
+  "pmchat.menu.save": "В избранное",
+  "pmchat.section.channels": "Каналы",
+  "pmchat.section.chats": "Личные",
+  "pmchat.tip.size": "Размер окна",
+  "pmchat.tip.settings": "Настройки",
+  "pmchat.tip.dnd": "Не беспокоить",
+  "pmchat.tip.stickers": "Стикеры и гифки",
+  "pmchat.tip.poll": "Создать опрос",
+  "pmchat.tip.voice": "Голосовое сообщение",
+  "pmchat.tip.photo": "Отправить фото",
+  "pmchat.tip.money": "Перевести деньги",
+  "pmchat.tip.stats": "Статистика чата",
+  "pmchat.tip.emoji": "Эмодзи",
+  "pmchat.tip.clear": "Очистить ленту"
 }

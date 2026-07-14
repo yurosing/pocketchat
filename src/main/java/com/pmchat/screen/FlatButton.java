@@ -24,6 +24,8 @@ public class FlatButton extends ClickableWidget {
     private final int border;
     private final int textColor;
     private final boolean centered;
+    /** Если задан — вместо текста рисуется своя пиксельная иконка (см. PmIcons). */
+    private String[] iconBitmap;
 
     public FlatButton(TextRenderer textRenderer, int x, int y, int width, int height, Text message,
                        int bg, int bgHover, int border, int textColor, boolean centered, PressAction action) {
@@ -42,6 +44,12 @@ public class FlatButton extends ClickableWidget {
         return new FlatButton(textRenderer, x, y, width, height, message, bg, bgHover, border, textColor, true, action);
     }
 
+    /** Кнопка с собственной пиксельной иконкой вместо символа шрифта. */
+    public FlatButton withIcon(String[] bitmap) {
+        this.iconBitmap = bitmap;
+        return this;
+    }
+
     @Override
     public void onClick(Click click, boolean doubled) {
         action.onPress(this);
@@ -57,6 +65,11 @@ public class FlatButton extends ClickableWidget {
         int fill = isHovered() ? bgHover : bg;
         context.fill(x0, y0, x1, y1, fill);
         context.drawStrokedRectangle(x0, y0, getWidth(), getHeight(), border);
+
+        if (iconBitmap != null) {
+            PmIcons.draw(context, iconBitmap, x0, y0, getWidth(), getHeight(), textColor);
+            return;
+        }
 
         Text message = getMessage();
         int textY = y0 + (getHeight() - textRenderer.fontHeight) / 2;
