@@ -117,5 +117,10 @@
   "pmchat.tip.money": "Перевести деньги",
   "pmchat.tip.stats": "Статистика чата",
   "pmchat.tip.emoji": "Эмодзи",
-  "pmchat.tip.clear": "Очистить ленту"
+  "pmchat.tip.clear": "Очистить ленту",
+  "pmchat.menu.quotefrag": "Цитата фрагмента",
+  "pmchat.frag.title": "Выберите фрагмент",
+  "pmchat.frag.hint": "Клик — начало, ещё клик — конец",
+  "pmchat.frag.ok": "Цитировать",
+  "pmchat.frag.cancel": "Отмена"
 }

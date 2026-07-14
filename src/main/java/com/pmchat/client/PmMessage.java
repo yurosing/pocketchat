@@ -14,6 +14,9 @@ public class PmMessage {
     /** Хэш цитируемого сообщения ([re:hash]) или null. */
     public String replyTo;
 
+    /** Если цитируется не всё сообщение, а фрагмент — его текст (иначе null). */
+    public String replyFragment;
+
     /** Автор (только для общего чата; в ЛС null). */
     public String sender;
 

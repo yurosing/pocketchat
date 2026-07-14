@@ -184,6 +184,17 @@ public class PmScreen extends Screen {
 
     // Ответ-цитата и эмодзи
     private PmMessage replyTarget = null;
+    // Цитата фрагмента: выбранный кусок + его смещение в оригинале
+    private String replyFragText = null;
+    private int replyFragStart = -1, replyFragLen = 0;
+
+    // Оверлей выбора фрагмента по словам (клик — начало, клик — конец)
+    private PmMessage fragMsg = null;
+    private int fragWordFrom = -1, fragWordTo = -1;
+    private final List<String> fragWords = new ArrayList<>();
+    private final List<int[]> fragSpans = new ArrayList<>();       // charStart,charEnd в оригинале
+    private final List<Object[]> fragWordRects = new ArrayList<>(); // x,y,w,h,wordIndex
+    private int[] fragOkRect = null, fragCancelRect = null;
     private boolean emojiMode = false;
     private int emojiCat = 0;
     // Категории эмодзи (только BMP-символы, которые рендерит шрифт Minecraft)
@@ -599,8 +610,8 @@ public class PmScreen extends Screen {
             return;
         }
         String replyHash = replyTarget != null ? PmHistory.msgHash(replyTarget.text) : null;
-        PmChatClient.sendMessage(selected, text, replyHash);
-        replyTarget = null;
+        PmChatClient.sendMessage(selected, text, replyHash, replyFragStart, replyFragLen, replyFragText);
+        clearReply();
         emojiMode = false;
         inputField.setText("");
         inputText = "";
@@ -929,6 +940,7 @@ public class PmScreen extends Screen {
 
         renderPlane(context);
         renderCtxMenu(context, mouseX, mouseY);
+        renderFragSelector(context, mouseX, mouseY);
 
         // Всплывашка «Скопировано»
         if (copiedAt > 0) {
@@ -1601,9 +1613,107 @@ public class PmScreen extends Screen {
 
     private String quotedTextOf(PmMessage msg) {
         if (msg.replyTo == null || selected == null) return null;
+        // Цитата фрагмента — показываем именно выбранный кусок
+        if (msg.replyFragment != null && !msg.replyFragment.isBlank()) {
+            return "«" + PmChatClient.previewOf(msg.replyFragment) + "»";
+        }
         PmMessage quoted = history.findByHash(selected, msg.replyTo);
         if (quoted == null) return "…";
         return PmChatClient.previewOf(quoted.text != null ? quoted.text : "");
+    }
+
+    private void clearReply() {
+        replyTarget = null;
+        replyFragText = null;
+        replyFragStart = -1;
+        replyFragLen = 0;
+    }
+
+    /** Открывает оверлей выбора фрагмента: режем сообщение на слова. */
+    private void openFragSelector(PmMessage msg) {
+        if (msg == null || msg.text == null || msg.text.isBlank()) return;
+        fragMsg = msg;
+        fragWordFrom = -1;
+        fragWordTo = -1;
+        fragWords.clear();
+        fragSpans.clear();
+        Matcher m = Pattern.compile("\\S+").matcher(msg.text);
+        while (m.find()) {
+            fragWords.add(m.group());
+            fragSpans.add(new int[]{m.start(), m.end()});
+        }
+    }
+
+    /** Подтверждает выбор: формирует фрагмент-цитату и делает его целью ответа. */
+    private void confirmFrag() {
+        if (fragMsg == null || fragWordFrom < 0) return;
+        int lo = Math.min(fragWordFrom, fragWordTo);
+        int hi = Math.max(fragWordFrom, fragWordTo);
+        int cs = fragSpans.get(lo)[0];
+        int ce = fragSpans.get(hi)[1];
+        replyTarget = fragMsg;
+        replyFragStart = cs;
+        replyFragLen = ce - cs;
+        replyFragText = fragMsg.text.substring(cs, ce);
+        fragMsg = null;
+        rebuild();
+    }
+
+    /** Оверлей выбора фрагмента: слова сообщения, клик — начало, ещё клик — конец. */
+    private void renderFragSelector(DrawContext context, int mouseX, int mouseY) {
+        fragWordRects.clear();
+        fragOkRect = null;
+        fragCancelRect = null;
+        if (fragMsg == null) return;
+
+        int x0 = px + LEFT_W + 6, x1 = px + PANEL_W - 6;
+        int y0 = py + 22, y1 = py + PANEL_H - 6;
+        context.createNewRootLayer();
+        context.fill(px, py, px + PANEL_W, py + PANEL_H, 0x88000000);
+        context.fill(x0 + 1, y0, x1 - 1, y1, LEFT_BG);
+        context.fill(x0, y0 + 1, x1, y1 - 1, LEFT_BG);
+        context.drawStrokedRectangle(x0, y0, x1 - x0, y1 - y0, DIVIDER);
+
+        context.drawText(textRenderer, Text.translatable("pmchat.frag.title"), x0 + 6, y0 + 5, 0xFF9CC4DC, false);
+        context.drawText(textRenderer, Text.translatable("pmchat.frag.hint"), x0 + 6, y0 + 16, SUBTLE, false);
+
+        int lo = fragWordFrom < 0 ? -1 : Math.min(fragWordFrom, fragWordTo);
+        int hi = fragWordFrom < 0 ? -1 : Math.max(fragWordFrom, fragWordTo);
+        int wx = x0 + 6, wy = y0 + 28;
+        int lineH = textRenderer.fontHeight + 3;
+        int btnTop = y1 - 20;
+        for (int i = 0; i < fragWords.size(); i++) {
+            String w = fragWords.get(i);
+            int ww = textRenderer.getWidth(w) + 6;
+            if (wx + ww > x1 - 6) {
+                wx = x0 + 6;
+                wy += lineH;
+            }
+            if (wy + lineH > btnTop - 2) break; // не влезло — обрезаем
+            boolean sel = lo >= 0 && i >= lo && i <= hi;
+            boolean hov = mouseX >= wx && mouseX < wx + ww && mouseY >= wy && mouseY < wy + lineH;
+            if (sel) context.fill(wx, wy, wx + ww, wy + lineH, ROW_SELECTED);
+            else if (hov) context.fill(wx, wy, wx + ww, wy + lineH, ROW_HOVER);
+            context.drawText(textRenderer, w, wx + 3, wy + 2, sel ? 0xFFF0C34E : NAME_TEXT, false);
+            fragWordRects.add(new Object[]{wx, wy, ww, lineH, i});
+            wx += ww + 2;
+        }
+
+        // Кнопки
+        boolean ready = fragWordFrom >= 0;
+        int okW = 84, caW = 60;
+        int okX = x0 + 6, caX = okX + okW + 6, by = btnTop;
+        context.fill(okX, by, okX + okW, by + 16, ready ? ACCENT_BG : WBTN_BG);
+        context.drawStrokedRectangle(okX, by, okW, 16, ready ? ACCENT_BORDER : WBTN_BORDER);
+        Text okT = Text.translatable("pmchat.frag.ok");
+        context.drawText(textRenderer, okT, okX + okW / 2 - textRenderer.getWidth(okT) / 2, by + 4,
+                ready ? ACCENT_TEXT : SUBTLE, false);
+        context.fill(caX, by, caX + caW, by + 16, WBTN_BG);
+        context.drawStrokedRectangle(caX, by, caW, 16, WBTN_BORDER);
+        Text caT = Text.translatable("pmchat.frag.cancel");
+        context.drawText(textRenderer, caT, caX + caW / 2 - textRenderer.getWidth(caT) / 2, by + 4, WBTN_TEXT, false);
+        fragOkRect = new int[]{okX, by, okW, 16};
+        fragCancelRect = new int[]{caX, by, caW, 16};
     }
 
     /** Содержимое голосового пузыря: ▶/⏸, полоски и длительность. */
@@ -1637,7 +1747,8 @@ public class PmScreen extends Screen {
         int w = PANEL_W - LEFT_W - 16;
         context.fill(x, y, x + w, y + 11, ROW_HOVER);
         context.fill(x, y, x + 1, y + 11, 0xFF6FBF8B);
-        String label = "↩ " + PmChatClient.previewOf(replyTarget.text != null ? replyTarget.text : "");
+        String base = replyFragText != null ? replyFragText : (replyTarget.text != null ? replyTarget.text : "");
+        String label = "↩ " + PmChatClient.previewOf(base);
         context.drawText(textRenderer, trim(label, w - 20), x + 5, y + 2, 0xFF9CC4DC, false);
         context.drawText(textRenderer, "×", x + w - 9, y + 2, 0xFFE07A6A, false);
         replyCancelX = x + w - 12;
@@ -1933,6 +2044,34 @@ public class PmScreen extends Screen {
             fullscreenImg = null;
             return true;
         }
+        // Оверлей выбора фрагмента перехватывает клики
+        if (fragMsg != null) {
+            double cx = click.x(), cy = click.y();
+            if (fragOkRect != null && cx >= fragOkRect[0] && cx < fragOkRect[0] + fragOkRect[2]
+                    && cy >= fragOkRect[1] && cy < fragOkRect[1] + fragOkRect[3]) {
+                confirmFrag();
+                return true;
+            }
+            if (fragCancelRect != null && cx >= fragCancelRect[0] && cx < fragCancelRect[0] + fragCancelRect[2]
+                    && cy >= fragCancelRect[1] && cy < fragCancelRect[1] + fragCancelRect[3]) {
+                fragMsg = null;
+                return true;
+            }
+            for (Object[] r : fragWordRects) {
+                int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
+                if (cx >= rx && cx < rx + rw && cy >= ry && cy < ry + rh) {
+                    int i = (int) r[4];
+                    if (fragWordFrom < 0) {
+                        fragWordFrom = i;
+                        fragWordTo = i;
+                    } else {
+                        fragWordTo = i;
+                    }
+                    return true;
+                }
+            }
+            return true; // клик внутри оверлея — дальше не пропускаем
+        }
         // Открытое контекстное меню перехватывает любой клик
         if (ctxMsg != null) {
             PmMessage msg = ctxMsg;
@@ -1945,7 +2084,10 @@ public class PmScreen extends Screen {
                     if (action.startsWith("react") && !global && selected != null) {
                         PmChatClient.sendReaction(selected, msg, Integer.parseInt(action.substring(5)));
                     } else if (action.equals("reply") && !global) {
+                        clearReply();
                         replyTarget = msg;
+                    } else if (action.equals("quotefrag") && !global) {
+                        openFragSelector(msg);
                     } else if (action.equals("copy") && msg.text != null) {
                         MinecraftClient.getInstance().keyboard.setClipboard(copyText(msg));
                         copiedAt = System.currentTimeMillis();
@@ -2009,7 +2151,7 @@ public class PmScreen extends Screen {
                 msgScroll = 0;
                 statsMode = false;
                 closeModes();
-                replyTarget = null;
+                clearReply();
                 clearConfirm = false;
                 rebuild();
                 return true;
@@ -2050,7 +2192,7 @@ public class PmScreen extends Screen {
         // Отмена ответа-цитаты
         if (replyCancelX >= 0 && click.x() >= replyCancelX && click.x() < replyCancelX + 12
                 && click.y() >= replyCancelY && click.y() < replyCancelY + 12) {
-            replyTarget = null;
+            clearReply();
             return true;
         }
         // Клик по закреплённому сообщению
@@ -2159,6 +2301,11 @@ public class PmScreen extends Screen {
 
         List<String[]> items = new ArrayList<>();
         if (!global) items.add(new String[]{"reply", "↩ " + Text.translatable("pmchat.menu.reply").getString()});
+        if (!global && ctxMsg.text != null && !ctxMsg.text.isBlank()
+                && imageIdOf(ctxMsg) == null && voiceOf(ctxMsg) == null && !ctxMsg.isPoll()
+                && ctxMsg.text.trim().contains(" ")) {
+            items.add(new String[]{"quotefrag", "❝ " + Text.translatable("pmchat.menu.quotefrag").getString()});
+        }
         items.add(new String[]{"forward", "⤶ " + Text.translatable("pmchat.menu.forward").getString()});
         if (!PmChatClient.SAVED.equals(selected)) {
             items.add(new String[]{"save", "✦ " + Text.translatable("pmchat.menu.save").getString()});
@@ -2264,6 +2411,11 @@ public class PmScreen extends Screen {
         // Esc закрывает полноэкранное фото, не выходя из чата
         if (fullscreenImg != null && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
             fullscreenImg = null;
+            return true;
+        }
+        // Esc закрывает оверлей выбора фрагмента
+        if (fragMsg != null && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
+            fragMsg = null;
             return true;
         }
         // Ctrl+V: если в буфере картинка — отправляем её как фото

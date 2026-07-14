@@ -117,5 +117,10 @@
   "pmchat.tip.money": "Send money",
   "pmchat.tip.stats": "Chat stats",
   "pmchat.tip.emoji": "Emoji",
-  "pmchat.tip.clear": "Clear feed"
+  "pmchat.tip.clear": "Clear feed",
+  "pmchat.menu.quotefrag": "Quote fragment",
+  "pmchat.frag.title": "Select a fragment",
+  "pmchat.frag.hint": "Click start, then click end",
+  "pmchat.frag.ok": "Quote",
+  "pmchat.frag.cancel": "Cancel"
 }

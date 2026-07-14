@@ -454,10 +454,19 @@ public class PmChatClient implements ClientModInitializer {
         typingUntil.remove(sender);
 
         String replyTo = null;
-        String[] reply = PmWire.parseReply(text);
-        if (reply != null) {
-            replyTo = reply[0];
-            text = reply[1];
+        int fragStart = -1, fragLen = 0;
+        Object[] rf = PmWire.parseReplyFrag(text);
+        if (rf != null) {
+            replyTo = (String) rf[0];
+            fragStart = (int) rf[1];
+            fragLen = (int) rf[2];
+            text = (String) rf[3];
+        } else {
+            String[] reply = PmWire.parseReply(text);
+            if (reply != null) {
+                replyTo = reply[0];
+                text = reply[1];
+            }
         }
 
         // Пересылка: pmc fwd <откуда> <содержимое>
@@ -469,7 +478,10 @@ public class PmChatClient implements ClientModInitializer {
         }
 
         PmMessage msg = history.add(sender, false, text, 0);
-        if (replyTo != null) msg.replyTo = replyTo;
+        if (replyTo != null) {
+            msg.replyTo = replyTo;
+            if (fragStart >= 0) msg.replyFragment = sliceFragment(sender, replyTo, fragStart, fragLen);
+        }
         if (forwardFrom != null) msg.forwardFrom = forwardFrom;
         applyPoll(msg, text);
         if (replyTo != null || forwardFrom != null || msg.isPoll()) history.save();
@@ -699,19 +711,26 @@ public class PmChatClient implements ClientModInitializer {
                     pendingEcho.remove(e);
                     if (!e[0].equalsIgnoreCase(target)) {
                         // Доставлено не тому, кого набирали — переносим сообщение в фактический диалог
-                        String[] rep = PmWire.parseReply(text);
-                        String stored = rep != null ? rep[1] : text;
+                        Object[] repF = PmWire.parseReplyFrag(text);
+                        String[] rep = repF == null ? PmWire.parseReply(text) : null;
+                        String stored = repF != null ? (String) repF[3] : (rep != null ? rep[1] : text);
                         history.moveLastOutgoing(e[0], target, stored);
                     }
                     return 1;
                 }
             }
         }
-        String[] reply = PmWire.parseReply(text);
         String replyTo = null;
-        if (reply != null) {
-            replyTo = reply[0];
-            text = reply[1];
+        Object[] repF = PmWire.parseReplyFrag(text);
+        if (repF != null) {
+            replyTo = (String) repF[0];
+            text = (String) repF[3];
+        } else {
+            String[] reply = PmWire.parseReply(text);
+            if (reply != null) {
+                replyTo = reply[0];
+                text = reply[1];
+            }
         }
         PmMessage msg = history.add(target, true, text, 0);
         if (replyTo != null) {
@@ -721,28 +740,48 @@ public class PmChatClient implements ClientModInitializer {
         return 1;
     }
 
+    /** Достаёт текст фрагмента [start, start+len) из оригинала (по хэшу) или null. */
+    private static String sliceFragment(String conv, String hash, int start, int len) {
+        PmMessage orig = history.findByHash(conv, hash);
+        if (orig == null || orig.text == null) return null;
+        String t = orig.text;
+        if (start < 0 || len <= 0 || start >= t.length()) return null;
+        return t.substring(start, Math.min(t.length(), start + len));
+    }
+
     /** Отправка ЛС из мода: команда на сервер + локальная запись + ожидание эха. */
     public static PmMessage sendMessage(String target, String text) {
         return sendMessage(target, text, null);
     }
 
     public static PmMessage sendMessage(String target, String text, String replyToHash) {
+        return sendMessage(target, text, replyToHash, -1, 0, null);
+    }
+
+    public static PmMessage sendMessage(String target, String text, String replyToHash,
+                                        int fragStart, int fragLen, String fragText) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target.isBlank() || text.isBlank()) return null;
+        boolean hasFrag = replyToHash != null && fragStart >= 0 && fragText != null;
 
         // Локальный чат (Избранное) — только сохраняем, ничего не шлём на сервер
         if (isLocalChat(target)) {
             PmMessage m = history.add(target, true, text, 0);
             applyPoll(m, text);
             if (replyToHash != null) m.replyTo = replyToHash;
+            if (hasFrag) m.replyFragment = fragText;
             history.save();
             return m;
         }
 
         // Маркер цитаты уходит по сети только модовым получателям
-        String wire = (replyToHash != null && config.isModUser(target))
-                ? PmWire.reply(replyToHash, text)
-                : text;
+        String wire;
+        if (replyToHash != null && config.isModUser(target)) {
+            wire = hasFrag ? PmWire.replyFrag(replyToHash, fragStart, fragLen, text)
+                    : PmWire.reply(replyToHash, text);
+        } else {
+            wire = text;
+        }
         client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
         synchronized (pendingEcho) {
             pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
@@ -750,6 +789,7 @@ public class PmChatClient implements ClientModInitializer {
         PmMessage msg = history.add(target, true, text, 0);
         if (replyToHash != null) {
             msg.replyTo = replyToHash;
+            if (hasFrag) msg.replyFragment = fragText;
             history.save();
         }
         return msg;

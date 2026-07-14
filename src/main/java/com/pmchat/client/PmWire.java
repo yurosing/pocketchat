@@ -22,6 +22,8 @@ public final class PmWire {
 
     private static final Pattern RE_NEW = Pattern.compile("^pmc re ([0-9a-fA-F]{1,8}) (.+)$");
     private static final Pattern RE_OLD = Pattern.compile("^\\[re:([0-9a-fA-F]{1,8})\\](.+)$");
+    // Ответ на фрагмент: pmc ref <hash> <start> <len> <текст>
+    private static final Pattern RE_FRAG = Pattern.compile("^pmc ref ([0-9a-fA-F]{1,8}) (\\d+) (\\d+) (.+)$");
 
     // Реакция: pmc rx <hash> <index>
     private static final Pattern RX = Pattern.compile("^pmc rx ([0-9a-fA-F]{1,8}) (\\d{1,2})$");
@@ -75,6 +77,24 @@ public final class PmWire {
 
     public static String reply(String hash, String text) {
         return "pmc re " + hash + " " + text;
+    }
+
+    /** Ответ на фрагмент цитируемого сообщения (start/len — смещение в оригинале). */
+    public static String replyFrag(String hash, int start, int len, String text) {
+        return "pmc ref " + hash + " " + start + " " + len + " " + text;
+    }
+
+    /** {хэш, start, len, текст} или null. */
+    public static Object[] parseReplyFrag(String text) {
+        if (text == null) return null;
+        Matcher m = RE_FRAG.matcher(text.trim());
+        if (!m.matches()) return null;
+        try {
+            return new Object[]{m.group(1), Integer.parseInt(m.group(2)),
+                    Integer.parseInt(m.group(3)), m.group(4).trim()};
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     public static String reaction(String hash, int index) {
