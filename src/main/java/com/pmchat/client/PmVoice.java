@@ -107,6 +107,20 @@ public final class PmVoice {
         }
     }
 
+    /** Длительность аудиофайла (WAV/AU/AIFF) в секундах, или 0 если не удалось. */
+    public static int fileDurationSeconds(Path file) {
+        try (AudioInputStream in = AudioSystem.getAudioInputStream(file.toFile())) {
+            AudioFormat fmt = in.getFormat();
+            long frames = in.getFrameLength();
+            if (frames > 0 && fmt.getFrameRate() > 0) {
+                return Math.max(1, Math.round(frames / fmt.getFrameRate()));
+            }
+        } catch (Exception e) {
+            PmChatClient.LOGGER.warn("Audio duration failed: {}", e.toString());
+        }
+        return 0;
+    }
+
     private static int lastDurationSeconds = 1;
 
     public static int lastDuration() {

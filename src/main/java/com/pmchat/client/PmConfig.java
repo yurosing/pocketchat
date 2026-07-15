@@ -37,6 +37,9 @@ public class PmConfig {
     /** Размер окна мессенджера: 0 — маленький, 1 — средний, 2 — большой. */
     public int uiScale = 0;
 
+    /** Полноэкранный режим мессенджера (на весь экран, как в Telegram Desktop). */
+    public boolean fullscreen = false;
+
     /** Прятать перехваченные строки ЛС из обычного чата. */
     public boolean hideChatLines = false;
 
@@ -68,6 +71,9 @@ public class PmConfig {
 
     /** Размер текста сообщений в процентах (80–125). */
     public int textScalePct = 100;
+
+    /** Индекс цвета символов текста сообщений (0 — авто). */
+    public int msgTextColor = 0;
 
     /** «Не беспокоить»: без всплывающих уведомлений и звука. */
     public boolean dnd = false;
@@ -113,6 +119,20 @@ public class PmConfig {
 
     /** Звук при входящем сообщении. */
     public boolean soundEnabled = true;
+
+    /**
+     * Staff-функции (6.1/6.8): кнопка /warn в ЛС и общем чате. По умолчанию
+     * ВЫКЛ — не в общий доступ, только для хелперов+. Команда без слэша.
+     */
+    public boolean staffFeatures = false;
+    public String warnCommand = "warn";
+
+    /**
+     * Отдельный чат логов CoreProtect (6.3). По умолчанию ВЫКЛ. Строки
+     * показываются как есть, без перевода. Паттерн ловит вывод плагина.
+     */
+    public boolean coreProtectEnabled = false;
+    public String coreProtectPattern = "(?i)(coreprotect|/co\\b|\\bco\\s+(lookup|inspect|rollback|restore)|\\d+(?:\\.\\d+)?\\s*/\\s*[hчd]\\s+(ago|назад))";
 
     /** Канал серверного чата (клан/альянс/группа): вкладка в мессенджере. */
     public static class PmChannel {
@@ -170,8 +190,44 @@ public class PmConfig {
         save();
     }
 
-    /** Закреплённое сообщение в диалоге: ник собеседника -> хэш текста. */
+    /** @deprecated Одиночный закреп. Мигрирует в {@link #pinned} при загрузке. */
+    @Deprecated
     public Map<String, String> pins = new HashMap<>();
+
+    /** Закреплённые сообщения в диалоге: ник -> список хэшей текста (как в Telegram). */
+    public Map<String, List<String>> pinned = new HashMap<>();
+
+    public List<String> pinnedList(String conv) {
+        return pinned.getOrDefault(conv, java.util.Collections.emptyList());
+    }
+
+    public boolean isPinned(String conv, String hash) {
+        List<String> list = pinned.get(conv);
+        return list != null && list.contains(hash);
+    }
+
+    /** Добавить закреп (без дублей, свежий — в конец). */
+    public void addPin(String conv, String hash) {
+        if (hash == null || hash.isEmpty()) return;
+        List<String> list = pinned.computeIfAbsent(conv, k -> new ArrayList<>());
+        list.remove(hash);
+        list.add(hash);
+        while (list.size() > 30) list.remove(0);
+        save();
+    }
+
+    public void removePin(String conv, String hash) {
+        List<String> list = pinned.get(conv);
+        if (list != null) {
+            list.remove(hash);
+            if (list.isEmpty()) pinned.remove(conv);
+            save();
+        }
+    }
+
+    public void clearPins(String conv) {
+        if (pinned.remove(conv) != null) save();
+    }
 
     /** Контакты (избранные собеседники) — закрепляются вверху списка. */
     public List<String> contacts = new ArrayList<>();
@@ -231,6 +287,22 @@ public class PmConfig {
                     if (cfg.hiSent == null) cfg.hiSent = new ArrayList<>();
                     if (cfg.stickerCache == null) cfg.stickerCache = new HashMap<>();
                     if (cfg.pins == null) cfg.pins = new HashMap<>();
+                    if (cfg.pinned == null) cfg.pinned = new HashMap<>();
+                    // Миграция одиночных закрепов в список
+                    if (!cfg.pins.isEmpty()) {
+                        for (Map.Entry<String, String> e : cfg.pins.entrySet()) {
+                            if (e.getValue() != null && !e.getValue().isEmpty()
+                                    && !cfg.isPinned(e.getKey(), e.getValue())) {
+                                cfg.pinned.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(e.getValue());
+                            }
+                        }
+                        cfg.pins.clear();
+                    }
+                    // Миграция старого паттерна CoreProtect на блочный
+                    if (cfg.coreProtectPattern == null || cfg.coreProtectPattern.isBlank()
+                            || cfg.coreProtectPattern.contains("/h\\s+ago")) {
+                        cfg.coreProtectPattern = new PmConfig().coreProtectPattern;
+                    }
                     if (cfg.contacts == null) cfg.contacts = new ArrayList<>();
                     if (cfg.recentStickers == null) cfg.recentStickers = new ArrayList<>();
                     if (cfg.hostOverrides == null) cfg.hostOverrides = new HashMap<>();

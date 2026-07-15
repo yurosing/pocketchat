@@ -32,6 +32,13 @@ dependencies {
 
     implementation 'com.google.code.gson:gson:2.10.1'
     include 'com.google.code.gson:gson:2.10.1'
+
+    // JCodec — чистый Java-декодер H.264/MP4 (без нативных бинарников):
+    // инлайн-превью видео кадрами прямо в игре.
+    implementation 'org.jcodec:jcodec:0.2.5'
+    include 'org.jcodec:jcodec:0.2.5'
+    implementation 'org.jcodec:jcodec-javase:0.2.5'
+    include 'org.jcodec:jcodec-javase:0.2.5'
 }
 
 processResources {

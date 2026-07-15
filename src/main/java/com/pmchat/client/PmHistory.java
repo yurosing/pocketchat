@@ -124,9 +124,11 @@ public class PmHistory {
     /** Пометить все наши сообщения в диалоге прочитанными (пришло [seen]). */
     public void markAllOutgoingRead(String player) {
         boolean changed = false;
+        long now = System.currentTimeMillis();
         for (PmMessage msg : messages(player)) {
             if (msg.out && !msg.read) {
                 msg.read = true;
+                msg.readTime = now;
                 changed = true;
             }
         }

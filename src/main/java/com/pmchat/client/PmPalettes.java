@@ -27,6 +27,12 @@ public final class PmPalettes {
             0xFFD0A8E8, 0xFFA0E8C8, 0xFFEDF3F0, 0xFFF0C34E
     };
 
+    /** Цвет символов текста сообщений (6.4). Индекс 0 — авто (по фону пузыря). */
+    public static final int[] MSG_TEXT = {
+            0, 0xFFFFFFFF, 0xFFF0C34E, 0xFF6FBF8B, 0xFF8FC8F0,
+            0xFFE8A0A0, 0xFFD0A8E8, 0xFFE8D8A0, 0xFF222222
+    };
+
     /** Цвета бейджа непрочитанных. */
     public static final int[] BADGE = {
             0xFF4C8A66, 0xFFC0453A, 0xFF3A6FB0, 0xFFC08A2D, 0xFF7A5AB0, 0xFF5A6A74

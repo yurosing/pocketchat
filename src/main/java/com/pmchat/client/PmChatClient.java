@@ -44,6 +44,29 @@ public class PmChatClient implements ClientModInitializer {
     public static final String GLOBAL = "§global";
     /** Сентинел «Избранное» — личный чат с собой, только локально. */
     public static final String SAVED = "§saved";
+    /** Сентинел ленты логов CoreProtect (6.3) — только чтение. */
+    public static final String COREPROTECT = "§cp";
+
+    private static Pattern coreProtect;
+    private static long coreProtectActiveUntil = 0; // окно захвата блока результата
+    private static final java.util.List<PmMessage> coreProtectFeed =
+            java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+
+    public static boolean isCoreProtect(String name) {
+        return COREPROTECT.equals(name);
+    }
+
+    public static java.util.List<PmMessage> getCoreProtectFeed() {
+        return coreProtectFeed;
+    }
+
+    public static boolean coreProtectHasMessages() {
+        return config.coreProtectEnabled && !coreProtectFeed.isEmpty();
+    }
+
+    public static void clearCoreProtect() {
+        coreProtectFeed.clear();
+    }
 
     /** Локальные диалоги (не отправляются на сервер): начинаются с §. */
     public static boolean isLocalChat(String name) {
@@ -210,6 +233,13 @@ public class PmChatClient implements ClientModInitializer {
             LOGGER.warn("Bad global pattern, disabled: {}", e.getMessage());
             global = null;
         }
+        try {
+            coreProtect = config.coreProtectPattern == null || config.coreProtectPattern.isBlank()
+                    ? null : Pattern.compile(config.coreProtectPattern);
+        } catch (Exception e) {
+            LOGGER.warn("Bad CoreProtect pattern, disabled: {}", e.getMessage());
+            coreProtect = null;
+        }
     }
 
     /** @return 0 — не ЛС, 1 — обычное ЛС, 2 — служебная метка (прятать всегда) */
@@ -227,6 +257,20 @@ public class PmChatClient implements ClientModInitializer {
             Matcher m = outgoing.matcher(plain);
             if (m.find()) {
                 return onOutgoingEcho(m.group(1), m.group(2).trim());
+            }
+        }
+        // Логи CoreProtect (6.3) — блочный захват: от заголовка ловим весь
+        // последующий вывод (результаты/контейнеры/пагинация), даже если строки
+        // не совпадают с паттерном (напр. плагин на другом языке).
+        if (config.coreProtectEnabled) {
+            long now = System.currentTimeMillis();
+            boolean strong = coreProtect != null && coreProtect.matcher(plain).find();
+            if (strong || now < coreProtectActiveUntil) {
+                PmMessage log = new PmMessage(false, plain, now, 0);
+                coreProtectFeed.add(log);
+                while (coreProtectFeed.size() > GLOBAL_LIMIT) coreProtectFeed.remove(0);
+                coreProtectActiveUntil = now + 2500; // продлеваем, пока блок идёт
+                return 0;
             }
         }
         // Каналы (клан/альянс/группа) — специфичнее глобального, проверяем раньше
@@ -426,9 +470,27 @@ public class PmChatClient implements ClientModInitializer {
         String pinHash = PmWire.parsePin(text);
         if (pinHash != null) {
             config.addModUser(sender);
-            if (pinHash.equals("-")) config.pins.remove(sender);
-            else config.pins.put(sender, pinHash);
-            config.save();
+            if (pinHash.equals("-")) config.clearPins(sender);
+            else config.addPin(sender, pinHash);
+            return 2;
+        }
+        String unpinHash = PmWire.parseUnpin(text);
+        if (unpinHash != null) {
+            config.addModUser(sender);
+            config.removePin(sender, unpinHash);
+            return 2;
+        }
+        String[] edit = PmWire.parseEdit(text);
+        if (edit != null) {
+            config.addModUser(sender);
+            PmMessage orig = history.findByHash(sender, edit[0]);
+            if (orig != null && !orig.out) {
+                orig.text = edit[1];
+                orig.edited = true;
+                orig.editTime = System.currentTimeMillis();
+                applyPoll(orig, edit[1]);
+                history.save();
+            }
             return 2;
         }
         Object[] vote = PmWire.parseVote(text);
@@ -519,6 +581,9 @@ public class PmChatClient implements ClientModInitializer {
         if (PmWire.parseVoice(text) != null) {
             return Text.translatable("pmchat.voice.label").getString();
         }
+        if (PmWire.parseVid(text) != null) {
+            return Text.translatable("pmchat.video.label").getString();
+        }
         String[] poll = PmWire.parsePoll(text);
         if (poll != null) {
             return "▤ " + poll[1];
@@ -548,16 +613,61 @@ public class PmChatClient implements ClientModInitializer {
         }
     }
 
-    /** Закрепить/открепить сообщение: локально + собеседнику с модом. */
-    public static void setPin(String target, String hashOrNull, boolean forBoth) {
-        if (hashOrNull == null) config.pins.remove(target);
-        else config.pins.put(target, hashOrNull);
-        config.save();
-        if (forBoth && config.enableMeta && config.isModUser(target)) {
+    private static void sendPinMeta(String target, String wire) {
+        if (config.enableMeta && config.isModUser(target) && !isLocalChat(target)) {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player != null) {
-                client.player.networkHandler.sendChatCommand(
-                        config.msgCommand + " " + target + " " + PmWire.pin(hashOrNull));
+                client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+            }
+        }
+    }
+
+    /** Закрепить сообщение: локально + собеседнику с модом. */
+    public static void addPin(String target, String hash, boolean forBoth) {
+        config.addPin(target, hash);
+        if (forBoth) sendPinMeta(target, PmWire.pin(hash));
+    }
+
+    /** Открепить одно сообщение. */
+    public static void removePin(String target, String hash, boolean forBoth) {
+        config.removePin(target, hash);
+        if (forBoth) sendPinMeta(target, PmWire.unpinOne(hash));
+    }
+
+    /** Открепить все. */
+    public static void clearPins(String target, boolean forBoth) {
+        config.clearPins(target);
+        if (forBoth) sendPinMeta(target, PmWire.pin(null));
+    }
+
+    /**
+     * Редактировать своё исходящее сообщение. Локально меняем текст + метку
+     * «изменено», а собеседнику с модом шлём pmc edit со старым хэшем.
+     * Правка доступна только для модовых диалогов/групп (проверяется в UI).
+     */
+    public static void editMessage(String target, PmMessage msg, String newText) {
+        if (msg == null || !msg.out || newText == null || newText.isBlank()) return;
+        if (msg.text != null && msg.text.equals(newText)) return;
+        String oldHash = PmHistory.msgHash(msg.text);
+        // Обновляем закреп, если он ссылался на старый хэш
+        if (config.isPinned(target, oldHash)) {
+            config.removePin(target, oldHash);
+            config.addPin(target, PmHistory.msgHash(newText));
+        }
+        msg.text = newText;
+        msg.edited = true;
+        msg.editTime = System.currentTimeMillis();
+        history.save();
+
+        if (isLocalChat(target)) return; // Избранное — только локально
+        if (config.enableMeta && config.isModUser(target)) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player != null) {
+                String wire = PmWire.edit(oldHash, newText);
+                client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+                synchronized (pendingEcho) {
+                    pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
+                }
             }
         }
     }
@@ -605,6 +715,19 @@ public class PmChatClient implements ClientModInitializer {
 
     public static String selfNamePublic() {
         return selfName();
+    }
+
+    /**
+     * Предупреждение игроку (6.1): НЕ отправляет сразу, а открывает игровой
+     * чат с уже вписанной командой «/warn <ник> » — хелпер дописывает причину
+     * и отправляет сам.
+     */
+    public static void warnPlayer(String nick) {
+        if (!config.staffFeatures || nick == null || nick.isBlank()) return;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        String cmd = (config.warnCommand == null || config.warnCommand.isBlank() ? "warn" : config.warnCommand.trim());
+        client.setScreen(new net.minecraft.client.gui.screen.ChatScreen("/" + cmd + " " + nick + " ", false));
     }
 
     // ---------- Опросы (только личные чаты) ----------
@@ -699,7 +822,7 @@ public class PmChatClient implements ClientModInitializer {
     private static int onOutgoingEcho(String target, String text) {
         if (PmWire.isTyping(text) || PmWire.isSeen(text) || PmWire.isHi(text)
                 || PmWire.parseReaction(text) != null || PmWire.isPinMeta(text)
-                || PmWire.isVoteMeta(text)) {
+                || PmWire.isVoteMeta(text) || PmWire.isEditMeta(text) || PmWire.isUnpinMeta(text)) {
             return 2; // эхо собственной меты — прячем, в историю не пишем
         }
         long now = System.currentTimeMillis();

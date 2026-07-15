@@ -48,7 +48,7 @@ public class PmSettingsScreen extends Screen {
     protected void init() {
         optionLabels.clear();
         clearChildren();
-        int rows = 18;
+        int rows = 21;
         panelH = 26 + rows * ROW_H + 28;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
@@ -76,6 +76,16 @@ public class PmSettingsScreen extends Screen {
                 () -> Text.literal("■ " + (config.nameColor % PmPalettes.NAMES.length + 1)),
                 () -> PmPalettes.NAMES[Math.floorMod(config.nameColor, PmPalettes.NAMES.length)],
                 () -> config.nameColor = (config.nameColor + 1) % PmPalettes.NAMES.length);
+
+        y = addOption(y, "pmchat.set.msgtextcolor",
+                () -> Text.literal(config.msgTextColor == 0
+                        ? Text.translatable("pmchat.set.wallpaper.none").getString()
+                        : "■ " + config.msgTextColor),
+                () -> {
+                    int c = PmPalettes.MSG_TEXT[Math.floorMod(config.msgTextColor, PmPalettes.MSG_TEXT.length)];
+                    return c == 0 ? VALUE : c;
+                },
+                () -> config.msgTextColor = (config.msgTextColor + 1) % PmPalettes.MSG_TEXT.length);
 
         y = addOption(y, "pmchat.set.textscale",
                 () -> Text.literal(config.textScalePct + "%"),
@@ -159,6 +169,16 @@ public class PmSettingsScreen extends Screen {
                 () -> Text.translatable(config.mentionOnCopy ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.mentionOnCopy ? 0xFF8FD8A8 : VALUE,
                 () -> config.mentionOnCopy = !config.mentionOnCopy);
+
+        y = addOption(y, "pmchat.set.staff",
+                () -> Text.translatable(config.staffFeatures ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> config.staffFeatures ? 0xFFE07A6A : VALUE,
+                () -> config.staffFeatures = !config.staffFeatures);
+
+        y = addOption(y, "pmchat.set.coreprotect",
+                () -> Text.translatable(config.coreProtectEnabled ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> config.coreProtectEnabled ? 0xFF8FD8A8 : VALUE,
+                () -> config.coreProtectEnabled = !config.coreProtectEnabled);
 
         y = addOption(y, "pmchat.set.badge",
                 () -> Text.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),

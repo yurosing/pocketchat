@@ -23,6 +23,13 @@ public class PmMessage {
     /** Прочитано собеседником (по метке seen, только между модами). */
     public boolean read;
 
+    /** Когда прочитано собеседником (мс), 0 — ещё не прочитано. */
+    public long readTime;
+
+    /** Сообщение было отредактировано + когда (мс). */
+    public boolean edited;
+    public long editTime;
+
     /** Реакции: моя и собеседника (символ из PmWire.REACTIONS). */
     public String reactMine;
     public String reactOther;

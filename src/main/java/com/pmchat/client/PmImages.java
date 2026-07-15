@@ -112,8 +112,8 @@ public final class PmImages {
         MinecraftClient client = MinecraftClient.getInstance();
         String safe = id.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9._-]", "_");
         try {
-            if (safe.endsWith(".gif")) {
-                PmGif.Frames gif = PmGif.decode(bytes);
+            if (safe.endsWith(".gif") || PmVideo.isVideo(safe)) {
+                PmGif.Frames gif = safe.endsWith(".gif") ? PmGif.decode(bytes) : PmVideo.decode(bytes);
                 client.execute(() -> {
                     try {
                         int n = gif.images().size();

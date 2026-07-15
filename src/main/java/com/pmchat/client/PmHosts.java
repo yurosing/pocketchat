@@ -94,7 +94,7 @@ public final class PmHosts {
     private static HttpResponse<String> post(String url, String contentType, byte[] body) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .timeout(Duration.ofSeconds(14))
+                .timeout(Duration.ofSeconds(60)) // большие аудио/видео не успевали за 14с
                 .header("Content-Type", contentType)
                 .header("User-Agent", "pmchat-mod/1.0")
                 .POST(HttpRequest.BodyPublishers.ofByteArray(body))

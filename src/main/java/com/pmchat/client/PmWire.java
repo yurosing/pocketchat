@@ -13,6 +13,8 @@ public final class PmWire {
     // v3: pmc img <host> <name> <ext> / pmc voice <host> <name> <ext> <secs>
     private static final Pattern IMG_V3 = Pattern.compile("^pmc img ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+)$");
     private static final Pattern VOICE_V3 = Pattern.compile("^pmc voice ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+) (\\d+)$");
+    // Видео: pmc vid <host> <name> <ext>
+    private static final Pattern VID = Pattern.compile("^pmc vid ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+)$");
     // v2 (без хоста — catbox)
     private static final Pattern IMG_V2 = Pattern.compile("^pmc img ([A-Za-z0-9_-]+) ([A-Za-z0-9]+)$");
     private static final Pattern VOICE_V2 = Pattern.compile("^pmc voice ([A-Za-z0-9_-]+) ([A-Za-z0-9]+) (\\d+)$");
@@ -27,10 +29,14 @@ public final class PmWire {
 
     // Реакция: pmc rx <hash> <index>
     private static final Pattern RX = Pattern.compile("^pmc rx ([0-9a-fA-F]{1,8}) (\\d{1,2})$");
+    // Правка: pmc edit <hash> <новый текст>
+    private static final Pattern EDIT = Pattern.compile("^pmc edit ([0-9a-fA-F]{1,8}) (.+)$", Pattern.DOTALL);
     // Пересылка: pmc fwd <откуда> <исходное содержимое>
     private static final Pattern FWD = Pattern.compile("^pmc fwd (\\S{1,20}) (.+)$", Pattern.DOTALL);
-    // Закреп: pmc pin <hash> (пусто hash = открепить)
+    // Закреп: pmc pin <hash> (добавить), pmc pin - (открепить все)
     private static final Pattern PIN = Pattern.compile("^pmc pin ([0-9a-fA-F]{1,8}|-)$");
+    // Открепить одно: pmc unpin <hash>
+    private static final Pattern UNPIN = Pattern.compile("^pmc unpin ([0-9a-fA-F]{1,8})$");
     // Опрос: pmc poll <multi> вопрос // вариант1 // вариант2 ...
     private static final Pattern POLL = Pattern.compile("^pmc poll ([01]) (.+)$", Pattern.DOTALL);
     // Голос: pmc pvote <pollHash> <индексы через запятую или ->
@@ -75,6 +81,21 @@ public final class PmWire {
         return "pmc voice " + hostCode + " " + name + " " + ext + " " + seconds;
     }
 
+    public static String vid(String hostCode, String fileId) {
+        int dot = fileId.lastIndexOf('.');
+        String name = dot > 0 ? fileId.substring(0, dot) : fileId;
+        String ext = dot > 0 ? fileId.substring(dot + 1) : "mp4";
+        return "pmc vid " + hostCode + " " + name + " " + ext;
+    }
+
+    /** {код хоста, id файла} или null. */
+    public static String[] parseVid(String text) {
+        if (text == null) return null;
+        Matcher m = VID.matcher(text.trim());
+        if (m.matches()) return new String[]{m.group(1), m.group(2) + "." + m.group(3)};
+        return null;
+    }
+
     public static String reply(String hash, String text) {
         return "pmc re " + hash + " " + text;
     }
@@ -101,12 +122,43 @@ public final class PmWire {
         return "pmc rx " + hash + " " + index;
     }
 
+    /** Правка сообщения: старый хэш + новый текст. */
+    public static String edit(String hash, String text) {
+        return "pmc edit " + hash + " " + text;
+    }
+
+    /** {хэш, новый текст} или null. */
+    public static String[] parseEdit(String text) {
+        if (text == null) return null;
+        Matcher m = EDIT.matcher(text.trim());
+        return m.matches() ? new String[]{m.group(1), m.group(2).trim()} : null;
+    }
+
+    public static boolean isEditMeta(String text) {
+        return parseEdit(text) != null;
+    }
+
     public static String forward(String from, String innerContent) {
         return "pmc fwd " + from + " " + innerContent;
     }
 
     public static String pin(String hash) {
         return "pmc pin " + (hash == null || hash.isEmpty() ? "-" : hash);
+    }
+
+    public static String unpinOne(String hash) {
+        return "pmc unpin " + hash;
+    }
+
+    /** Хэш откреплённого сообщения (pmc unpin) или null. */
+    public static String parseUnpin(String text) {
+        if (text == null) return null;
+        Matcher m = UNPIN.matcher(text.trim());
+        return m.matches() ? m.group(1) : null;
+    }
+
+    public static boolean isUnpinMeta(String text) {
+        return parseUnpin(text) != null;
     }
 
     public static String poll(boolean multi, String question, java.util.List<String> options) {
