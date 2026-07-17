@@ -43,7 +43,10 @@ public final class PmYtDlp {
 
     /** Формат: только одиночные файлы со звуком И видео — иначе без ffmpeg не свести. */
     private static final String FORMAT = "b[vcodec!=none][acodec!=none][ext=mp4]/b[vcodec!=none][acodec!=none]/b";
-    private static final String EXTRACTOR_ARGS = "youtube:player_client=default,mweb";
+    // Клиент android отдаёт прогрессивный itag 18 (360p, звук+видео вместе) и
+    // часто проходит без входа там, где default/web упираются в бот-проверку.
+    // Ставим его первым, остальные — как фолбэк в рамках одного запуска.
+    private static final String EXTRACTOR_ARGS = "youtube:player_client=android,default,mweb";
     private static final Pattern PROGRESS = Pattern.compile("(\\d{1,3}(?:\\.\\d+)?)%");
 
     private static volatile boolean downloadingBinary = false;
