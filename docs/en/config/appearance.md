@@ -1,27 +1,30 @@
 # Appearance
 
+All these settings are easiest to change in-game, with a live preview, on the
+PocketChat settings screen.
+
 <Shot src="/img/themes.png" caption="Theme, bubble colors and wallpaper settings." />
 
-| Key | Default | Description |
+| Setting | Default | What it does |
 |---|---|---|
-| `theme` | `0` | 0 — dark, 1 — light |
-| `uiScale` | `0` | Window size: 0 small, 1 medium, 2 large |
-| `fullscreen` | `false` | Fullscreen mode (like Telegram Desktop) |
-| `outColor` | `0` | Your bubble color (palette index) |
-| `inColor` | `0` | Incoming bubble color (palette index) |
-| `uniformNames` | `false` | One name color instead of the "rainbow" |
-| `nameColor` | `0` | Index of the uniform name color |
-| `msgTextColor` | `0` | Message text color (0 — auto) |
-| `textScalePct` | `100` | Text size, % (60–150) |
-| `badgeColor` | `0` | Unread badge color |
-| `wallpaper` | `""` | Wallpaper file name from `config/pmchat-wallpapers/` |
+| Theme | Dark | Dark or light |
+| Window size | Small | Small / medium / large |
+| Fullscreen | Off | The window fills the whole screen, like Telegram Desktop |
+| Your message color | — | Color of the bubbles you send |
+| Incoming message color | — | Color of the bubbles you receive |
+| Same color for all names | Off | If on, every nick uses one color instead of the "rainbow" |
+| Message text color | Auto | |
+| Text size | 100% | Make it bigger or smaller |
+| Unread badge color | — | |
+| Chat wallpaper | None | Your own picture instead of a plain background |
 
-## Wallpaper
+## Setting a wallpaper
 
-Put an image into `config/pmchat-wallpapers/` and set its file name in `wallpaper`.
-An empty value means no wallpaper.
+Put a picture into the `pmchat-wallpapers` folder (see
+[Where the mod's files live](/en/reference/folders)), then pick it on the
+"Chat wallpaper" settings screen.
 
-## Colors
+## Picking colors
 
-Colors are set as indices into the mod's internal palette. The easiest way to pick
-them is in-game, on the [settings screen](/en/config/) — it shows a preview.
+Easiest done in-game, on the settings screen — you can see how the chat will
+look before saving.

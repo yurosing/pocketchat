@@ -1,38 +1,29 @@
-# File hosts
+# Where files get uploaded
 
-Photos, stickers, GIFs and voice notes upload to public file hosts. The retry
-order is set in `uploadOrder` — codes separated by commas, leftmost first.
+Photos, stickers, GIFs and voice notes can't be sent directly to another
+player — Minecraft isn't built for that. So the mod first uploads the file to
+one of several free image-hosting sites and sends your contact only a link —
+that's how most messengers work under the hood.
 
-| Code | Host | Note |
-|---|---|---|
-| `k` | kappa.lol | first by default |
-| `x` | x0.at | |
-| `q` | qu.ax | |
-| `c` | catbox.moe | blocked in Russia — listed last |
+## Checking which sites are working
 
-Default value:
+If a photo won't send, type `/pm hosts` in chat. The mod checks every site in
+turn and shows which ones currently respond from your internet connection.
 
-```json
-"uploadOrder": "k,x,q,c"
-```
-
-## Checking availability
-
-The `/pm hosts` command iterates over all hosts and shows which respond from your
-connection. If photos don't upload, start there.
-
-::: tip Reorder them
-If, say, only `x0.at` is stable for you, put it first:
-`"uploadOrder": "x,k,q,c"`.
+::: tip
+Some upload sites may be blocked in your country — that's not a mod bug, that
+particular site is just unreachable. The mod automatically tries the next one.
 :::
 
-## URL overrides
+## The order sites are tried in
 
-In `hostOverrides` you can manually override the download URL per host code — in
-case domains or mirrors change.
+Settings let you change which site is tried first (this can speed things up if
+one of them works better for you than the others). The default order is:
 
-| Key | Description |
-|---|---|
-| `uploadUrl` | Upload URL (catbox API by default) |
-| `imageHost` | Base URL for downloading by id |
-| `hostOverrides` | A "host code → URL" map for overrides |
+1. kappa.lol
+2. x0.at
+3. qu.ax
+4. catbox.moe *(blocked in Russia — listed last)*
+
+If, say, only one site reliably works for you, put it first in the list in
+settings.

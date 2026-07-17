@@ -1,23 +1,24 @@
-# Global chat
+# Server's global chat
 
-A pinned tab shows the server's public chat as the same clean bubbles: colored
-names, clickable links and a reply box — you never have to leave PocketChat to
-post in the public chat.
+The messenger window has a tab that shows the server's public chat — as the
+same neat bubbles, with colored names and clickable links. You can post to the
+global chat right from there, without leaving PocketChat.
 
 <Shot src="/img/global.png" caption="The server's global chat inside the messenger." />
 
-## Send prefix
+## If your server needs a symbol before the message
 
-Sending to global uses the prefix from the [`globalPrefix`](/en/config/) setting.
-On many servers this is `!`. If your global chat is the default (no prefix),
-leave the field empty.
+On some servers, to post in global chat you need to put a symbol in front of
+your message (like `!`). The mod can add it for you automatically — set it once
+in [settings](/en/config/).
 
-## How lines are captured
+## If the global chat looks wrong
 
-Public messages are detected by the [`globalPattern`](/en/config/patterns) regex.
-If names or text in global are parsed incorrectly, adjust that pattern.
+If names or text in the global chat look garbled, your server's chat format
+differs from what the mod expects by default. Fixed the same way as private
+messages — see [Setting it up for your server](/en/config/patterns).
 
-## TTS
+## Text-to-speech
 
-Global chat messages can be read aloud with the system voice — the
-[`ttsGlobal`](/en/config/voice) setting.
+Global chat messages can be read aloud with the system voice — see
+[Voice & TTS](/en/config/voice).

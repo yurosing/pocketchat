@@ -2,35 +2,28 @@
 
 ## Channels (clan / alliance / group)
 
-**Channels** are server chats. A tab appears automatically as soon as the mod
-captures the first channel message via its regex. Three are defined by default:
+**Channels** are separate server chats, like a clan or alliance chat. A tab for
+one appears automatically as soon as the mod sees the first message in it.
+Three come set up out of the box:
 
-| id | Tab | Send command |
-|---|---|---|
-| `clan` | Clan | `.` |
-| `ally` | Alliance | `ally` |
-| `gc` | Group | `gc` |
+| Tab | How to send a message |
+|---|---|
+| Clan | `.text` |
+| Alliance | `ally text` |
+| Group | `gc text` |
 
 <Shot src="/img/groups.png" caption="Group chat and channel tabs." />
 
-Channels are configured in the `channels` array of `pmchat.json`. Each channel has:
-
-- `id` — internal identifier;
-- `label` — tab name;
-- `command` — the server send command;
-- `pattern` — a regex with **named groups**:
-  `(?<name>…)` — nick, `(?<text>…)` — text, optionally `(?<clan>…)` — clan tag.
-
-More on named groups in [Server regex](/en/config/patterns#channels).
+If your server uses different chat names or commands, they can be adjusted in
+[settings](/en/config/patterns#channels).
 
 ## Groups
 
-**Groups** are local conversations with several players. The mod sends ordinary
-`/m` to each member and collects incoming messages into one feed. The group id is
-deterministic (derived from the member set) so it matches across all members who
-have the mod.
+**Groups** are chats with several friends at once, created right in the mod.
+Under the hood, the mod just sends a plain private message to every member
+separately and combines all replies into one shared conversation — the server
+just sees ordinary `/m` commands.
 
 ::: tip
-Groups are a purely client-side abstraction: the server still sees ordinary
-private messages to each member individually.
+Everyone in the group who has PocketChat sees the same combined conversation.
 :::

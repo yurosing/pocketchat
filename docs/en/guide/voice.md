@@ -1,25 +1,26 @@
 # Voice messages
 
-Hold the microphone button, speak (up to 20 seconds), release — the message is
-sent. The bubble shows a waveform and a timer.
+Hold the microphone button, say something (up to 20 seconds), release — done,
+the message is sent. It shows up as a waveform with a timer.
 
-<Shot src="/img/voice.png" caption="Voice message with a waveform and recognized text." />
+<Shot src="/img/voice.png" caption="A voice message with a waveform and recognized text." />
 
-## Speech-to-text (Vosk)
+## Turning voice into text
 
-Voice notes can be transcribed offline with the [Vosk](https://alphacephei.com/vosk/)
-engine. On first use the mod downloads a language model into `config/pmchat-stt/`.
+You can turn a voice note into text right in the game — no internet service
+involved, it all happens on your own computer. The first time you use it, the
+mod downloads a small file it needs — takes a minute or two depending on your
+connection, and after that it works instantly.
 
-- The recognition language is set by [`sttLang`](/en/config/voice) (0 — Russian, 1 — English).
-- Model URLs live in `sttModelUrlRu` / `sttModelUrlEn` (a comma-separated list of
-  mirrors, tried in order; the GitHub mirror comes first).
+- The recognition language can be Russian or English, set in the options.
+- If the download fails the first time, the mod automatically tries another
+  source.
 
-::: tip The model downloads once
-The model is tens of megabytes and stays on disk. If the primary mirror is down,
-the mod tries the next one in the list.
+::: tip
+More on these settings in [Voice & TTS](/en/config/voice).
 :::
 
-## Global chat TTS
+## Reading the global chat aloud
 
-The [`ttsGlobal`](/en/config/voice) setting reads out global chat messages with
-the system voice.
+You can turn on a setting that reads global chat messages out loud using your
+system's voice — handy if you're multitasking while playing.

@@ -1,32 +1,40 @@
-# Folder layout
+# Where the mod's files live
 
-Everything the mod creates lives in the `config/` folder of your game instance
-(the same place as `mods/`).
+All of the mod's own files go into the game folder, next to `mods`, inside a
+`config` subfolder.
+
+## How to open that folder
+
+1. Press <kbd>Win</kbd>+<kbd>R</kbd>, type `%appdata%\.minecraft\config` and
+   press Enter.
+2. Or in the Minecraft launcher: **Installations → Open game folder**, then go
+   into `config`.
+
+## What's where
 
 ```
 .minecraft/
 ├─ mods/
-│  ├─ fabric-api-*.jar
 │  └─ pmchat-mod-1.3.0.jar        # the mod itself
 └─ config/
    ├─ pmchat.json                 # all settings
-   ├─ pmchat-history.json         # all chats (local, forever)
+   ├─ pmchat-history.json         # your entire chat history
    ├─ pmchat-media/               # downloaded photos and voice notes
-   ├─ pmchat-stickers/            # your stickers and GIFs (put here)
-   ├─ pmchat-wallpapers/          # chat wallpapers (put here)
-   └─ pmchat-stt/                 # offline Vosk models for speech-to-text
+   ├─ pmchat-stickers/            # put your own stickers and GIFs here
+   ├─ pmchat-wallpapers/          # put chat background images here
+   └─ pmchat-stt/                 # files used for speech recognition
 ```
 
-| Path | What's inside |
+| Folder or file | What's in it |
 |---|---|
-| `config/pmchat.json` | All mod settings — see [pmchat.json overview](/en/config/) |
-| `config/pmchat-history.json` | Full history of chats, channels and groups. Back up from here |
-| `config/pmchat-media/` | Cache of downloaded images and voice notes |
-| `config/pmchat-stickers/` | Your `.png` and `.gif` files become stickers |
-| `config/pmchat-wallpapers/` | Wallpaper images; the name goes into `wallpaper` |
-| `config/pmchat-stt/` | Vosk models (downloaded automatically) |
+| `pmchat.json` | All settings — see [Mod settings](/en/config/) |
+| `pmchat-history.json` | Your whole chat history: threads, channels, groups |
+| `pmchat-media/` | Already-downloaded photos and voice notes (cache) |
+| `pmchat-stickers/` | Drop your `.png` and `.gif` files here — they become stickers |
+| `pmchat-wallpapers/` | Drop pictures here — they become available as backgrounds |
+| `pmchat-stt/` | Speech recognition files, downloaded automatically |
 
-::: tip Backup
-To keep all your chats and settings, copy `pmchat.json` and
-`pmchat-history.json`. Stickers and wallpapers — from their folders.
+::: tip Back up your chat history
+To avoid losing your chat history, copy the `pmchat-history.json` file
+somewhere safe — for example, before reinstalling Windows.
 :::

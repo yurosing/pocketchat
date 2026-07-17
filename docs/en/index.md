@@ -21,27 +21,27 @@ hero:
 
 features:
   - icon: 🧵
-    title: Threads & history
-    details: Every contact gets its own thread with unread badges. All chats are saved locally forever and searchable instantly.
+    title: Chats and history
+    details: A separate conversation with each person, with an unread marker. Everything is saved on your own computer forever and searches instantly.
     link: /en/guide/interface
   - icon: 🎙️
     title: Voice messages
-    details: Hold to record, release to send. Up to 20 seconds with a waveform, plus speech-to-text (Vosk).
+    details: Hold, speak, release. Up to 20 seconds, turn it into text with one button.
     link: /en/guide/voice
   - icon: 🎞️
-    title: Stickers, GIFs & photos
-    details: Your own PNGs/GIFs from a folder, and paste an image from the clipboard with Ctrl+V.
+    title: Stickers, GIFs and photos
+    details: Your own pictures from a folder, plus pasting a screenshot from the clipboard with Ctrl+V.
     link: /en/guide/media
   - icon: 🌍
-    title: Global chat
-    details: The server's public chat as the same clean bubbles with a reply box.
+    title: Server's global chat
+    details: The same public chat, but shown as neat bubbles with a reply box right there.
     link: /en/guide/global
   - icon: 🎨
-    title: Themes & colors
-    details: Dark/light theme, bubble color, wallpapers, window size and fullscreen mode.
+    title: Theme and colors
+    details: Dark or light theme, your own bubble color, chat wallpaper, window size.
     link: /en/config/appearance
   - icon: ⚡
-    title: Client-only
-    details: No plugin, permissions or server setup. Just drop the jar into mods/.
+    title: Only on your computer
+    details: Nothing to set up on the server. Download, drop into mods, use it.
     link: /en/guide/install
 ---

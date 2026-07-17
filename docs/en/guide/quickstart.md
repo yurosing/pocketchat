@@ -1,26 +1,29 @@
 # Quick start
 
 1. Join a server and press <kbd>J</kbd> — the PocketChat window opens.
-2. Send someone a PM with the usual command (`/m Nick hi`) or right from the window.
-3. Check that incoming and outgoing PMs appear in the mod as bubbles.
+2. Send someone a private message with the usual command (`/m Nick hi`) or
+   right from the open window.
+3. Check that both the sent and received message show up as bubbles in the
+   window.
 
-::: tip If PMs don't show up
-Your server's PM format differs from the default. Fix it via regex — see
-[Server regex](/en/config/patterns).
+::: tip If messages don't show up
+Your server's private messages probably look different from what the mod
+expects by default. Takes a couple of minutes to fix — see
+[Setting it up for your server](/en/config/patterns).
 :::
 
-## Mini checklist
+## Step-by-step check
 
-| Step | How to check |
+| Step | How to tell it worked |
 |---|---|
-| Mod loaded | **ModMenu** has a PocketChat entry |
-| Window opens | <kbd>J</kbd> opens/closes the messenger |
-| PMs captured | An incoming PM appears as a separate thread |
+| Mod loaded | PocketChat shows up in the mod list (ModMenu) |
+| Window opens | <kbd>J</kbd> opens and closes the window |
+| Messages captured | An incoming message shows up as a separate thread |
 | Photos work | <kbd>Ctrl</kbd>+<kbd>V</kbd> in a chat sends an image |
-| Hosts reachable | `/pm hosts` shows green hosts |
+| Upload sites reachable | `/pm hosts` shows at least one working site |
 
-## What to configure first
+## What to set up first
 
-- [Server regex](/en/config/patterns) — if PMs aren't captured.
-- [File hosts](/en/config/hosts) — if photos/voice don't upload.
+- [Setting it up for your server](/en/config/patterns) — if messages aren't captured.
+- [Where files get uploaded](/en/config/hosts) — if photos and voice notes fail to send.
 - [Appearance](/en/config/appearance) — theme, colors, window size.

@@ -1,34 +1,34 @@
 # Interface
 
-On the left — the conversation list, contacts and pinned chats. On the right —
-the active chat with message bubbles.
+On the left — your list of chats and favorite people. On the right — the open
+conversation with message bubbles.
 
-<Shot src="/img/list.png" caption="Left panel — conversation list with unread badges." />
+<Shot src="/img/list.png" caption="Left panel — chat list with an unread marker." />
 
-## Message context menu
+## Right-click menu
 
-Right-click any message to open a Telegram-style menu:
+**Right-click** any message to open a menu:
 
-- **Reply** with a quote (you can select a text fragment).
-- **Reaction** — an emoji, synced with other players who have the mod.
+- **Reply** with a quote (you can select just part of the text).
+- **Add a reaction** — an emoji, a contact with the mod sees it instantly.
 - **Copy** the text.
-- **Pin** — up to 30 pinned per conversation.
+- **Pin** — the message stays at the top of the chat.
 - **Delete**.
 
 <Shot src="/img/context-menu.png" caption="Right-click menu: reply, reactions, copy, pin, delete." />
 
 ## Search
 
-Instant search across your entire saved history — all conversations at once.
+Searches instantly across your entire saved history — all chats at once.
 
 <Shot src="/img/search.png" caption="Search results across history." />
 
-## Contacts and pins
+## Favorites and pins
 
-- **Contacts** — favorite people, pinned to the top of the list.
+- **Favorites** — pin the people you talk to most to the top of the list.
 - **Pinned messages** — like Telegram, per conversation.
 
-## Who has the mod
+## "Has the mod" indicator
 
-A small dot next to a name shows whether PocketChat is installed on their side —
-so you know if reactions, typing indicators and read receipts will reach them.
+A small dot next to a name shows whether that person also has PocketChat — if
+they do, they'll see your reactions and typing status too.

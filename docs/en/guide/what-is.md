@@ -1,46 +1,51 @@
 # What is it
 
-**PocketChat** turns the server's `/m` command (private messages) into a real
-Telegram-style chat: message bubbles, voice notes, reactions, stickers, history
-and search.
+**PocketChat** turns plain private messages (`/m`) into a real chat, like
+Telegram: colorful bubbles, voice notes, reactions, stickers, chat history and
+search.
 
-The mod runs **entirely on the client**: no plugin, permissions or server setup
-required. Just drop the `.jar` into `mods/` and start talking.
+The mod installs **only on your own computer**. Nothing to set up on the server,
+no permissions to ask for. Drop the file into `mods` and you're using it.
 
 <Shot src="/img/hero.png" caption="Overview: conversation list on the left, open chat on the right." />
 
 ## How it works
 
-The mod reads lines like "(PM) Nick → me » text" from the regular chat, sorts
-them into threads and saves them to disk. Your messages are sent with the plain
-`/m Nick text` command.
+The mod watches the regular chat and picks out private messages in it — both
+incoming and outgoing. It shows each one nicely in its own window and saves it
+on your computer. When you send a message from that window, the mod just types
+the plain `/m Nick text` command for you, as if you typed it yourself.
 
-- Players **without** the mod see plain text.
-- Players **with** the mod see everything: bubbles, reactions, statuses.
+- A contact **without** the mod sees a completely normal message.
+- A contact **with** the mod sees everything you see: bubbles, reactions.
 
-::: tip Set it up once per server
-The mod needs to be matched to your server's PM format once — via regular
-expressions. Defaults target the Essentials format. If incoming PMs don't show
-up, see [Server regex](/en/config/patterns).
+::: tip If messages don't show up
+Your server's private messages probably look different from what the mod
+expects by default. Easy to fix — see
+[Setting it up for your server](/en/config/patterns).
 :::
 
-## What's inside
+## What it can do
 
-- 🧵 **Threads** — a separate conversation per contact with unread badges.
-- 🎙️ **Voice** — up to 20 seconds with a waveform and speech-to-text.
-- ↩️ **Replies & reactions** — right-click context menu.
-- 🎞️ **Stickers & GIFs** — your own animated files from a folder.
-- 🖼️ **Photos** — paste from clipboard with <kbd>Ctrl</kbd>+<kbd>V</kbd>.
-- 🔍 **Search & history** — everything stored locally, forever.
-- 🌍 **Global chat** — the server's public chat as the same bubbles.
-- 🎨 **Themes & colors** — dark/light, bubble color, wallpapers.
-- 🟢 **Who has the mod** — a dot by the name shows PocketChat presence.
+- 🧵 **Threads** — a separate conversation with every person, with an unread
+  counter.
+- 🎙️ **Voice notes** — up to 20 seconds, can be turned into text.
+- ↩️ **Replies & reactions** — right-click a message.
+- 🎞️ **Stickers & GIFs** — your own pictures from a folder.
+- 🖼️ **Photos** — paste an image from the clipboard with
+  <kbd>Ctrl</kbd>+<kbd>V</kbd>.
+- 🔍 **Search** — across your whole chat history.
+- 🌍 **Server's global chat** — also shown as nice bubbles, reply right there.
+- 🎨 **Theme and colors** — dark or light, your own bubble color, chat
+  wallpaper.
+- 🟢 **Mod indicator** — a dot shows whether the other person also has
+  PocketChat.
 
-## Requirements
+## What you need to install it
 
 | Component | Version |
 |---|---|
 | Minecraft | 1.21.11 |
-| [Fabric Loader](https://fabricmc.net/use/) | 0.15+ |
-| [Fabric API](https://modrinth.com/mod/fabric-api) | any for 1.21.11 |
-| Side | client only |
+| [Fabric Loader](https://fabricmc.net/use/) | any recent version |
+| [Fabric API](https://modrinth.com/mod/fabric-api) | required, the mod won't work without it |
+| Where to install | only your own computer |

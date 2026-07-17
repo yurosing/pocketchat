@@ -1,20 +1,47 @@
-# Server regex
+# Setting it up for your server
 
-The mod detects PMs via regular expressions. By default they target the
-**Essentials** format like "(PM) me → nick » text". If your server uses a
-different format, adjust the patterns.
+Every server formats private messages a bit differently. The mod is set up by
+default for the most common case (the Essentials plugin), but if your server's
+format is different, messages might not get captured. That's fixed in settings.
 
-::: warning Important about groups
-In the PM and global patterns: **group 1 — nick, group 2 — text**.
+::: tip Check first if you even need this
+If [Quick start](/en/guide/quickstart) worked fine and messages get captured —
+you can skip this page, everything already works.
 :::
 
-| Key | What it captures |
-|---|---|
-| `incomingPattern` | Incoming PM (someone messaged you) |
-| `outgoingPattern` | Outgoing PM (you messaged someone) |
-| `globalPattern` | Public chat lines for the "Global" tab |
+## How to tell this is the problem
 
-## Defaults
+If you send or receive a private message and it doesn't show up in the
+PocketChat window — that's almost always the reason. The regular chat shows the
+message fine, the mod just doesn't "recognize" it.
+
+## How to fix it
+
+1. Send yourself a test private message and look at **exactly** how it appears
+   in the regular Minecraft chat.
+2. Open the mod's settings and find the fields about the PM format — enter that
+   format there.
+3. Save and restart the game.
+
+If your server's format is very different and the in-game settings don't cut
+it, here's a more detailed explanation for anyone comfortable poking around in
+the settings file.
+
+## In detail: how the format works (advanced)
+
+The mod finds messages using a text pattern (the technical term is "regular
+expression") — basically an instruction like "find a line where a nickname
+comes first, then some separator, then the message text".
+
+In the `pmchat.json` settings file, three entries handle this:
+
+| Entry | What it's for |
+|---|---|
+| `incomingPattern` | What a message someone sent you looks like |
+| `outgoingPattern` | What a message you sent looks like |
+| `globalPattern` | What a line in the server's global chat looks like |
+
+Default values:
 
 ```json
 "incomingPattern": "\\(ЛС\\)\\s*\\W*([A-Za-z0-9_]{2,16})\\s*->\\s*я\\s*»\\s*(.+)",
@@ -22,37 +49,17 @@ In the PM and global patterns: **group 1 — nick, group 2 — text**.
 "globalPattern":   "([A-Za-z0-9_]{2,16})[^»A-Za-z0-9_]*»\\s*(.+)"
 ```
 
-## How to tune for your server
+What matters: the part in parentheses `([A-Za-z0-9_]{2,16})` is the nickname,
+and `(.+)` is the message text. Leave those alone — only change what's around
+them (the "(ЛС)" label, the arrow, the "»" separator) to match what your server
+actually sends.
 
-1. Send yourself a test PM and look at the **exact** chat line text.
-2. Replace the `(ЛС)` label, the `->` arrow and the `»` separator with what your
-   server actually sends.
-3. Keep the groups `([A-Za-z0-9_]{2,16})` for the nick and `(.+)` for the text.
-4. Save the file and restart the game.
-
-::: tip Escaping in JSON
-In JSON a backslash is written twice: `\\s`, `\\(`, `\\W`. Capture groups `(...)`
-are not doubled.
+::: warning Backslashes are doubled in JSON
+If editing the file by hand: `\s`, `\(`, `\W` need to be written as `\\s`,
+`\\(`, `\\W`. Parentheses with letters inside `(...)` stay as they are.
 :::
 
-## Channels
+## Extra chats (clan, alliance)
 
-Channels (clan/alliance/group) are configured in the `channels` array and use
-**named groups** instead of numbered ones:
-
-- `(?<name>…)` — nick;
-- `(?<text>…)` — message text;
-- `(?<clan>…)` — optional clan tag, shown next to the nick.
-
-Example of the default "Clan" channel:
-
-```json
-{
-  "id": "clan",
-  "label": "Клан",
-  "command": ".",
-  "pattern": "^\\W{0,6}(?:клан|clan)\\W+.*?(?<name>[A-Za-z0-9_]{2,16})\\s*[»:>]\\s*(?<text>.+)"
-}
-```
-
-On using channels, see [Channels & groups](/en/guide/channels).
+For how separate tabs for clan or alliance chat are set up, see
+[Channels & groups](/en/guide/channels).
