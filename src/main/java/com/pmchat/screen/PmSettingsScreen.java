@@ -188,6 +188,13 @@ public class PmSettingsScreen extends Screen {
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Text.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
+
+        // NEW: кнопка-ссылка на сайт документации (открывает RU/EN по языку клиента)
+        FlatButton docsBtn = FlatButton.centered(textRenderer, px + PANEL_W - 24, py + 3, 18, 14,
+                Text.translatable("pmchat.tip.docs"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
+                btn -> PmChatClient.openDocs()).withIcon(PmIcons.BOOK);
+        docsBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.tip.docs")));
+        addDrawableChild(docsBtn);
     }
 
     private interface ValueSupplier {

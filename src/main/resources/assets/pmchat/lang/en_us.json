@@ -160,5 +160,6 @@
   "pmchat.secret.ttl.h": "h",
   "pmchat.secret.input.hint": "Secret message…",
   "pmchat.secret.toast": "Secret message",
-  "pmchat.secret.undecryptable": "Could not decrypt"
+  "pmchat.secret.undecryptable": "Could not decrypt",
+  "pmchat.tip.docs": "Documentation (website)"
 }

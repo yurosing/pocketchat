@@ -1320,6 +1320,18 @@ public class PmChatClient implements ClientModInitializer {
         return client.getLanguageManager().getLanguage().toLowerCase(Locale.ROOT).startsWith("ru");
     }
 
+    /** NEW: открыть сайт документации в браузере — на английском, если у игрока не русский язык клиента. */
+    public static void openDocs() {
+        String url = isRussian()
+                ? "https://yurosing.github.io/pocketchat/"
+                : "https://yurosing.github.io/pocketchat/en/";
+        try {
+            net.minecraft.util.Util.getOperatingSystem().open(url);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to open docs URL: {}", e.toString());
+        }
+    }
+
     public static PmConfig getConfig() {
         return config;
     }

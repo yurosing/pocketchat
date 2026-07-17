@@ -160,5 +160,6 @@
   "pmchat.secret.ttl.h": "ч",
   "pmchat.secret.input.hint": "Секретное сообщение…",
   "pmchat.secret.toast": "Секретное сообщение",
-  "pmchat.secret.undecryptable": "Не удалось расшифровать"
+  "pmchat.secret.undecryptable": "Не удалось расшифровать",
+  "pmchat.tip.docs": "Документация (сайт)"
 }
