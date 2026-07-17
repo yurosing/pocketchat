@@ -39,20 +39,74 @@ public final class PmVlc {
     private PmVlc() {
     }
 
-    /** Проверка (один раз, лениво) — установлен ли VLC на этом компьютере. */
+    /**
+     * Проверка (один раз, лениво) — установлен ли VLC на этом компьютере.
+     * Сначала пробуем стандартный автопоиск vlcj; если он не сработал (бывает
+     * на Windows, если реестр читается иначе, чем ожидает библиотека),
+     * дополнительно ищем сами — по реестру и по обычным путям установки —
+     * и явно подсказываем JNA, где искать libvlc.dll.
+     */
     public static synchronized boolean isAvailable() {
         if (available == null) {
+            boolean found = false;
             try {
-                available = new NativeDiscovery().discover();
-                if (available) {
-                    factory = new MediaPlayerFactory("--no-video-title-show", "--quiet");
-                }
+                found = new NativeDiscovery().discover();
             } catch (Throwable t) {
-                LOGGER.warn("VLC not available: {}", t.toString());
-                available = false;
+                LOGGER.warn("vlcj NativeDiscovery threw: {}", t.toString());
             }
+            if (!found) {
+                found = tryManualDiscovery();
+            }
+            if (found) {
+                try {
+                    factory = new MediaPlayerFactory("--no-video-title-show", "--quiet");
+                } catch (Throwable t) {
+                    LOGGER.warn("VLC found but MediaPlayerFactory failed to start: {}", t.toString());
+                    found = false;
+                }
+            } else {
+                LOGGER.warn("VLC not found — video will open externally instead of the built-in player. "
+                        + "Checked the registry and the usual install paths.");
+            }
+            available = found;
         }
         return available;
+    }
+
+    /**
+     * Ручной поиск VLC на Windows: читаем InstallDir из реестра (тот же ключ,
+     * что пишет сам инсталлятор VLC) и на всякий случай проверяем обычные
+     * пути установки. Найденную папку явно добавляем в пути поиска JNA —
+     * после этого либо повторный автопоиск, либо сама библиотека найдёт
+     * libvlc.dll при следующей попытке создать плеер.
+     */
+    private static boolean tryManualDiscovery() {
+        java.util.List<String> candidates = new java.util.ArrayList<>();
+        try {
+            String fromRegistry = com.sun.jna.platform.win32.Advapi32Util.registryGetStringValue(
+                    com.sun.jna.platform.win32.WinReg.HKEY_LOCAL_MACHINE, "SOFTWARE\\VideoLAN\\VLC", "InstallDir");
+            if (fromRegistry != null && !fromRegistry.isBlank()) candidates.add(fromRegistry);
+        } catch (Throwable ignored) {
+            // не Windows, ключа нет, или JNA ещё не готова читать реестр — не страшно
+        }
+        candidates.add("C:\\Program Files\\VideoLAN\\VLC");
+        candidates.add("C:\\Program Files (x86)\\VideoLAN\\VLC");
+
+        for (String dir : candidates) {
+            java.io.File f = new java.io.File(dir, "libvlc.dll");
+            if (f.isFile()) {
+                LOGGER.info("Found VLC manually at: {}", dir);
+                com.sun.jna.NativeLibrary.addSearchPath("libvlc", dir);
+                com.sun.jna.NativeLibrary.addSearchPath("libvlccore", dir);
+                try {
+                    return new NativeDiscovery().discover();
+                } catch (Throwable t) {
+                    LOGGER.warn("Re-discovery after manual path hint still failed: {}", t.toString());
+                    return false;
+                }
+            }
+        }
+        return false;
     }
 
     /** Один открытый сеанс проигрывания — одно видео, один плеер VLC. */
