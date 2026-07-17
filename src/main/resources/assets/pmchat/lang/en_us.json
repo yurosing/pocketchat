@@ -180,5 +180,6 @@
   "pmchat.media.title": "Media & playlists",
   "pmchat.media.openfolder": "Open folder",
   "pmchat.media.hint": "Drop mp3 into config/pmchat-music (folders work too)",
-  "pmchat.media.tracks": "tracks"
+  "pmchat.media.tracks": "tracks",
+  "pmchat.tip.media": "Music & playlists"
 }

@@ -50,7 +50,9 @@ public class PmMediaScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        this.renderBackground(ctx, mouseX, mouseY, delta);
+        // Тёмная заливка вместо renderBackground(): его блюр падает
+        // «Can only blur once per frame», если кадр уже размывался.
+        ctx.fill(0, 0, width, height, 0xC00B120F);
         // Панель
         ctx.fill(px, py, px + pw, py + ph, PANEL);
         ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
