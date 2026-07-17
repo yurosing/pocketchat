@@ -45,6 +45,12 @@ dependencies {
     // НЕ включаем, только Java-обвязку, которая находит и дёргает системный VLC.
     implementation 'uk.co.caprica:vlcj:4.8.2'
     include 'uk.co.caprica:vlcj:4.8.2'
+    // vlcj-natives — сами JNA-биндинги (LibVlc, RuntimeUtil и т.д.), без неё
+    // vlcj падает с NoClassDefFoundError. Gradle резолвит её транзитивно для
+    // компиляции, но Loom не пакует транзитивные зависимости сам — нужно
+    // явно перечислить, иначе в итоговом jar её просто не будет.
+    implementation 'uk.co.caprica:vlcj-natives:4.8.1'
+    include 'uk.co.caprica:vlcj-natives:4.8.1'
     implementation 'net.java.dev.jna:jna:5.13.0'
     include 'net.java.dev.jna:jna:5.13.0'
     implementation 'net.java.dev.jna:jna-platform:5.13.0'
