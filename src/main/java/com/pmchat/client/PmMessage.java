@@ -54,6 +54,9 @@ public class PmMessage {
     /** NEW: когда самоуничтожится (мс, 0 — никогда). Не сохраняется — секретные сообщения не пишутся в файл. */
     public transient long destructAt;
 
+    /** NEW (4.9): спойлер-фото/видео открыто кликом — запоминается, как в Telegram. */
+    public boolean spoilerRevealed;
+
     /** Голосов за вариант i (я + собеседник). */
     public int pollCount(int i) {
         int c = 0;

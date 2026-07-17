@@ -43,6 +43,8 @@
   "pmchat.menu.warn": "Предупредить",
   "pmchat.video.label": "Видео",
   "pmchat.video.decoding": "▶ Видео (загрузка…)",
+  "pmchat.video.stuck": "Не получилось показать это видео тут",
+  "pmchat.video.openweb": "Открыть в браузере",
   "pmchat.media.pick": "Отправить медиа",
   "pmchat.media.video": "Видео",
   "pmchat.media.audio": "Аудио",
@@ -161,5 +163,8 @@
   "pmchat.secret.input.hint": "Секретное сообщение…",
   "pmchat.secret.toast": "Секретное сообщение",
   "pmchat.secret.undecryptable": "Не удалось расшифровать",
-  "pmchat.tip.docs": "Документация (сайт)"
+  "pmchat.tip.docs": "Документация (сайт)",
+  "pmchat.call.start": "NEW · Позвонить (голосом)",
+  "pmchat.call.end": "Завершить звонок",
+  "pmchat.call.incoming.toast": "Звонит вам — вы автоматически в голосовом чате"
 }

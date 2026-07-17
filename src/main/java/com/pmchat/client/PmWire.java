@@ -15,6 +15,9 @@ public final class PmWire {
     private static final Pattern VOICE_V3 = Pattern.compile("^pmc voice ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+) (\\d+)$");
     // Видео: pmc vid <host> <name> <ext>
     private static final Pattern VID = Pattern.compile("^pmc vid ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+)$");
+    // NEW (4.9): спойлер — то же самое + " s" в конце. pmc img/vid ... s
+    private static final Pattern IMG_SPOILER = Pattern.compile("^pmc img ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+) s$");
+    private static final Pattern VID_SPOILER = Pattern.compile("^pmc vid ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+) s$");
     // v2 (без хоста — catbox)
     private static final Pattern IMG_V2 = Pattern.compile("^pmc img ([A-Za-z0-9_-]+) ([A-Za-z0-9]+)$");
     private static final Pattern VOICE_V2 = Pattern.compile("^pmc voice ([A-Za-z0-9_-]+) ([A-Za-z0-9]+) (\\d+)$");
@@ -54,6 +57,10 @@ public final class PmWire {
     // pmc sec msg <ttlSeconds> <nonceHex 24> <cipherHex>
     private static final Pattern SEC_MSG = Pattern.compile("^pmc sec msg (\\d+) ([0-9a-f]{24}) ([0-9a-f]+)$");
 
+    // NEW (4.6.1 «звонки»): pmc call <имя группы SVC> <пароль> — приглашение в голосовую группу
+    private static final Pattern CALL = Pattern.compile("^pmc call ([A-Za-z0-9]{4,32}) ([A-Za-z0-9]{4,32})$");
+    private static final String CALL_END = "pmc call end";
+
     public static final String POLL_DELIM = " // ";
 
     public static final String TYPING = "pmc typ";
@@ -80,10 +87,16 @@ public final class PmWire {
     // ---------- Сборка ----------
 
     public static String img(String hostCode, String fileId) {
+        return img(hostCode, fileId, false);
+    }
+
+    /** NEW (4.9): фото со спойлером — скрыто размытием, пока получатель не кликнет. */
+    public static String img(String hostCode, String fileId, boolean spoiler) {
         int dot = fileId.lastIndexOf('.');
         String name = dot > 0 ? fileId.substring(0, dot) : fileId;
         String ext = dot > 0 ? fileId.substring(dot + 1) : "png";
-        return "pmc img " + hostCode + " " + name + " " + ext;
+        String base = "pmc img " + hostCode + " " + name + " " + ext;
+        return spoiler ? base + " s" : base;
     }
 
     public static String voice(String hostCode, String fileId, int seconds) {
@@ -94,17 +107,26 @@ public final class PmWire {
     }
 
     public static String vid(String hostCode, String fileId) {
+        return vid(hostCode, fileId, false);
+    }
+
+    /** NEW (4.9): видео со спойлером — скрыто размытием, пока получатель не кликнет. */
+    public static String vid(String hostCode, String fileId, boolean spoiler) {
         int dot = fileId.lastIndexOf('.');
         String name = dot > 0 ? fileId.substring(0, dot) : fileId;
         String ext = dot > 0 ? fileId.substring(dot + 1) : "mp4";
-        return "pmc vid " + hostCode + " " + name + " " + ext;
+        String base = "pmc vid " + hostCode + " " + name + " " + ext;
+        return spoiler ? base + " s" : base;
     }
 
-    /** {код хоста, id файла} или null. */
+    /** {код хоста, id файла, "1"/"0" — спойлер} или null. */
     public static String[] parseVid(String text) {
         if (text == null) return null;
-        Matcher m = VID.matcher(text.trim());
-        if (m.matches()) return new String[]{m.group(1), m.group(2) + "." + m.group(3)};
+        String t = text.trim();
+        Matcher m = VID_SPOILER.matcher(t);
+        if (m.matches()) return new String[]{m.group(1), m.group(2) + "." + m.group(3), "1"};
+        m = VID.matcher(t);
+        if (m.matches()) return new String[]{m.group(1), m.group(2) + "." + m.group(3), "0"};
         return null;
     }
 
@@ -321,19 +343,50 @@ public final class PmWire {
         return parseSecretRequest(t) != null || parseSecretAck(t) != null || isSecretEnd(t);
     }
 
+    // ---------- NEW: звонки через голосовую группу Simple Voice Chat ----------
+
+    public static String call(String groupName, String password) {
+        return "pmc call " + groupName + " " + password;
+    }
+
+    public static String callEnd() {
+        return CALL_END;
+    }
+
+    /** {имя группы, пароль} или null. */
+    public static String[] parseCall(String text) {
+        if (text == null) return null;
+        Matcher m = CALL.matcher(text.trim());
+        return m.matches() ? new String[]{m.group(1), m.group(2)} : null;
+    }
+
+    public static boolean isCallEnd(String text) {
+        return text != null && text.trim().equals(CALL_END);
+    }
+
+    public static boolean isCallMeta(String text) {
+        return text != null && (parseCall(text) != null || isCallEnd(text));
+    }
+
     // ---------- Разбор ----------
 
-    /** {код хоста, id файла} или null. */
+    /** {код хоста, id файла, "1"/"0" — спойлер} или null. */
     public static String[] parseImg(String text) {
         if (text == null) return null;
         String t = text.trim();
-        Matcher m = IMG_V3.matcher(t);
-        if (m.matches()) return new String[]{m.group(1), m.group(2) + "." + m.group(3)};
+        Matcher m = IMG_SPOILER.matcher(t);
+        if (m.matches()) return new String[]{m.group(1), m.group(2) + "." + m.group(3), "1"};
+        m = IMG_V3.matcher(t);
+        if (m.matches()) return new String[]{m.group(1), m.group(2) + "." + m.group(3), "0"};
         m = IMG_V2.matcher(t);
-        if (m.matches()) return new String[]{"c", m.group(1) + "." + m.group(2)};
+        if (m.matches()) return new String[]{"c", m.group(1) + "." + m.group(2), "0"};
         m = IMG_V1.matcher(t);
-        if (m.matches()) return new String[]{"c", m.group(1)};
+        if (m.matches()) return new String[]{"c", m.group(1), "0"};
         return null;
+    }
+
+    public static boolean isSpoiler(String[] imgOrVidRef) {
+        return imgOrVidRef != null && imgOrVidRef.length > 2 && "1".equals(imgOrVidRef[2]);
     }
 
     /** {код хоста, id файла, секунды} или null. */

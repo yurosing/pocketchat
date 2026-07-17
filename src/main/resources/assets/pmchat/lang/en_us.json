@@ -43,6 +43,8 @@
   "pmchat.menu.warn": "Warn",
   "pmchat.video.label": "Video",
   "pmchat.video.decoding": "▶ Video (loading…)",
+  "pmchat.video.stuck": "Couldn't play this video here",
+  "pmchat.video.openweb": "Open in browser",
   "pmchat.media.pick": "Send media",
   "pmchat.media.video": "Video",
   "pmchat.media.audio": "Audio",
@@ -161,5 +163,8 @@
   "pmchat.secret.input.hint": "Secret message…",
   "pmchat.secret.toast": "Secret message",
   "pmchat.secret.undecryptable": "Could not decrypt",
-  "pmchat.tip.docs": "Documentation (website)"
+  "pmchat.tip.docs": "Documentation (website)",
+  "pmchat.call.start": "NEW · Call (voice)",
+  "pmchat.call.end": "End call",
+  "pmchat.call.incoming.toast": "Calling you — you're now in the voice chat"
 }

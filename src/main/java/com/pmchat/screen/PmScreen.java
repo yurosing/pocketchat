@@ -217,6 +217,8 @@ public class PmScreen extends Screen {
     private boolean uploadFailed = false;
     private List<Path> screenshots = List.of();
     private List<Path> stickers = List.of();
+    /** NEW (4.9): следующее отправленное фото/видео уйдёт со спойлером (размытие до клика). */
+    private boolean spoilerMode = false;
 
     // Медиа-меню (5.9 видео / 6.0 аудиофайлы)
     private boolean mediaMode = false;
@@ -274,6 +276,21 @@ public class PmScreen extends Screen {
 
     // Просмотр фото на весь экран
     private PmImages.Entry fullscreenImg = null;
+
+    // NEW (4.3): встроенный видеоплеер (VLC) на весь экран
+    private com.pmchat.client.PmVlc.Session videoSession = null;
+    private String videoUrl;
+    private long videoOpenedAt;
+    private int[] videoFallbackRect; // «Открыть в браузере», если VLC не смог показать
+    private boolean videoDragSeek = false;
+    private boolean videoDragVolume = false;
+    private static final float[] VIDEO_RATES = {0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f};
+    private int[] videoBarRect;   // x,y,w,h полоски перемотки (для клика/драга)
+    private int[] videoVolRect;   // x,y,w,h полоски громкости
+    private int[] videoPlayRect;  // x,y,w,h кнопки play/pause
+    private int[] videoRateRect;  // x,y,w,h кнопки скорости
+    private int[] videoCloseRect; // x,y,w,h кнопки закрытия
+    private int[] videoImgRect;   // x,y,w,h самого видеокадра (клик — пауза/плей)
 
     // Пересылка: выбранное сообщение ждёт, пока кликнут диалог-получатель
     private PmMessage forwardBuffer = null;
@@ -623,10 +640,12 @@ public class PmScreen extends Screen {
                         rebuild();
                     }));
 
-            // NEW (6.10): секретный чат — только для личного диалога с игроком, у кого стоит мод.
-            // Кнопки встают НАД рядами «в контакты»/«очистить» (те остаются на месте, -44/-24).
+            // NEW (6.10 / звонки): секретный чат и звонок — только для личного диалога
+            // с игроком, у кого стоит мод. Кнопки встают НАД рядами «в контакты»/«очистить»
+            // (те остаются на месте, -44/-24), стек растёт вверх по мере надобности.
             boolean secretEligible = selected != null && !isFeedTab()
                     && !PmChatClient.isLocalChat(selected) && config.isModUser(selected);
+            int extraRow = 64;
             if (secretEligible) {
                 PmSecretSession.State st = PmChatClient.secretState(selected);
                 String labelKey = switch (st) {
@@ -637,7 +656,7 @@ public class PmScreen extends Screen {
                 int labelColor = st == PmSecretSession.State.ACTIVE ? 0xFF8FD8A8
                         : st == PmSecretSession.State.PENDING ? 0xFFE0B040 : 0xFF9CC4DC;
                 addDrawableChild(FlatButton.centered(textRenderer,
-                        px + LEFT_W + 10, py + PANEL_H - 64, PANEL_W - LEFT_W - 20, 16,
+                        px + LEFT_W + 10, py + PANEL_H - extraRow, PANEL_W - LEFT_W - 20, 16,
                         Text.translatable(labelKey), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, labelColor, btn -> {
                             if (st == PmSecretSession.State.NONE) {
                                 PmChatClient.startSecretChat(selected);
@@ -646,17 +665,35 @@ public class PmScreen extends Screen {
                             }
                             rebuild();
                         }));
+                extraRow += 20;
                 if (st == PmSecretSession.State.ACTIVE) {
                     int ttl = PmChatClient.secretTtl(selected);
                     String ttlLabel = ttlLabel(ttl);
                     addDrawableChild(FlatButton.centered(textRenderer,
-                            px + LEFT_W + 10, py + PANEL_H - 84, PANEL_W - LEFT_W - 20, 16,
+                            px + LEFT_W + 10, py + PANEL_H - extraRow, PANEL_W - LEFT_W - 20, 16,
                             Text.translatable("pmchat.secret.ttl", ttlLabel), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
                             0xFFCB8A8A, btn -> {
                                 PmChatClient.cycleSecretTtl(selected);
                                 rebuild();
                             }));
+                    extraRow += 20;
                 }
+            }
+            // NEW: звонок через голосовую группу Simple Voice Chat
+            if (secretEligible) {
+                boolean inCall = PmChatClient.isInCall(selected);
+                addDrawableChild(FlatButton.centered(textRenderer,
+                        px + LEFT_W + 10, py + PANEL_H - extraRow, PANEL_W - LEFT_W - 20, 16,
+                        Text.translatable(inCall ? "pmchat.call.end" : "pmchat.call.start"),
+                        WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, inCall ? 0xFFE07A6A : 0xFF8FD8A8, btn -> {
+                            if (inCall) {
+                                PmChatClient.endCall(selected);
+                            } else {
+                                PmChatClient.startCall(selected);
+                            }
+                            rebuild();
+                        }));
+                extraRow += 20;
             }
 
             // В контакты / из контактов (личный диалог)
@@ -731,6 +768,7 @@ public class PmScreen extends Screen {
         mediaMode = false;
         uploadFailed = false;
         groupCreateMode = false;
+        spoilerMode = false;
     }
 
     /** NEW (6.10): человекочитаемая метка таймера самоуничтожения. */
@@ -1181,12 +1219,14 @@ public class PmScreen extends Screen {
         uploading = true;
         uploadFailed = false;
         String target = selected;
+        boolean spoiler = spoilerMode; // NEW (4.9): снимок настройки на момент отправки
         PmImages.upload(file).whenComplete((res, err) ->
                 MinecraftClient.getInstance().execute(() -> {
                     uploading = false;
                     if (err == null && res != null) {
-                        PmChatClient.sendMessage(target, com.pmchat.client.PmWire.vid(res[0], res[1]));
+                        PmChatClient.sendMessage(target, com.pmchat.client.PmWire.vid(res[0], res[1], spoiler));
                         mediaMode = false;
+                        spoilerMode = false;
                         msgScroll = 0;
                         planeAt = System.currentTimeMillis();
                     } else {
@@ -1229,6 +1269,7 @@ public class PmScreen extends Screen {
         uploading = true;
         uploadFailed = false;
         String target = selected;
+        boolean spoiler = spoilerMode; // NEW (4.9): снимок настройки на момент отправки
         PmImages.upload(file).whenComplete((res, err) ->
                 MinecraftClient.getInstance().execute(() -> {
                     uploading = false;
@@ -1237,8 +1278,9 @@ public class PmScreen extends Screen {
                             com.pmchat.client.PmImages.preload(res[0], res[1], Files.readAllBytes(file));
                         } catch (Exception ignored) {
                         }
-                        PmChatClient.sendMessage(target, com.pmchat.client.PmWire.img(res[0], res[1]));
+                        PmChatClient.sendMessage(target, com.pmchat.client.PmWire.img(res[0], res[1], spoiler));
                         imageMode = false;
+                        spoilerMode = false;
                         msgScroll = 0;
                         planeAt = System.currentTimeMillis();
                     } else {
@@ -1334,6 +1376,148 @@ public class PmScreen extends Screen {
         if (fullscreenImg != null) {
             renderFullscreenImage(context);
         }
+        // NEW (4.3): видеоплеер — поверх всего
+        if (videoSession != null) {
+            renderVideoPlayer(context, mouseX, mouseY);
+        }
+    }
+
+    /** NEW (4.3): открыть видео по ссылке во встроенном плеере (закрывает предыдущий сеанс, если был). */
+    private void openVideoPlayer(String url) {
+        closeVideoPlayer();
+        videoUrl = url;
+        videoOpenedAt = System.currentTimeMillis();
+        try {
+            videoSession = com.pmchat.client.PmVlc.open(url);
+        } catch (Exception e) {
+            videoSession = null;
+        }
+    }
+
+    private void closeVideoPlayer() {
+        if (videoSession != null) {
+            videoSession.release();
+            videoSession = null;
+        }
+        videoDragSeek = false;
+        videoDragVolume = false;
+        videoUrl = null;
+        videoFallbackRect = null;
+    }
+
+    /** Затемнённый оверлей с видео, полоской прогресса, громкостью, скоростью и закрытием. */
+    private void renderVideoPlayer(DrawContext context, int mouseX, int mouseY) {
+        com.pmchat.client.PmVlc.Session s = videoSession;
+        if (s == null) return;
+        s.tick();
+        context.fill(0, 0, width, height, 0xE6000000);
+
+        int barH = 40;
+        int vw = s.width(), vh = s.height();
+        if (vw > 0 && vh > 0) {
+            float scale = Math.min((width - 40f) / vw, (height - 60f - barH) / vh);
+            scale = Math.min(scale, 6f);
+            int w = Math.max(1, Math.round(vw * scale));
+            int h = Math.max(1, Math.round(vh * scale));
+            int ix = (width - w) / 2;
+            int iy = (height - barH - h) / 2 - 10;
+            videoImgRect = new int[]{ix, iy, w, h};
+            videoFallbackRect = null;
+            context.drawTexture(RenderPipelines.GUI_TEXTURED, s.textureId(), ix, iy,
+                    0f, 0f, w, h, vw, vh, vw, vh);
+        } else {
+            videoImgRect = null;
+            // NEW (4.3): долго нет кадров (частый случай для YouTube — не всякий VLC
+            // умеет его разбирать) — предлагаем открыть исходную ссылку в браузере.
+            boolean stuck = System.currentTimeMillis() - videoOpenedAt > 8000;
+            Text loading = Text.translatable(stuck ? "pmchat.video.stuck" : "pmchat.video.decoding");
+            context.drawText(textRenderer, loading, (width - textRenderer.getWidth(loading)) / 2, height / 2 - (stuck ? 14 : 0), 0xFFB8C6CE, false);
+            if (stuck && videoUrl != null) {
+                Text openInBrowser = Text.translatable("pmchat.video.openweb");
+                int bw2 = textRenderer.getWidth(openInBrowser) + 16;
+                int bx2 = (width - bw2) / 2, by2 = height / 2 + 4;
+                videoFallbackRect = new int[]{bx2, by2, bw2, 16};
+                boolean hov = inRect(mouseX, mouseY, videoFallbackRect);
+                context.fill(bx2, by2, bx2 + bw2, by2 + 16, hov ? 0xFF2A4A5C : 0xFF1C3644);
+                context.drawStrokedRectangle(bx2, by2, bw2, 16, 0xFF4C8A66);
+                context.drawText(textRenderer, openInBrowser, bx2 + 8, by2 + 4, 0xFF8FD8A8, false);
+            }
+        }
+
+        // ---- Панель управления снизу ----
+        int barY = height - barH - 12;
+        int barX = width / 2 - 220;
+        int barW = 440;
+        context.fill(barX, barY, barX + barW, barY + barH, 0xD0121A16);
+        context.drawStrokedRectangle(barX, barY, barW, barH, 0xFF2A4A5C);
+
+        // Play/Pause
+        int btn = 22;
+        int bx = barX + 8, by = barY + (barH - btn) / 2;
+        videoPlayRect = new int[]{bx, by, btn, btn};
+        boolean hovPlay = inRect(mouseX, mouseY, videoPlayRect);
+        context.fill(bx, by, bx + btn, by + btn, hovPlay ? 0xFF2A4A5C : 0xFF1C3644);
+        String playGlyph = s.isPlaying() ? "❚❚" : "▶";
+        context.drawText(textRenderer, playGlyph, bx + (btn - textRenderer.getWidth(playGlyph)) / 2, by + 7, 0xFFEDF3F0, false);
+
+        // Полоса перемотки
+        int seekX = bx + btn + 10;
+        int seekW = barX + barW - seekX - 150;
+        int seekY = by + btn / 2 - 2;
+        videoBarRect = new int[]{seekX, seekY - 4, seekW, 12};
+        context.fill(seekX, seekY, seekX + seekW, seekY + 4, 0xFF2A4A5C);
+        float pos = Math.max(0f, Math.min(1f, s.positionFraction()));
+        context.fill(seekX, seekY, seekX + Math.round(seekW * pos), seekY + 4, 0xFF6FBF8B);
+        int knobX = seekX + Math.round(seekW * pos);
+        context.fill(knobX - 2, seekY - 3, knobX + 2, seekY + 7, 0xFFEDF3F0);
+
+        // Время
+        String timeStr = fmtTime(s.timeMs()) + " / " + fmtTime(s.lengthMs());
+        context.drawText(textRenderer, timeStr, seekX, barY + 4, 0xFF9CC4DC, false);
+
+        // Скорость
+        int rateW = 40;
+        int rateX = barX + barW - 8 - rateW - 8 - 60;
+        videoRateRect = new int[]{rateX, by, rateW, btn};
+        boolean hovRate = inRect(mouseX, mouseY, videoRateRect);
+        context.fill(rateX, by, rateX + rateW, by + btn, hovRate ? 0xFF2A4A5C : 0xFF1C3644);
+        String rateLabel = trimRate(s.getRate()) + "x";
+        context.drawText(textRenderer, rateLabel, rateX + (rateW - textRenderer.getWidth(rateLabel)) / 2, by + 7, 0xFFF0C34E, false);
+
+        // Громкость
+        int volX = rateX + rateW + 8;
+        int volW = 60;
+        videoVolRect = new int[]{volX, by + 7, volW, 8};
+        context.fill(volX, by + 9, volX + volW, by + 13, 0xFF2A4A5C);
+        float volFrac = Math.max(0f, Math.min(1f, s.getVolume() / 150f));
+        context.fill(volX, by + 9, volX + Math.round(volW * volFrac), by + 13, 0xFF9CC4DC);
+        int volKnobX = volX + Math.round(volW * volFrac);
+        context.fill(volKnobX - 2, by + 6, volKnobX + 2, by + 16, 0xFFEDF3F0);
+
+        // Закрыть
+        int closeW = 22;
+        int closeX = barX + barW - 8 - closeW;
+        videoCloseRect = new int[]{closeX, by, closeW, btn};
+        boolean hovClose = inRect(mouseX, mouseY, videoCloseRect);
+        context.fill(closeX, by, closeX + closeW, by + btn, hovClose ? 0xFF6E2A22 : 0xFF1C3644);
+        context.drawText(textRenderer, "✖", closeX + (closeW - textRenderer.getWidth("✖")) / 2, by + 7,
+                hovClose ? 0xFFE07A6A : 0xFF9CC4DC, false);
+    }
+
+    private static boolean inRect(int mx, int my, int[] r) {
+        return r != null && mx >= r[0] && mx < r[0] + r[2] && my >= r[1] && my < r[1] + r[3];
+    }
+
+    private static String fmtTime(long ms) {
+        if (ms < 0) ms = 0;
+        long totalSec = ms / 1000;
+        long m = totalSec / 60, s = totalSec % 60;
+        return String.format(Locale.ROOT, "%d:%02d", m, s);
+    }
+
+    private static String trimRate(float rate) {
+        if (rate == Math.round(rate)) return String.valueOf(Math.round(rate));
+        return String.valueOf(Math.round(rate * 100) / 100f);
     }
 
     /** Затемнённый оверлей с картинкой, вписанной в окно. */
@@ -2633,6 +2817,51 @@ public class PmScreen extends Screen {
             fullscreenImg = null;
             return true;
         }
+        // NEW (4.3): встроенный видеоплеер — свои контролы
+        if (videoSession != null) {
+            int mx = (int) click.x(), my = (int) click.y();
+            if (inRect(mx, my, videoFallbackRect) && videoUrl != null) {
+                String link = videoUrl;
+                closeVideoPlayer();
+                try {
+                    net.minecraft.util.Util.getOperatingSystem().open(link);
+                } catch (Exception ignored) {
+                }
+                return true;
+            }
+            if (inRect(mx, my, videoCloseRect)) {
+                closeVideoPlayer();
+                return true;
+            }
+            if (inRect(mx, my, videoPlayRect)) {
+                videoSession.togglePause();
+                return true;
+            }
+            if (inRect(mx, my, videoRateRect)) {
+                float cur = videoSession.getRate();
+                int idx = 0;
+                for (int i = 0; i < VIDEO_RATES.length; i++) {
+                    if (Math.abs(VIDEO_RATES[i] - cur) < 0.01f) { idx = i; break; }
+                }
+                videoSession.setRate(VIDEO_RATES[(idx + 1) % VIDEO_RATES.length]);
+                return true;
+            }
+            if (inRect(mx, my, videoBarRect)) {
+                videoDragSeek = true;
+                videoSession.seekFraction((mx - videoBarRect[0]) / (float) videoBarRect[2]);
+                return true;
+            }
+            if (inRect(mx, my, videoVolRect)) {
+                videoDragVolume = true;
+                videoSession.setVolume(Math.round((mx - videoVolRect[0]) / (float) videoVolRect[2] * 150));
+                return true;
+            }
+            if (inRect(mx, my, videoImgRect)) {
+                videoSession.togglePause();
+                return true;
+            }
+            return true; // клик по затемнённому фону — просто гасим, не закрываем случайно
+        }
         // Оверлей глобального поиска (6.7) перехватывает клики
         if (searchOpen) {
             for (Object[] r : searchResultRects) {
@@ -2972,22 +3201,33 @@ public class PmScreen extends Screen {
                         com.pmchat.client.PmVoice.togglePlay(voice[0], voice[1]);
                         return true;
                     }
-                    // Видео — открыть во внешнем плеере/браузере (со звуком)
+                    // NEW (4.3): видео — свой плеер поверх окна (пауза/громкость/скорость),
+                    // если у игрока установлен VLC. Иначе — старое поведение (открыть внешне).
                     String[] vid = vidOf(msg);
                     if (vid != null) {
-                        try {
-                            net.minecraft.util.Util.getOperatingSystem()
-                                    .open(com.pmchat.client.PmHosts.baseUrl(vid[0]) + vid[1]);
-                        } catch (Exception ignored) {
+                        String url = com.pmchat.client.PmHosts.baseUrl(vid[0]) + vid[1];
+                        if (com.pmchat.client.PmVlc.isAvailable()) {
+                            openVideoPlayer(url);
+                        } else {
+                            try {
+                                net.minecraft.util.Util.getOperatingSystem().open(url);
+                            } catch (Exception ignored) {
+                            }
                         }
                         return true;
                     }
-                    // Текст: ссылка — открыть в браузере, иначе — скопировать
+                    // Текст: ссылка — открыть в браузере (YouTube — во встроенном плеере), иначе — скопировать
                     if (msg.text != null && imageIdOf(msg) == null) {
                         Matcher url = URL_PATTERN.matcher(msg.text);
                         if (url.find()) {
+                            String link = url.group(1);
+                            // NEW (4.3): ссылка на YouTube — пробуем во встроенном плеере (через VLC)
+                            if (isYouTubeUrl(link) && com.pmchat.client.PmVlc.isAvailable()) {
+                                openVideoPlayer(link);
+                                return true;
+                            }
                             try {
-                                net.minecraft.util.Util.getOperatingSystem().open(url.group(1));
+                                net.minecraft.util.Util.getOperatingSystem().open(link);
                             } catch (Exception ignored) {
                             }
                             return true;
@@ -3147,6 +3387,14 @@ public class PmScreen extends Screen {
     }
 
     private static final Pattern URL_PATTERN = Pattern.compile("(https?://\\S+)");
+
+    /** NEW (4.3): ссылка на youtube.com/youtu.be — пробуем открыть во встроенном плеере. */
+    private static boolean isYouTubeUrl(String url) {
+        if (url == null) return false;
+        String u = url.toLowerCase(Locale.ROOT);
+        return u.contains("youtube.com/watch") || u.contains("youtube.com/shorts")
+                || u.contains("youtu.be/");
+    }
     private long copiedAt = -1;
     private int copiedX, copiedY;
 
@@ -3192,6 +3440,11 @@ public class PmScreen extends Screen {
         // Esc закрывает полноэкранное фото, не выходя из чата
         if (fullscreenImg != null && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
             fullscreenImg = null;
+            return true;
+        }
+        // NEW (4.3): Esc закрывает видеоплеер (и останавливает VLC)
+        if (videoSession != null && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
+            closeVideoPlayer();
             return true;
         }
         // Esc закрывает оверлей выбора фрагмента
@@ -3482,5 +3735,19 @@ public class PmScreen extends Screen {
     @Override
     public boolean shouldPause() {
         return false;
+    }
+
+    // NEW (4.3): закрываем окно мессенджера — обязательно гасим VLC, иначе он
+    // продолжит играть в фоне (звук и занятая память) даже без видимого окна.
+    @Override
+    public void close() {
+        closeVideoPlayer();
+        super.close();
+    }
+
+    @Override
+    public void removed() {
+        closeVideoPlayer();
+        super.removed();
     }
 }
