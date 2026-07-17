@@ -126,6 +126,8 @@ public class PmConfig {
      */
     public boolean staffFeatures = false;
     public String warnCommand = "warn";
+    /** Причина по умолчанию для /warn (пусто — не добавлять). */
+    public String warnReason = "";
 
     /**
      * Отдельный чат логов CoreProtect (6.3). По умолчанию ВЫКЛ. Строки
@@ -158,6 +160,36 @@ public class PmConfig {
      * опционально (?<clan>клан) — показывается рядом с ником.
      */
     public List<PmChannel> channels = defaultChannels();
+
+    /**
+     * Групповой чат (6.9): локальная беседа с несколькими игроками. Мод шлёт
+     * обычные /m каждому участнику, входящие собираются в одну ленту. id —
+     * детерминированный (из состава), чтобы у всех участников с модом совпадал.
+     */
+    public static class PmGroup {
+        public String id;
+        public String name;
+        public List<String> members = new ArrayList<>();
+
+        public PmGroup() {
+        }
+
+        public PmGroup(String id, String name, List<String> members) {
+            this.id = id;
+            this.name = name;
+            this.members = members;
+        }
+    }
+
+    public List<PmGroup> groups = new ArrayList<>();
+
+    public PmGroup findGroup(String id) {
+        if (id == null) return null;
+        for (PmGroup g : groups) {
+            if (id.equals(g.id)) return g;
+        }
+        return null;
+    }
 
     private static List<PmChannel> defaultChannels() {
         List<PmChannel> list = new ArrayList<>();
@@ -312,6 +344,11 @@ public class PmConfig {
                         cfg.uploadOrder = "k,x,q,c"; // миграция со старого порядка
                     }
                     if (cfg.channels == null || cfg.channels.isEmpty()) cfg.channels = defaultChannels();
+                    if (cfg.groups == null) cfg.groups = new ArrayList<>();
+                    for (PmGroup g : cfg.groups) {
+                        if (g.members == null) g.members = new ArrayList<>();
+                    }
+                    if (cfg.warnReason == null) cfg.warnReason = "";
                     // Миграция: одиночный alphacephei-URL -> список зеркал с GitHub
                     if (cfg.sttModelUrlRu == null || !cfg.sttModelUrlRu.contains(",")) {
                         cfg.sttModelUrlRu = new PmConfig().sttModelUrlRu;

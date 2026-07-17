@@ -41,6 +41,8 @@ public final class PmWire {
     private static final Pattern POLL = Pattern.compile("^pmc poll ([01]) (.+)$", Pattern.DOTALL);
     // Голос: pmc pvote <pollHash> <индексы через запятую или ->
     private static final Pattern PVOTE = Pattern.compile("^pmc pvote ([0-9a-fA-F]{1,8}) ([-0-9,]+)$");
+    // Групповое сообщение: pmc grp <hexИмя> <составЧерезДефис> <текст>
+    private static final Pattern GRP = Pattern.compile("^pmc grp ([0-9a-f]*) ([A-Za-z0-9_-]+) (.+)$", Pattern.DOTALL);
 
     public static final String POLL_DELIM = " // ";
 
@@ -213,6 +215,51 @@ public final class PmWire {
         if (text == null) return null;
         Matcher m = PIN.matcher(text.trim());
         return m.matches() ? m.group(1) : null;
+    }
+
+    // ---------- Группы ----------
+
+    /** UTF-8 -> hex (только 0-9a-f, безопасно для анти-рекламных фильтров). */
+    public static String hex(String s) {
+        if (s == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (byte b : s.getBytes(java.nio.charset.StandardCharsets.UTF_8)) {
+            sb.append(Character.forDigit((b >> 4) & 0xF, 16));
+            sb.append(Character.forDigit(b & 0xF, 16));
+        }
+        return sb.toString();
+    }
+
+    /** hex -> UTF-8 (обратно к {@link #hex}). */
+    public static String unhex(String h) {
+        if (h == null || h.isEmpty() || (h.length() & 1) != 0) return "";
+        byte[] out = new byte[h.length() / 2];
+        for (int i = 0; i < out.length; i++) {
+            int hi = Character.digit(h.charAt(i * 2), 16);
+            int lo = Character.digit(h.charAt(i * 2 + 1), 16);
+            if (hi < 0 || lo < 0) return "";
+            out[i] = (byte) ((hi << 4) | lo);
+        }
+        return new String(out, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /** Групповое сообщение: имя (hex) + полный состав + текст. */
+    public static String group(String name, java.util.List<String> roster, String text) {
+        return "pmc grp " + hex(name) + " " + String.join("-", roster) + " " + text;
+    }
+
+    /** {имя, состав(String[]), текст} или null. */
+    public static Object[] parseGroup(String text) {
+        if (text == null) return null;
+        Matcher m = GRP.matcher(text.trim());
+        if (!m.matches()) return null;
+        String name = unhex(m.group(1));
+        String[] roster = m.group(2).split("-");
+        return new Object[]{name, roster, m.group(3).trim()};
+    }
+
+    public static boolean isGroupMeta(String text) {
+        return parseGroup(text) != null;
     }
 
     // ---------- Разбор ----------

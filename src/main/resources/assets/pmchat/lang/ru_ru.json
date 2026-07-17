@@ -141,5 +141,13 @@
   "pmchat.frag.title": "Выберите фрагмент",
   "pmchat.frag.hint": "Клик — начало, ещё клик — конец",
   "pmchat.frag.ok": "Цитировать",
-  "pmchat.frag.cancel": "Отмена"
+  "pmchat.frag.cancel": "Отмена",
+  "pmchat.group": "Группа",
+  "pmchat.group.new": "Новая группа",
+  "pmchat.group.title": "Новая группа",
+  "pmchat.group.name": "Название",
+  "pmchat.group.members": "Участники",
+  "pmchat.group.members.hint": "Ники через запятую",
+  "pmchat.group.create": "Создать",
+  "pmchat.group.hint": "Сообщения уходят каждому участнику через /m"
 }

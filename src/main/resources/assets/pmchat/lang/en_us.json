@@ -141,5 +141,13 @@
   "pmchat.frag.title": "Select a fragment",
   "pmchat.frag.hint": "Click start, then click end",
   "pmchat.frag.ok": "Quote",
-  "pmchat.frag.cancel": "Cancel"
+  "pmchat.frag.cancel": "Cancel",
+  "pmchat.group": "Group",
+  "pmchat.group.new": "New group",
+  "pmchat.group.title": "New group",
+  "pmchat.group.name": "Name",
+  "pmchat.group.members": "Members",
+  "pmchat.group.members.hint": "Nicknames, comma-separated",
+  "pmchat.group.create": "Create",
+  "pmchat.group.hint": "Messages are sent to each member via /m"
 }

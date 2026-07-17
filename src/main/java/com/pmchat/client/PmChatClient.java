@@ -68,9 +68,10 @@ public class PmChatClient implements ClientModInitializer {
         coreProtectFeed.clear();
     }
 
-    /** Локальные диалоги (не отправляются на сервер): начинаются с §. */
+    /** Локальные диалоги (не отправляются на сервер): начинаются с §.
+     *  Группы (§grp:) исключаем — они рассылаются на сервер через /m. */
     public static boolean isLocalChat(String name) {
-        return name != null && name.startsWith("§");
+        return name != null && name.startsWith("§") && !name.startsWith(GROUP_PREFIX);
     }
 
     /** Сохранить сообщение в Избранное (копия локально). */
@@ -265,7 +266,11 @@ public class PmChatClient implements ClientModInitializer {
         if (config.coreProtectEnabled) {
             long now = System.currentTimeMillis();
             boolean strong = coreProtect != null && coreProtect.matcher(plain).find();
-            if (strong || now < coreProtectActiveUntil) {
+            // В «слабом» окне (после заголовка) НЕ проглатываем строки, которые
+            // на самом деле являются обычным чатом — иначе сообщения общего чата,
+            // каналов и ЛС попадают в ленту CoreProtect. Заголовок (strong) ловим
+            // всегда.
+            if (strong || (now < coreProtectActiveUntil && !looksLikeKnownChat(plain))) {
                 PmMessage log = new PmMessage(false, plain, now, 0);
                 coreProtectFeed.add(log);
                 while (coreProtectFeed.size() > GLOBAL_LIMIT) coreProtectFeed.remove(0);
@@ -285,6 +290,29 @@ public class PmChatClient implements ClientModInitializer {
             }
         }
         return 0;
+    }
+
+    /**
+     * Похожа ли строка на обычный чат (общий/канал/ЛС) — только проверка
+     * паттернов, без побочных эффектов. Нужно, чтобы блочный захват CoreProtect
+     * не проглатывал сообщения общего чата, каналов и личек.
+     */
+    private static boolean looksLikeKnownChat(String plain) {
+        if (global != null && global.matcher(plain).find()) return true;
+        if (incoming != null && incoming.matcher(plain).find()) return true;
+        if (outgoing != null && outgoing.matcher(plain).find()) return true;
+        for (PmConfig.PmChannel channel : config.channels) {
+            Pattern pattern = channelPatterns.computeIfAbsent(channel.id, k -> {
+                try {
+                    return Pattern.compile(channel.pattern,
+                            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+                } catch (Exception e) {
+                    return Pattern.compile("$^");
+                }
+            });
+            if (pattern.matcher(plain).find()) return true;
+        }
+        return false;
     }
 
     // ---------- Каналы серверного чата ----------
@@ -389,6 +417,150 @@ public class PmChatClient implements ClientModInitializer {
             if (channel.id.equals(id)) return channel;
         }
         return null;
+    }
+
+    // ---------- Групповые чаты (6.9) ----------
+
+    /** Сентинел-префикс «диалога» группы. */
+    public static final String GROUP_PREFIX = "§grp:";
+
+    private static final java.util.Map<String, java.util.List<PmMessage>> groupFeeds =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<String, Integer> groupUnread =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static boolean isGroup(String name) {
+        return name != null && name.startsWith(GROUP_PREFIX);
+    }
+
+    public static String groupId(String name) {
+        return isGroup(name) ? name.substring(GROUP_PREFIX.length()) : null;
+    }
+
+    /** Детерминированный id группы из состава (не зависит от порядка/регистра). */
+    public static String computeGroupId(java.util.Collection<String> roster) {
+        java.util.List<String> norm = new java.util.ArrayList<>();
+        for (String r : roster) {
+            if (r != null && !r.isBlank()) norm.add(r.trim().toLowerCase(Locale.ROOT));
+        }
+        java.util.Collections.sort(norm);
+        return PmHistory.msgHash(String.join("", norm));
+    }
+
+    public static java.util.List<PmMessage> getGroupFeed(String id) {
+        return groupFeeds.getOrDefault(id, java.util.List.of());
+    }
+
+    public static int groupUnread(String id) {
+        return groupUnread.getOrDefault(id, 0);
+    }
+
+    public static void clearGroupUnread(String id) {
+        groupUnread.remove(id);
+    }
+
+    /** Создать группу локально; возвращает id для выбора. */
+    public static String createGroup(String name, java.util.List<String> members) {
+        java.util.List<String> clean = new java.util.ArrayList<>();
+        String self = selfName();
+        for (String m : members) {
+            if (m == null) continue;
+            String t = m.trim();
+            if (t.isEmpty() || t.equalsIgnoreCase(self)) continue;
+            if (clean.stream().noneMatch(x -> x.equalsIgnoreCase(t))) clean.add(t);
+        }
+        if (clean.isEmpty()) return null;
+        java.util.List<String> roster = new java.util.ArrayList<>();
+        roster.add(self);
+        roster.addAll(clean);
+        String id = computeGroupId(roster);
+        if (config.findGroup(id) == null) {
+            config.groups.add(new PmConfig.PmGroup(id, name == null || name.isBlank() ? "Группа" : name.trim(), clean));
+            config.save();
+        }
+        return id;
+    }
+
+    /** «Удалить группу»: убирает из конфига и очищает ленту. */
+    public static void deleteGroup(String id) {
+        config.groups.removeIf(g -> g.id.equals(id));
+        config.save();
+        groupFeeds.remove(id);
+        groupUnread.remove(id);
+    }
+
+    /** Отправить сообщение в группу: рассылка /m каждому участнику. */
+    public static void sendGroup(String id, String text) {
+        PmConfig.PmGroup g = config.findGroup(id);
+        if (g == null || text == null || text.isBlank()) return;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        String self = selfName();
+
+        // Локальное эхо своего сообщения
+        PmMessage mine = new PmMessage(true, text, System.currentTimeMillis(), 0);
+        mine.sender = self;
+        addToGroupFeed(id, mine);
+
+        java.util.List<String> roster = new java.util.ArrayList<>();
+        roster.add(self);
+        roster.addAll(g.members);
+        String hexName = PmWire.hex(g.name);
+
+        for (String member : g.members) {
+            if (member.equalsIgnoreCase(self)) continue;
+            String out;
+            if (config.isModUser(member)) {
+                out = PmWire.group(hexName, roster, text);
+            } else {
+                // Без мода: человекочитаемо, с пометкой группы
+                out = "[" + g.name + "] " + text;
+            }
+            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + member + " " + out);
+            synchronized (pendingEcho) {
+                pendingEcho.add(new String[]{member, out, String.valueOf(System.currentTimeMillis() + 5000)});
+            }
+        }
+    }
+
+    private static void addToGroupFeed(String id, PmMessage msg) {
+        java.util.List<PmMessage> feed = groupFeeds.computeIfAbsent(id,
+                k -> java.util.Collections.synchronizedList(new java.util.ArrayList<>()));
+        feed.add(msg);
+        while (feed.size() > GLOBAL_LIMIT) feed.remove(0);
+    }
+
+    /** Входящее групповое сообщение (pmc grp) от участника с модом. */
+    private static void handleIncomingGroup(String sender, String name, String[] roster, String text) {
+        String self = selfName();
+        java.util.List<String> members = new java.util.ArrayList<>();
+        for (String r : roster) {
+            if (r == null || r.isBlank()) continue;
+            if (r.equalsIgnoreCase(self)) continue;
+            if (members.stream().noneMatch(x -> x.equalsIgnoreCase(r))) members.add(r.trim());
+        }
+        if (members.isEmpty()) return;
+        String id = computeGroupId(java.util.Arrays.asList(roster));
+        PmConfig.PmGroup g = config.findGroup(id);
+        if (g == null) {
+            config.groups.add(new PmConfig.PmGroup(id, name == null || name.isBlank() ? "Группа" : name, members));
+            config.save();
+        }
+
+        PmMessage msg = new PmMessage(false, text, System.currentTimeMillis(), 0);
+        msg.sender = sender;
+        addToGroupFeed(id, msg);
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        boolean viewing = client.currentScreen instanceof PmScreen screen
+                && screen.isViewing(GROUP_PREFIX + id);
+        if (!viewing) {
+            groupUnread.merge(id, 1, Integer::sum);
+            if (!config.dnd) {
+                client.getToastManager().add(new PmToast(name + " · " + sender, previewOf(text)));
+                playNotifySound(client);
+            }
+        }
     }
 
     private static void addGlobal(String sender, String text) {
@@ -503,6 +675,14 @@ public class PmChatClient implements ClientModInitializer {
                 poll.pollOtherVotes = idx;
                 history.save();
             }
+            return 2;
+        }
+
+        // Групповое сообщение (pmc grp) — в ленту группы, из ЛС прячем
+        Object[] grp = PmWire.parseGroup(text);
+        if (grp != null) {
+            config.addModUser(sender);
+            handleIncomingGroup(sender, (String) grp[0], (String[]) grp[1], (String) grp[2]);
             return 2;
         }
 
@@ -718,16 +898,18 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     /**
-     * Предупреждение игроку (6.1): НЕ отправляет сразу, а открывает игровой
-     * чат с уже вписанной командой «/warn <ник> » — хелпер дописывает причину
-     * и отправляет сам.
+     * Предупреждение игроку (6.1): сразу отправляет команду «/warn <ник>» на
+     * сервер (без открытия игрового чата). Причина по умолчанию берётся из
+     * настроек (warnReason), если задана.
      */
     public static void warnPlayer(String nick) {
         if (!config.staffFeatures || nick == null || nick.isBlank()) return;
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
         String cmd = (config.warnCommand == null || config.warnCommand.isBlank() ? "warn" : config.warnCommand.trim());
-        client.setScreen(new net.minecraft.client.gui.screen.ChatScreen("/" + cmd + " " + nick + " ", false));
+        String reason = config.warnReason == null ? "" : config.warnReason.trim();
+        String full = reason.isEmpty() ? cmd + " " + nick : cmd + " " + nick + " " + reason;
+        client.player.networkHandler.sendChatCommand(full);
     }
 
     // ---------- Опросы (только личные чаты) ----------

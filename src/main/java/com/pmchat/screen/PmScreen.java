@@ -127,7 +127,16 @@ public class PmScreen extends Screen {
     private boolean isFeedTab() {
         return selected != null && (PmChatClient.GLOBAL.equals(selected)
                 || PmChatClient.COREPROTECT.equals(selected)
-                || selected.startsWith(PmChatClient.CHANNEL_PREFIX));
+                || selected.startsWith(PmChatClient.CHANNEL_PREFIX)
+                || PmChatClient.isGroup(selected));
+    }
+
+    private boolean isGroupTab() {
+        return PmChatClient.isGroup(selected);
+    }
+
+    private String groupId() {
+        return PmChatClient.groupId(selected);
     }
 
     /** Ленты только для чтения (без ввода/реакций/закрепов). */
@@ -167,6 +176,12 @@ public class PmScreen extends Screen {
     private String selected = null;
     private boolean statsMode = false;
     private boolean moneyMode = false;
+
+    // Групповой чат (6.9): режим создания + поля
+    private boolean groupCreateMode = false;
+    private int[] groupNewRect = null;
+    private TextFieldWidget groupNameField;
+    private TextFieldWidget groupMembersField;
 
     private int listScroll = 0;
     private int msgScroll = 0;      // 0 — низ переписки
@@ -328,6 +343,62 @@ public class PmScreen extends Screen {
         rebuild();
     }
 
+    // ---------- Создание группы (6.9) ----------
+
+    private void buildGroupComposer() {
+        int cx = px + LEFT_W + 10;
+        int cw = PANEL_W - LEFT_W - 20;
+        int y = py + 40;
+        String nameHint = Text.translatable("pmchat.group.name").getString();
+        groupNameField = new TextFieldWidget(textRenderer, cx, y, cw, 16, Text.literal(nameHint));
+        groupNameField.setMaxLength(24);
+        groupNameField.setSuggestion(nameHint);
+        groupNameField.setChangedListener(s -> groupNameField.setSuggestion(s.isEmpty() ? nameHint : ""));
+        addDrawableChild(groupNameField);
+        y += 42;
+        String memHint = Text.translatable("pmchat.group.members.hint").getString();
+        groupMembersField = new TextFieldWidget(textRenderer, cx, y, cw, 16, Text.literal(memHint));
+        groupMembersField.setMaxLength(160);
+        groupMembersField.setSuggestion(memHint);
+        groupMembersField.setChangedListener(s -> groupMembersField.setSuggestion(s.isEmpty() ? memHint : ""));
+        addDrawableChild(groupMembersField);
+        y += 30;
+        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 100, 16,
+                Text.translatable("pmchat.group.create"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT,
+                btn -> createGroupFromComposer()));
+        addDrawableChild(FlatButton.centered(textRenderer, cx + 106, y, 60, 16,
+                Text.translatable("pmchat.poll.cancel"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT,
+                btn -> { groupCreateMode = false; rebuild(); }));
+    }
+
+    private void createGroupFromComposer() {
+        if (groupNameField == null || groupMembersField == null) return;
+        String name = groupNameField.getText().trim();
+        String raw = groupMembersField.getText().trim();
+        List<String> members = new ArrayList<>();
+        for (String part : raw.split("[,\\s]+")) {
+            if (!part.isBlank()) members.add(part.trim());
+        }
+        if (members.isEmpty()) return;
+        String id = PmChatClient.createGroup(name, members);
+        groupCreateMode = false;
+        if (id != null) {
+            selected = PmChatClient.GROUP_PREFIX + id;
+            msgScroll = 0;
+        }
+        rebuild();
+    }
+
+    private void renderGroupCreate(DrawContext context) {
+        int cx = px + LEFT_W + 10;
+        context.drawText(textRenderer, Text.translatable("pmchat.group.title"), cx, py + 10, TITLE, false);
+        context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
+        context.drawText(textRenderer, Text.translatable("pmchat.group.name"), cx, py + 30, SUBTLE, false);
+        context.drawText(textRenderer, Text.translatable("pmchat.group.members"), cx, py + 72, SUBTLE, false);
+        context.drawText(textRenderer, Text.translatable("pmchat.group.hint"),
+                cx, py + PANEL_H - 40, SUBTLE, false);
+    }
+
     /** Ник исходного автора сообщения (для пересылки). */
     private String senderOfMessage(PmMessage msg) {
         if (msg.forwardFrom != null) return msg.forwardFrom; // уже переслано — сохраняем первоисточник
@@ -419,7 +490,7 @@ public class PmScreen extends Screen {
         addDrawableChild(searchField);
 
         boolean isGlobal = isFeedTab();
-        if (selected != null && !statsMode && !isGlobal) {
+        if (selected != null && !statsMode && !isGlobal && !groupCreateMode) {
             // Медиа: видео + аудиофайлы (5.9/6.0)
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 174, py + 6, 18, 14,
                     Text.literal("▶"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
@@ -513,7 +584,7 @@ public class PmScreen extends Screen {
             }
         }
 
-        if (isGlobal && !isReadOnlyFeed()) {
+        if (isGlobal && !isReadOnlyFeed() && !groupCreateMode) {
             // Общий чат: только эмодзи + поле + отправка
             int inputY = py + PANEL_H - 24;
             addDrawableChild(icon(px + LEFT_W + 8, inputY, 16, 16, PmIcons.EMOJI, 0xFFF0C34E, "pmchat.tip.emoji",
@@ -575,13 +646,20 @@ public class PmScreen extends Screen {
             }
         }
 
+        if (groupCreateMode) {
+            buildGroupComposer();
+        }
+
         // Очистка ленты общего чата (без подтверждения — это кэш сессии)
-        if (isGlobal && !statsMode) {
+        if (isGlobal && !statsMode && !groupCreateMode) {
             addDrawableChild(icon(px + PANEL_W - 28, py + 6, 20, 14, PmIcons.CLEAR, 0xFFE07A6A, "pmchat.tip.clear", btn -> {
                         if (PmChatClient.GLOBAL.equals(selected)) {
                             PmChatClient.clearGlobalChat();
                         } else if (PmChatClient.COREPROTECT.equals(selected)) {
                             PmChatClient.clearCoreProtect();
+                        } else if (isGroupTab()) {
+                            PmChatClient.deleteGroup(groupId());
+                            selected = null; // «удалить группу»: вкладка исчезает
                         } else if (channelId() != null) {
                             PmChatClient.clearChannel(channelId());
                             selected = null; // «удалить чат»: вкладка исчезает
@@ -603,6 +681,7 @@ public class PmScreen extends Screen {
         emojiMode = false;
         mediaMode = false;
         uploadFailed = false;
+        groupCreateMode = false;
     }
 
     /** Кнопка со своей пиксельной иконкой (PmIcons) и всплывающей подсказкой. */
@@ -665,6 +744,8 @@ public class PmScreen extends Screen {
         if (isFeedTab()) {
             if (PmChatClient.GLOBAL.equals(selected)) {
                 PmChatClient.sendGlobal(text);
+            } else if (isGroupTab()) {
+                PmChatClient.sendGroup(groupId(), text);
             } else {
                 PmChatClient.sendChannel(channelId(), text);
             }
@@ -1138,7 +1219,9 @@ public class PmScreen extends Screen {
 
         renderConversationList(context, mouseX, mouseY);
 
-        if (statsMode) {
+        if (groupCreateMode) {
+            renderGroupCreate(context);
+        } else if (statsMode) {
             renderStats(context);
         } else if (selected == null) {
             Text hint = Text.translatable("pmchat.empty.chat");
@@ -1393,6 +1476,51 @@ public class PmScreen extends Screen {
             y += ROW_H;
         }
 
+        // Группы (6.9): пользовательские беседы с несколькими игроками
+        groupNewRect = null;
+        for (com.pmchat.client.PmConfig.PmGroup g : config.groups) {
+            if (y + ROW_H > bottom + 2) break;
+            String tabId = PmChatClient.GROUP_PREFIX + g.id;
+            boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + ROW_H;
+            boolean isSel = tabId.equals(selected);
+            if (isSel) {
+                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_SELECTED);
+            } else if (hovered) {
+                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_HOVER);
+            }
+            context.drawText(textRenderer, "▣", px + 7, y + 4, 0xFF6FBF8B, false);
+            int gUnread = PmChatClient.groupUnread(g.id);
+            int labelMax = LEFT_W - 26 - (gUnread > 0 ? 16 : 0);
+            context.drawText(textRenderer, trim(g.name, labelMax), px + 16, y + 4, NAME_TEXT, false);
+            List<PmMessage> feed = PmChatClient.getGroupFeed(g.id);
+            if (!feed.isEmpty()) {
+                PmMessage last = feed.get(feed.size() - 1);
+                String preview = (last.sender != null ? last.sender + ": " : "")
+                        + PmChatClient.previewOf(last.text != null ? last.text : "");
+                context.drawText(textRenderer, trim(preview, LEFT_W - 14), px + 7, y + 14, PREVIEW_TEXT, false);
+            } else {
+                context.drawText(textRenderer, trim(String.join(", ", g.members), LEFT_W - 14),
+                        px + 7, y + 14, PREVIEW_TEXT, false);
+            }
+            if (gUnread > 0) {
+                String badge = gUnread > 9 ? "9+" : String.valueOf(gUnread);
+                int bw2 = textRenderer.getWidth(badge) + 6;
+                context.fill(px + LEFT_W - 5 - bw2, y + 3, px + LEFT_W - 5, y + 13, BADGE_BG);
+                context.drawText(textRenderer, badge, px + LEFT_W - 5 - bw2 + 3, y + 4, 0xFFFFFFFF, false);
+            }
+            rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, tabId});
+            y += ROW_H;
+        }
+        // Строка «＋ Новая группа» (только когда не идёт поиск)
+        if (query.isEmpty() && y + 12 <= bottom) {
+            boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + 12;
+            if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + 11, ROW_HOVER);
+            context.drawText(textRenderer, "＋ " + Text.translatable("pmchat.group.new").getString(),
+                    px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
+            groupNewRect = new int[]{px, y, LEFT_W, 12};
+            y += 14;
+        }
+
         // Заголовок секции «Личные» (переписки с игроками)
         if (!names.isEmpty() && y + 10 <= bottom) {
             context.drawText(textRenderer, Text.translatable("pmchat.section.chats").getString().toUpperCase(Locale.ROOT),
@@ -1466,6 +1594,9 @@ public class PmScreen extends Screen {
         } else if (channelId() != null) {
             com.pmchat.client.PmConfig.PmChannel channel = PmChatClient.channelById(channelId());
             header = "# " + (channel != null ? channel.label : channelId());
+        } else if (isGroupTab()) {
+            com.pmchat.client.PmConfig.PmGroup g = config.findGroup(groupId());
+            header = "▣ " + (g != null ? g.name : Text.translatable("pmchat.group").getString());
         } else {
             header = trim(selected, PANEL_W - LEFT_W - 132);
         }
@@ -1483,6 +1614,25 @@ public class PmScreen extends Screen {
             String typing = Text.translatable("pmchat.typing").getString() + ".".repeat(dots);
             context.drawText(textRenderer, typing,
                     headerX + 4 + textRenderer.getWidth(header), py + 8, 0xFF6FBF8B, false);
+        }
+        // Состав группы с пометкой участников, у кого стоит мод (зелёная точка)
+        if (isGroupTab()) {
+            com.pmchat.client.PmConfig.PmGroup g = config.findGroup(groupId());
+            if (g != null) {
+                int mx = headerX + textRenderer.getWidth(header) + 10;
+                int limit = px + PANEL_W - 34;
+                for (String member : g.members) {
+                    boolean hasMod = config.isModUser(member);
+                    int w = textRenderer.getWidth(member) + 14;
+                    if (mx + w > limit) {
+                        context.drawText(textRenderer, "…", mx, py + 8, SUBTLE, false);
+                        break;
+                    }
+                    context.drawText(textRenderer, "●", mx, py + 8, hasMod ? 0xFF6FBF8B : SUBTLE, false);
+                    context.drawText(textRenderer, member, mx + 8, py + 8, PREVIEW_TEXT, false);
+                    mx += w;
+                }
+            }
         }
         context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
 
@@ -1582,6 +1732,8 @@ public class PmScreen extends Screen {
             all = new ArrayList<>(PmChatClient.getCoreProtectFeed());
         } else if (channelId() != null) {
             all = new ArrayList<>(PmChatClient.getChannelFeed(channelId()));
+        } else if (isGroupTab()) {
+            all = new ArrayList<>(PmChatClient.getGroupFeed(groupId()));
         } else {
             all = history.messages(selected);
         }
@@ -1754,12 +1906,18 @@ public class PmScreen extends Screen {
                 }
                 context.drawText(textRenderer, trim(senderName, bx + dx + bw - 4 - nx), nx, y + dy + 3,
                         applyAlpha(nameColor(senderName), alpha), false);
-                // 6.8: кнопка ⚠ «предупредить» в общем чате/каналах (staff-функции)
+                // 6.8: кнопка ⚠ «предупредить» в общем чате/каналах (staff-функции).
+                // Показываем только при наведении на пузырь — иначе значки засоряют
+                // общий чат.
                 if (config.staffFeatures && !msg.out) {
-                    String bare = senderName.contains(" [") ? senderName.substring(0, senderName.indexOf(" [")) : senderName;
                     int wx2 = bx + dx + bw + 3;
-                    context.drawText(textRenderer, "⚠", wx2, y + dy + 3, applyAlpha(0xFFE0B040, alpha), false);
-                    warnBtnRects.add(new Object[]{wx2 - 1, y + dy + 1, 10, 11, bare});
+                    boolean rowHover = mouseX >= bx + dx && mouseX <= wx2 + 12
+                            && mouseY >= y + dy && mouseY <= y + dy + bh;
+                    if (rowHover) {
+                        String bare = senderName.contains(" [") ? senderName.substring(0, senderName.indexOf(" [")) : senderName;
+                        context.drawText(textRenderer, "⚠", wx2, y + dy + 3, applyAlpha(0xFFE0B040, alpha), false);
+                        warnBtnRects.add(new Object[]{wx2 - 1, y + dy + 1, 10, 11, bare});
+                    }
                 }
             }
 
@@ -2525,13 +2683,22 @@ public class PmScreen extends Screen {
         if (super.mouseClicked(click, doubled)) {
             return true;
         }
+        // «＋ Новая группа»
+        if (groupNewRect != null && hit(click, groupNewRect)) {
+            closeModes();
+            statsMode = false;
+            groupCreateMode = true;
+            rebuild();
+            return true;
+        }
         for (Object[] r : rowRects) {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
             if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
                 String tab = (String) r[4];
                 // Пересылка: клик по диалогу-получателю
                 if (forwardBuffer != null && !PmChatClient.GLOBAL.equals(tab)
-                        && !tab.startsWith(PmChatClient.CHANNEL_PREFIX)) {
+                        && !tab.startsWith(PmChatClient.CHANNEL_PREFIX)
+                        && !PmChatClient.isGroup(tab)) {
                     PmChatClient.forwardMessage(tab, forwardFromNick, forwardBuffer);
                     forwardBuffer = null;
                     selected = tab;
@@ -2546,6 +2713,9 @@ public class PmScreen extends Screen {
                 if (selected.startsWith(PmChatClient.CHANNEL_PREFIX)) {
                     PmChatClient.clearChannelUnread(
                             selected.substring(PmChatClient.CHANNEL_PREFIX.length()));
+                }
+                if (PmChatClient.isGroup(selected)) {
+                    PmChatClient.clearGroupUnread(PmChatClient.groupId(selected));
                 }
                 if (hadUnread) {
                     PmChatClient.sendSeen(selected);
