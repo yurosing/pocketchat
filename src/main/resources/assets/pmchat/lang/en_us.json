@@ -43,6 +43,8 @@
   "pmchat.menu.warn": "Warn",
   "pmchat.video.label": "Video",
   "pmchat.video.decoding": "▶ Video (loading…)",
+  "pmchat.video.signin": "YouTube requires sign-in for this video",
+  "pmchat.video.signin.hint": "Add config/pmchat-cookies.txt (see docs)",
   "pmchat.video.stuck": "Couldn't play this video here",
   "pmchat.video.gettingtool": "Getting yt-dlp",
   "pmchat.video.downloading": "Downloading",

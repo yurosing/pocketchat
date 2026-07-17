@@ -288,6 +288,7 @@ public class PmScreen extends Screen {
     private boolean videoResolving = false; // NEW (5.0): фоновая подготовка YouTube (yt-dlp)
     private boolean videoOpenFailed = false; // резолв/запуск не удался — сразу показываем fallback
     private volatile String videoStatusText = null; // NEW (5.1): «yt-dlp» / «42%» при подготовке
+    private boolean videoNeedsCookies = false;      // NEW (5.1): провал из-за требования входа YouTube
     private java.io.File videoTempFile = null;      // NEW (5.1): скачанный ролик — удалить при закрытии
     private int videoSeq = 0;           // защита от «просроченных» фоновых резолвов
     private int[] videoFallbackRect; // «Открыть в браузере», если VLC не смог показать
@@ -1445,6 +1446,7 @@ public class PmScreen extends Screen {
                     } else {
                         // yt-dlp не смог (бот-проверка/нет бинарника) — состояние
                         // ошибки с кнопкой «Открыть в браузере».
+                        videoNeedsCookies = com.pmchat.client.PmYtDlp.lastNeededSignIn();
                         videoOpenFailed = true;
                     }
                 });
@@ -1487,6 +1489,7 @@ public class PmScreen extends Screen {
         }
         videoResolving = false;
         videoOpenFailed = false;
+        videoNeedsCookies = false;
         videoStatusText = null;
         videoDragSeek = false;
         videoDragVolume = false;
@@ -1564,14 +1567,22 @@ public class PmScreen extends Screen {
         } else {
             videoImgRect = null;
             // ---- Плашка состояния по центру ----
-            int pw = 280, ph = stuck ? 84 : 64;
+            // Для «нужен вход» плашка выше — там ещё строка-подсказка про куки.
+            boolean cookiesHint = stuck && videoNeedsCookies;
+            int pw = cookiesHint ? 320 : 280;
+            int ph = stuck ? (cookiesHint ? 100 : 84) : 64;
             int pxc = (width - pw) / 2, pyc = (height - ph) / 2 - 10;
             context.fill(pxc, pyc, pxc + pw, pyc + ph, 0xE0101A16);
             context.drawStrokedRectangle(pxc, pyc, pw, ph, 0xFF2A4A5C);
             if (stuck) {
-                Text err = Text.translatable("pmchat.video.stuck");
+                Text err = Text.translatable(cookiesHint ? "pmchat.video.signin" : "pmchat.video.stuck");
                 context.drawText(textRenderer, err,
-                        pxc + (pw - textRenderer.getWidth(err)) / 2, pyc + 16, 0xFFE0B08A, false);
+                        pxc + (pw - textRenderer.getWidth(err)) / 2, pyc + 14, 0xFFE0B08A, false);
+                if (cookiesHint) {
+                    Text hint = Text.translatable("pmchat.video.signin.hint");
+                    context.drawText(textRenderer, hint,
+                            pxc + (pw - textRenderer.getWidth(hint)) / 2, pyc + 30, 0xFF8FA6B4, false);
+                }
                 Text openInBrowser = Text.translatable("pmchat.video.openweb");
                 int bw2 = textRenderer.getWidth(openInBrowser) + 24;
                 int bx2 = pxc + (pw - bw2) / 2, by2 = pyc + ph - 32;

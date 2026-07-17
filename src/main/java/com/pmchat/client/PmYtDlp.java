@@ -47,6 +47,8 @@ public final class PmYtDlp {
     private static final Pattern PROGRESS = Pattern.compile("(\\d{1,3}(?:\\.\\d+)?)%");
 
     private static volatile boolean downloadingBinary = false;
+    /** Последняя попытка провалилась из-за требования входа (нужны куки). */
+    private static volatile boolean lastNeededSignIn = false;
 
     private PmYtDlp() {
     }
@@ -140,33 +142,51 @@ public final class PmYtDlp {
      * (нет yt-dlp / бот-проверка без кук / формат недоступен).
      */
     public static File download(String youtubeUrl, Consumer<String> status) {
+        lastNeededSignIn = false;
         File bin = ensureBinary(status);
         if (bin == null) return null;
 
         String id = PmYouTube.videoId(youtubeUrl);
         if (id == null) id = "video";
-        File out = new File(binDir(), "yt-" + id + ".mp4");
-        // Чистим прошлый результат для этого id, чтобы не проиграть устаревший
-        deleteQuiet(out);
+        deleteQuiet(findProduced(id)); // не проиграть устаревший результат
 
+        // Стратегии по куки, по очереди до первой удачной. Многие ролики
+        // проходят анонимно; на тех, где YouTube требует вход, спасают куки —
+        // либо экспортированные в файл, либо прямо из браузера (Chrome/Edge/
+        // Firefox). Извлечение из браузера часто не работает (браузер запущен
+        // или свежее app-bound шифрование) — потому это лишь запасные попытки.
+        List<String[]> strategies = new ArrayList<>();
+        File cookiesFile = new File(MinecraftClient.getInstance().runDirectory, "config/pmchat-cookies.txt");
+        if (cookiesFile.isFile()) {
+            strategies.add(new String[]{"--cookies", cookiesFile.getAbsolutePath()});
+        } else {
+            strategies.add(new String[]{}); // анонимно
+            strategies.add(new String[]{"--cookies-from-browser", "chrome"});
+            strategies.add(new String[]{"--cookies-from-browser", "edge"});
+            strategies.add(new String[]{"--cookies-from-browser", "firefox"});
+        }
+
+        for (String[] cookieArgs : strategies) {
+            File f = runOnce(bin, id, youtubeUrl, cookieArgs, status);
+            if (f != null) return f;
+        }
+        return null;
+    }
+
+    /** Одна попытка yt-dlp с заданными куки-аргументами. Возвращает файл или null. */
+    private static File runOnce(File bin, String id, String youtubeUrl, String[] cookieArgs,
+                                Consumer<String> status) {
         List<String> cmd = new ArrayList<>();
         cmd.add(bin.getAbsolutePath());
         cmd.add("--no-playlist");
-        cmd.add("--no-warnings");
         cmd.add("--no-part");
         cmd.add("--extractor-args");
         cmd.add(EXTRACTOR_ARGS);
         cmd.add("-f");
         cmd.add(FORMAT);
-        // Файл заранее не знаем по расширению — но формат ограничен mp4/одиночным,
-        // ext будет mp4; фиксируем шаблон и потом ищем результат.
         cmd.add("-o");
         cmd.add(new File(binDir(), "yt-" + id + ".%(ext)s").getAbsolutePath());
-        File cookies = new File(MinecraftClient.getInstance().runDirectory, "config/pmchat-cookies.txt");
-        if (cookies.isFile()) {
-            cmd.add("--cookies");
-            cmd.add(cookies.getAbsolutePath());
-        }
+        java.util.Collections.addAll(cmd, cookieArgs);
         cmd.add(youtubeUrl);
 
         Process proc = null;
@@ -183,10 +203,11 @@ public final class PmYtDlp {
                 return null;
             }
             if (proc.exitValue() != 0) {
-                LOGGER.warn("yt-dlp exited {} for {}", proc.exitValue(), youtubeUrl);
+                LOGGER.warn("yt-dlp exited {} for {} (cookies: {})",
+                        proc.exitValue(), youtubeUrl,
+                        cookieArgs.length > 0 ? cookieArgs[cookieArgs.length - 1] : "none");
                 return null;
             }
-            // Ищем реально созданный файл yt-<id>.*
             File produced = findProduced(id);
             if (produced == null || produced.length() == 0) {
                 LOGGER.warn("yt-dlp finished but no output file for {}", youtubeUrl);
@@ -200,7 +221,7 @@ public final class PmYtDlp {
         }
     }
 
-    /** Читает вывод yt-dlp (прогресс идёт через \r) и дёргает status процентами. */
+    /** Читает вывод yt-dlp (прогресс идёт через \r), дёргает status процентами и ловит признак бот-проверки. */
     private static void readProgress(InputStream in, Consumer<String> status) throws Exception {
         BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
         StringBuilder tok = new StringBuilder();
@@ -209,6 +230,9 @@ public final class PmYtDlp {
             if (c == '\r' || c == '\n') {
                 String line = tok.toString();
                 tok.setLength(0);
+                if (line.contains("not a bot") || line.contains("Sign in to confirm")) {
+                    lastNeededSignIn = true;
+                }
                 if (line.contains("[download]")) {
                     Matcher m = PROGRESS.matcher(line);
                     if (m.find()) {
@@ -220,6 +244,11 @@ public final class PmYtDlp {
                 tok.append((char) c);
             }
         }
+    }
+
+    /** true — последняя загрузка провалилась из-за требования входа в аккаунт YouTube. */
+    public static boolean lastNeededSignIn() {
+        return lastNeededSignIn;
     }
 
     private static File findProduced(String id) {

@@ -43,6 +43,8 @@
   "pmchat.menu.warn": "Предупредить",
   "pmchat.video.label": "Видео",
   "pmchat.video.decoding": "▶ Видео (загрузка…)",
+  "pmchat.video.signin": "YouTube просит вход для этого видео",
+  "pmchat.video.signin.hint": "Добавьте config/pmchat-cookies.txt (см. доки)",
   "pmchat.video.stuck": "Не получилось показать это видео тут",
   "pmchat.video.gettingtool": "Получаю yt-dlp",
   "pmchat.video.downloading": "Скачивание",
