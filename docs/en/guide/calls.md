@@ -17,10 +17,10 @@ nothing — no errors, no crashes.
 
 1. Open a chat with someone who definitely has PocketChat.
 2. Click the phone-handset icon in the chat's top toolbar.
-3. Done — Simple Voice Chat invites your contact into your voice group
-   (creating one if you're not already in one). From there it's the usual
-   Simple Voice Chat flow: your contact sees the invite through that mod
-   itself.
+3. Done. If you're not in a voice group yet, PocketChat creates one for you
+   (named after your nickname) and sends the invite as soon as the server
+   confirms the group. From there it's the usual Simple Voice Chat flow:
+   your contact sees the invite through that mod itself.
 
 ## How to leave the channel
 
@@ -29,7 +29,10 @@ with Simple Voice Chat: the `/voicechat leave` command, or its own menu
 (opens with <kbd>V</kbd> by default — the group tab).
 
 ::: tip Under the hood
-PocketChat just runs the official `/voicechat invite <nickname>` command —
-everything else is handled by Simple Voice Chat itself, no extra logic on
-top.
+`/voicechat invite <nickname>` only works when you're already in a group — the
+invite itself does not create one. So PocketChat first checks group membership
+through the Simple Voice Chat API and, if needed, creates a group with the
+same network packet its own menu uses, then runs the official
+`/voicechat invite <nickname>`. Everything else is handled by Simple Voice
+Chat itself.
 :::

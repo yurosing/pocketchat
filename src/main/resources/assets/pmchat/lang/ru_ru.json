@@ -44,6 +44,7 @@
   "pmchat.video.label": "Видео",
   "pmchat.video.decoding": "▶ Видео (загрузка…)",
   "pmchat.video.stuck": "Не получилось показать это видео тут",
+  "pmchat.video.resolving": "Получаю ссылку на поток",
   "pmchat.video.openweb": "Открыть в браузере",
   "pmchat.media.pick": "Отправить медиа",
   "pmchat.media.video": "Видео",

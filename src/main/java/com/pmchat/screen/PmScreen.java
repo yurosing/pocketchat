@@ -283,8 +283,11 @@ public class PmScreen extends Screen {
 
     // NEW (4.3): встроенный видеоплеер (VLC) на весь экран
     private com.pmchat.client.PmVlc.Session videoSession = null;
-    private String videoUrl;
+    private String videoUrl;            // null — оверлей плеера закрыт
     private long videoOpenedAt;
+    private boolean videoResolving = false; // NEW (5.0): фоновый резолв YouTube-ссылки
+    private boolean videoOpenFailed = false; // резолв/запуск не удался — сразу показываем fallback
+    private int videoSeq = 0;           // защита от «просроченных» фоновых резолвов
     private int[] videoFallbackRect; // «Открыть в браузере», если VLC не смог показать
     private boolean videoDragSeek = false;
     private boolean videoDragVolume = false;
@@ -294,6 +297,7 @@ public class PmScreen extends Screen {
     private int[] videoPlayRect;  // x,y,w,h кнопки play/pause
     private int[] videoRateRect;  // x,y,w,h кнопки скорости
     private int[] videoCloseRect; // x,y,w,h кнопки закрытия
+    private int[] videoBrowserRect; // NEW (5.0): кнопка «в браузере» в панели
     private int[] videoImgRect;   // x,y,w,h самого видеокадра (клик — пауза/плей)
 
     // Пересылка: выбранное сообщение ждёт, пока кликнут диалог-получатель
@@ -1401,8 +1405,8 @@ public class PmScreen extends Screen {
         if (fullscreenImg != null) {
             renderFullscreenImage(context);
         }
-        // NEW (4.3): видеоплеер — поверх всего
-        if (videoSession != null) {
+        // NEW (4.3): видеоплеер — поверх всего (в т.ч. пока резолвится YouTube-ссылка)
+        if (videoUrl != null) {
             renderVideoPlayer(context, mouseX, mouseY);
         }
     }
@@ -1412,121 +1416,239 @@ public class PmScreen extends Screen {
         closeVideoPlayer();
         videoUrl = url;
         videoOpenedAt = System.currentTimeMillis();
+        final int seq = ++videoSeq;
+        if (com.pmchat.client.PmYouTube.videoId(url) != null) {
+            // NEW (5.0): VLC сам не умеет разбирать страницы YouTube (его
+            // youtube.lua давно сломан) — окно висело чёрным. Резолвим прямую
+            // ссылку на поток в фоне и отдаём VLC уже её.
+            videoResolving = true;
+            Thread t = new Thread(() -> {
+                String direct = com.pmchat.client.PmYouTube.resolve(url);
+                MinecraftClient.getInstance().execute(() -> {
+                    if (seq != videoSeq) return; // плеер уже закрыли/переоткрыли
+                    videoResolving = false;
+                    videoOpenedAt = System.currentTimeMillis();
+                    startVideoSession(direct != null ? direct : url);
+                });
+            }, "pmchat-yt-resolve");
+            t.setDaemon(true);
+            t.start();
+        } else {
+            startVideoSession(url);
+        }
+    }
+
+    private void startVideoSession(String mediaUrl) {
         try {
-            videoSession = com.pmchat.client.PmVlc.open(url);
+            videoSession = com.pmchat.client.PmVlc.open(mediaUrl);
         } catch (Exception e) {
             videoSession = null;
+            videoOpenFailed = true;
         }
     }
 
     private void closeVideoPlayer() {
+        videoSeq++; // отменяем висящие фоновые резолвы
         if (videoSession != null) {
             videoSession.release();
             videoSession = null;
         }
+        videoResolving = false;
+        videoOpenFailed = false;
         videoDragSeek = false;
         videoDragVolume = false;
         videoUrl = null;
         videoFallbackRect = null;
+        videoBrowserRect = null;
     }
 
-    /** Затемнённый оверлей с видео, полоской прогресса, громкостью, скоростью и закрытием. */
+    /**
+     * NEW (5.0): переработанный оверлей плеера — заголовок с источником и
+     * закрытием сверху, кадр с рамкой по центру, аккуратная плавающая панель
+     * управления снизу (play/время/перемотка/громкость/скорость/браузер),
+     * состояния «резолвим ссылку / буферизация / не получилось» и драг
+     * ползунков (перемотка и громкость тянутся мышью).
+     */
     private void renderVideoPlayer(DrawContext context, int mouseX, int mouseY) {
+        if (videoUrl == null) return;
         com.pmchat.client.PmVlc.Session s = videoSession;
-        if (s == null) return;
-        s.tick();
-        context.fill(0, 0, width, height, 0xE6000000);
+        if (s != null) s.tick();
 
-        int barH = 40;
-        int vw = s.width(), vh = s.height();
-        if (vw > 0 && vh > 0) {
-            float scale = Math.min((width - 40f) / vw, (height - 60f - barH) / vh);
+        // Драг ползунков: пока зажата ЛКМ — тянем, отпустили — закончили.
+        boolean lmbDown = GLFW.glfwGetMouseButton(
+                MinecraftClient.getInstance().getWindow().getHandle(),
+                GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        if (!lmbDown) {
+            videoDragSeek = false;
+            videoDragVolume = false;
+        } else if (s != null) {
+            if (videoDragSeek && videoBarRect != null && videoBarRect[2] > 0) {
+                s.seekFraction((mouseX - videoBarRect[0]) / (float) videoBarRect[2]);
+            }
+            if (videoDragVolume && videoVolRect != null && videoVolRect[2] > 0) {
+                float f = Math.max(0f, Math.min(1f, (mouseX - videoVolRect[0]) / (float) videoVolRect[2]));
+                s.setVolume(Math.round(f * 150));
+            }
+        }
+
+        // Затемнение
+        context.fill(0, 0, width, height, 0xF0070B09);
+
+        // ---- Заголовок ----
+        String title = videoUrl.replaceFirst("^https?://(www\\.)?", "");
+        if (title.length() > 64) title = title.substring(0, 61) + "…";
+        context.drawText(textRenderer, "▶ " + title, 14, 13, 0xFF9CC4DC, false);
+
+        int closeSz = 20;
+        int closeX = width - 12 - closeSz, closeY = 9;
+        videoCloseRect = new int[]{closeX, closeY, closeSz, closeSz};
+        boolean hovClose = inRect(mouseX, mouseY, videoCloseRect);
+        context.fill(closeX, closeY, closeX + closeSz, closeY + closeSz, hovClose ? 0xFF6E2A22 : 0x66223530);
+        PmIcons.draw(context, PmIcons.CLEAR, closeX, closeY, closeSz, closeSz,
+                hovClose ? 0xFFE07A6A : 0xFFB8C6CE);
+
+        int barH = 38;
+        boolean failed = videoOpenFailed || (s != null && s.hasError());
+        boolean noFrames = s == null || s.width() <= 0 || s.height() <= 0;
+        boolean stuck = failed
+                || (noFrames && !videoResolving && System.currentTimeMillis() - videoOpenedAt > 8000);
+
+        // ---- Кадр видео ----
+        videoFallbackRect = null;
+        if (!noFrames) {
+            int vw = s.width(), vh = s.height();
+            float scale = Math.min((width - 48f) / vw, (height - 76f - barH) / vh);
             scale = Math.min(scale, 6f);
             int w = Math.max(1, Math.round(vw * scale));
             int h = Math.max(1, Math.round(vh * scale));
             int ix = (width - w) / 2;
-            int iy = (height - barH - h) / 2 - 10;
+            int iy = 32 + (height - 44 - barH - 32 - h) / 2 + 4;
             videoImgRect = new int[]{ix, iy, w, h};
-            videoFallbackRect = null;
+            context.fill(ix - 2, iy - 2, ix + w + 2, iy + h + 2, 0xFF0B120F);
+            context.drawStrokedRectangle(ix - 2, iy - 2, w + 4, h + 4, 0xFF2A4A5C);
             context.drawTexture(RenderPipelines.GUI_TEXTURED, s.textureId(), ix, iy,
                     0f, 0f, w, h, vw, vh, vw, vh);
         } else {
             videoImgRect = null;
-            // NEW (4.3): долго нет кадров (частый случай для YouTube — не всякий VLC
-            // умеет его разбирать) — предлагаем открыть исходную ссылку в браузере.
-            boolean stuck = System.currentTimeMillis() - videoOpenedAt > 8000;
-            Text loading = Text.translatable(stuck ? "pmchat.video.stuck" : "pmchat.video.decoding");
-            context.drawText(textRenderer, loading, (width - textRenderer.getWidth(loading)) / 2, height / 2 - (stuck ? 14 : 0), 0xFFB8C6CE, false);
-            if (stuck && videoUrl != null) {
+            // ---- Плашка состояния по центру ----
+            int pw = 280, ph = stuck ? 84 : 64;
+            int pxc = (width - pw) / 2, pyc = (height - ph) / 2 - 10;
+            context.fill(pxc, pyc, pxc + pw, pyc + ph, 0xE0101A16);
+            context.drawStrokedRectangle(pxc, pyc, pw, ph, 0xFF2A4A5C);
+            if (stuck) {
+                Text err = Text.translatable("pmchat.video.stuck");
+                context.drawText(textRenderer, err,
+                        pxc + (pw - textRenderer.getWidth(err)) / 2, pyc + 16, 0xFFE0B08A, false);
                 Text openInBrowser = Text.translatable("pmchat.video.openweb");
-                int bw2 = textRenderer.getWidth(openInBrowser) + 16;
-                int bx2 = (width - bw2) / 2, by2 = height / 2 + 4;
-                videoFallbackRect = new int[]{bx2, by2, bw2, 16};
+                int bw2 = textRenderer.getWidth(openInBrowser) + 24;
+                int bx2 = pxc + (pw - bw2) / 2, by2 = pyc + ph - 32;
+                videoFallbackRect = new int[]{bx2, by2, bw2, 18};
                 boolean hov = inRect(mouseX, mouseY, videoFallbackRect);
-                context.fill(bx2, by2, bx2 + bw2, by2 + 16, hov ? 0xFF2A4A5C : 0xFF1C3644);
-                context.drawStrokedRectangle(bx2, by2, bw2, 16, 0xFF4C8A66);
-                context.drawText(textRenderer, openInBrowser, bx2 + 8, by2 + 4, 0xFF8FD8A8, false);
+                context.fill(bx2, by2, bx2 + bw2, by2 + 18, hov ? 0xFF2E5C48 : 0xFF1C3644);
+                context.drawStrokedRectangle(bx2, by2, bw2, 18, 0xFF4C8A66);
+                PmIcons.draw(context, PmIcons.LINKOUT, bx2 + 2, by2 + 4, 12, 10, 0xFF8FD8A8);
+                context.drawText(textRenderer, openInBrowser, bx2 + 15, by2 + 5, 0xFF8FD8A8, false);
+            } else {
+                // Загрузка: статус + бегущие точки (+ процент буферизации, если VLC его сообщает)
+                Text status = Text.translatable(videoResolving ? "pmchat.video.resolving" : "pmchat.video.decoding");
+                String base = status.getString();
+                if (s != null && s.bufferPercent() >= 0 && s.bufferPercent() < 100) {
+                    base += " " + (int) s.bufferPercent() + "%";
+                }
+                int dots = (int) (System.currentTimeMillis() / 350 % 4);
+                // Центруем по тексту без точек, чтобы надпись не «дышала»
+                int lx = pxc + (pw - textRenderer.getWidth(base)) / 2;
+                context.drawText(textRenderer, base + " " + "•".repeat(dots),
+                        lx, pyc + (ph - 8) / 2, 0xFFB8C6CE, false);
             }
         }
 
-        // ---- Панель управления снизу ----
+        // ---- Панель управления (только когда сеанс жив и не в ошибке) ----
+        videoPlayRect = null;
+        videoBarRect = null;
+        videoVolRect = null;
+        videoRateRect = null;
+        videoBrowserRect = null;
+        if (s == null || failed) return;
+
+        int barW = Math.min(560, width - 28);
+        int barX = (width - barW) / 2;
         int barY = height - barH - 12;
-        int barX = width / 2 - 220;
-        int barW = 440;
-        context.fill(barX, barY, barX + barW, barY + barH, 0xD0121A16);
+        context.fill(barX, barY, barX + barW, barY + barH, 0xE8101A16);
         context.drawStrokedRectangle(barX, barY, barW, barH, 0xFF2A4A5C);
 
         // Play/Pause
-        int btn = 22;
-        int bx = barX + 8, by = barY + (barH - btn) / 2;
+        int btn = 24;
+        int bx = barX + 7, by = barY + (barH - btn) / 2;
         videoPlayRect = new int[]{bx, by, btn, btn};
         boolean hovPlay = inRect(mouseX, mouseY, videoPlayRect);
-        context.fill(bx, by, bx + btn, by + btn, hovPlay ? 0xFF2A4A5C : 0xFF1C3644);
-        String playGlyph = s.isPlaying() ? "❚❚" : "▶";
-        context.drawText(textRenderer, playGlyph, bx + (btn - textRenderer.getWidth(playGlyph)) / 2, by + 7, 0xFFEDF3F0, false);
-
-        // Полоса перемотки
-        int seekX = bx + btn + 10;
-        int seekW = barX + barW - seekX - 150;
-        int seekY = by + btn / 2 - 2;
-        videoBarRect = new int[]{seekX, seekY - 4, seekW, 12};
-        context.fill(seekX, seekY, seekX + seekW, seekY + 4, 0xFF2A4A5C);
-        float pos = Math.max(0f, Math.min(1f, s.positionFraction()));
-        context.fill(seekX, seekY, seekX + Math.round(seekW * pos), seekY + 4, 0xFF6FBF8B);
-        int knobX = seekX + Math.round(seekW * pos);
-        context.fill(knobX - 2, seekY - 3, knobX + 2, seekY + 7, 0xFFEDF3F0);
+        context.fill(bx, by, bx + btn, by + btn, hovPlay ? 0xFF2A4A5C : 0xFF16241E);
+        PmIcons.draw(context, s.isPlaying() ? PmIcons.PAUSE : PmIcons.PLAY, bx, by, btn, btn, 0xFFEDF3F0);
 
         // Время
         String timeStr = fmtTime(s.timeMs()) + " / " + fmtTime(s.lengthMs());
-        context.drawText(textRenderer, timeStr, seekX, barY + 4, 0xFF9CC4DC, false);
+        int timeX = bx + btn + 9;
+        context.drawText(textRenderer, timeStr, timeX, barY + (barH - 8) / 2, 0xFF9CC4DC, false);
+        int timeEnd = timeX + textRenderer.getWidth("88:88 / 88:88");
 
-        // Скорость
-        int rateW = 40;
-        int rateX = barX + barW - 8 - rateW - 8 - 60;
-        videoRateRect = new int[]{rateX, by, rateW, btn};
+        // Правый кластер: [громкость][скорость][в браузере]
+        int browserSz = 20;
+        int browserX = barX + barW - 7 - browserSz;
+        int browserY = barY + (barH - browserSz) / 2;
+        videoBrowserRect = new int[]{browserX, browserY, browserSz, browserSz};
+        boolean hovBrowser = inRect(mouseX, mouseY, videoBrowserRect);
+        context.fill(browserX, browserY, browserX + browserSz, browserY + browserSz,
+                hovBrowser ? 0xFF2E5C48 : 0xFF16241E);
+        PmIcons.draw(context, PmIcons.LINKOUT, browserX, browserY, browserSz, browserSz, 0xFF8FD8A8);
+
+        int rateW = 32, rateH = 20;
+        int rateX = browserX - 6 - rateW;
+        int rateY = barY + (barH - rateH) / 2;
+        videoRateRect = new int[]{rateX, rateY, rateW, rateH};
         boolean hovRate = inRect(mouseX, mouseY, videoRateRect);
-        context.fill(rateX, by, rateX + rateW, by + btn, hovRate ? 0xFF2A4A5C : 0xFF1C3644);
+        context.fill(rateX, rateY, rateX + rateW, rateY + rateH, hovRate ? 0xFF2A4A5C : 0xFF16241E);
         String rateLabel = trimRate(s.getRate()) + "x";
-        context.drawText(textRenderer, rateLabel, rateX + (rateW - textRenderer.getWidth(rateLabel)) / 2, by + 7, 0xFFF0C34E, false);
+        context.drawText(textRenderer, rateLabel,
+                rateX + (rateW - textRenderer.getWidth(rateLabel)) / 2, rateY + 6, 0xFFF0C34E, false);
 
-        // Громкость
-        int volX = rateX + rateW + 8;
-        int volW = 60;
-        videoVolRect = new int[]{volX, by + 7, volW, 8};
-        context.fill(volX, by + 9, volX + volW, by + 13, 0xFF2A4A5C);
+        int cy = barY + barH / 2;
+        int volW = 44;
+        int volX = rateX - 6 - volW;
+        PmIcons.draw(context, PmIcons.VOLUME, volX - 13, cy - 5, 11, 11, 0xFF9CC4DC);
+        videoVolRect = new int[]{volX, cy - 6, volW, 12};
+        boolean hovVol = inRect(mouseX, mouseY, videoVolRect) || videoDragVolume;
+        context.fill(volX, cy - 1, volX + volW, cy + 2, 0xFF23352E);
         float volFrac = Math.max(0f, Math.min(1f, s.getVolume() / 150f));
-        context.fill(volX, by + 9, volX + Math.round(volW * volFrac), by + 13, 0xFF9CC4DC);
-        int volKnobX = volX + Math.round(volW * volFrac);
-        context.fill(volKnobX - 2, by + 6, volKnobX + 2, by + 16, 0xFFEDF3F0);
+        context.fill(volX, cy - 1, volX + Math.round(volW * volFrac), cy + 2, 0xFF9CC4DC);
+        if (hovVol) {
+            int volKnobX = volX + Math.round(volW * volFrac);
+            context.fill(volKnobX - 1, cy - 4, volKnobX + 2, cy + 5, 0xFFEDF3F0);
+        }
 
-        // Закрыть
-        int closeW = 22;
-        int closeX = barX + barW - 8 - closeW;
-        videoCloseRect = new int[]{closeX, by, closeW, btn};
-        boolean hovClose = inRect(mouseX, mouseY, videoCloseRect);
-        context.fill(closeX, by, closeX + closeW, by + btn, hovClose ? 0xFF6E2A22 : 0xFF1C3644);
-        context.drawText(textRenderer, "✖", closeX + (closeW - textRenderer.getWidth("✖")) / 2, by + 7,
-                hovClose ? 0xFFE07A6A : 0xFF9CC4DC, false);
+        // Полоса перемотки — всё оставшееся место между временем и громкостью
+        int seekX = timeEnd + 10;
+        int seekW = volX - 22 - seekX;
+        if (seekW > 30) {
+            boolean hovSeek = mouseX >= seekX && mouseX < seekX + seekW
+                    && mouseY >= cy - 7 && mouseY < cy + 8;
+            videoBarRect = new int[]{seekX, cy - 7, seekW, 14};
+            int trackH = (hovSeek || videoDragSeek) ? 5 : 3;
+            int ty = cy - trackH / 2;
+            context.fill(seekX, ty, seekX + seekW, ty + trackH, 0xFF23352E);
+            float pos = Math.max(0f, Math.min(1f, s.positionFraction()));
+            context.fill(seekX, ty, seekX + Math.round(seekW * pos), ty + trackH, 0xFF6FBF8B);
+            int knobX = seekX + Math.round(seekW * pos);
+            context.fill(knobX - 1, cy - 5, knobX + 2, cy + 5, 0xFFEDF3F0);
+            // Подсказка времени под курсором
+            if ((hovSeek || videoDragSeek) && s.lengthMs() > 0) {
+                float f = Math.max(0f, Math.min(1f, (mouseX - seekX) / (float) seekW));
+                String tip = fmtTime((long) (s.lengthMs() * f));
+                int tw = textRenderer.getWidth(tip) + 8;
+                int tx = Math.max(seekX, Math.min(seekX + seekW - tw, mouseX - tw / 2));
+                context.fill(tx, cy - 22, tx + tw, cy - 10, 0xF0223530);
+                context.drawText(textRenderer, tip, tx + 4, cy - 20, 0xFFEDF3F0, false);
+            }
+        }
     }
 
     private static boolean inRect(int mx, int my, int[] r) {
@@ -2902,9 +3024,9 @@ public class PmScreen extends Screen {
             return true;
         }
         // NEW (4.3): встроенный видеоплеер — свои контролы
-        if (videoSession != null) {
+        if (videoUrl != null) {
             int mx = (int) click.x(), my = (int) click.y();
-            if (inRect(mx, my, videoFallbackRect) && videoUrl != null) {
+            if (inRect(mx, my, videoFallbackRect) || inRect(mx, my, videoBrowserRect)) {
                 String link = videoUrl;
                 closeVideoPlayer();
                 try {
@@ -2917,32 +3039,34 @@ public class PmScreen extends Screen {
                 closeVideoPlayer();
                 return true;
             }
-            if (inRect(mx, my, videoPlayRect)) {
-                videoSession.togglePause();
-                return true;
-            }
-            if (inRect(mx, my, videoRateRect)) {
-                float cur = videoSession.getRate();
-                int idx = 0;
-                for (int i = 0; i < VIDEO_RATES.length; i++) {
-                    if (Math.abs(VIDEO_RATES[i] - cur) < 0.01f) { idx = i; break; }
+            if (videoSession != null) {
+                if (inRect(mx, my, videoPlayRect)) {
+                    videoSession.togglePause();
+                    return true;
                 }
-                videoSession.setRate(VIDEO_RATES[(idx + 1) % VIDEO_RATES.length]);
-                return true;
-            }
-            if (inRect(mx, my, videoBarRect)) {
-                videoDragSeek = true;
-                videoSession.seekFraction((mx - videoBarRect[0]) / (float) videoBarRect[2]);
-                return true;
-            }
-            if (inRect(mx, my, videoVolRect)) {
-                videoDragVolume = true;
-                videoSession.setVolume(Math.round((mx - videoVolRect[0]) / (float) videoVolRect[2] * 150));
-                return true;
-            }
-            if (inRect(mx, my, videoImgRect)) {
-                videoSession.togglePause();
-                return true;
+                if (inRect(mx, my, videoRateRect)) {
+                    float cur = videoSession.getRate();
+                    int idx = 0;
+                    for (int i = 0; i < VIDEO_RATES.length; i++) {
+                        if (Math.abs(VIDEO_RATES[i] - cur) < 0.01f) { idx = i; break; }
+                    }
+                    videoSession.setRate(VIDEO_RATES[(idx + 1) % VIDEO_RATES.length]);
+                    return true;
+                }
+                if (inRect(mx, my, videoBarRect)) {
+                    videoDragSeek = true;
+                    videoSession.seekFraction((mx - videoBarRect[0]) / (float) videoBarRect[2]);
+                    return true;
+                }
+                if (inRect(mx, my, videoVolRect)) {
+                    videoDragVolume = true;
+                    videoSession.setVolume(Math.round((mx - videoVolRect[0]) / (float) videoVolRect[2] * 150));
+                    return true;
+                }
+                if (inRect(mx, my, videoImgRect)) {
+                    videoSession.togglePause();
+                    return true;
+                }
             }
             return true; // клик по затемнённому фону — просто гасим, не закрываем случайно
         }
@@ -3548,7 +3672,7 @@ public class PmScreen extends Screen {
             return true;
         }
         // NEW (4.3): Esc закрывает видеоплеер (и останавливает VLC)
-        if (videoSession != null && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
+        if (videoUrl != null && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
             closeVideoPlayer();
             return true;
         }

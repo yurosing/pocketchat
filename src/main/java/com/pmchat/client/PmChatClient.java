@@ -1150,19 +1150,49 @@ public class PmChatClient implements ClientModInitializer {
     // ---------- NEW: звонки через Simple Voice Chat ----------
 
     /**
-     * Позвонить: официальная команда Simple Voice Chat — «/voicechat invite
-     * ник» зовёт игрока в вашу текущую голосовую группу (создаёт её, если вы
-     * ещё не в группе). Никаких своих групп/паролей — так работает сам плагин.
-     * Плюс лёгкое уведомление через /m, чтобы собеседник увидел тост в моде.
-     * Работает, только если на сервере установлен сам Simple Voice Chat —
-     * если его нет, команда просто не выполнится, ничего не ломается.
+     * Позвонить через Simple Voice Chat. Важно: «/voicechat invite ник»
+     * работает только если ты УЖЕ в голосовой группе — сама группа при
+     * инвайте не создаётся. Поэтому (5.0): если группы нет, принудительно
+     * создаём её через API SVC (тем же пакетом, что и родное GUI), ждём
+     * подтверждения от сервера и только потом шлём инвайт. Плюс лёгкое
+     * уведомление через /m, чтобы собеседник увидел тост в моде.
+     * Если SVC не установлен — команды просто не выполнятся, ничего не ломается.
      */
     public static void startCall(String target) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target == null || target.isBlank()) return;
-        client.player.networkHandler.sendChatCommand("voicechat invite " + target);
         client.player.networkHandler.sendChatCommand(
                 config.msgCommand + " " + target + " " + PmWire.call());
+
+        if (PmSvc.isInGroup() == Boolean.TRUE) {
+            client.player.networkHandler.sendChatCommand("voicechat invite " + target);
+            return;
+        }
+        if (!PmSvc.createGroup(selfName())) {
+            // API SVC недоступен (мода нет или версия незнакомая) — шлём
+            // инвайт как раньше: вдруг игрок уже в группе, а API не читается.
+            client.player.networkHandler.sendChatCommand("voicechat invite " + target);
+            return;
+        }
+        // Группа создаётся раунд-трипом на сервер — подождём подтверждения
+        // (до ~3 с) в фоне и позовём собеседника, когда мы реально в группе.
+        Thread waiter = new Thread(() -> {
+            for (int i = 0; i < 30; i++) {
+                if (PmSvc.isInGroup() == Boolean.TRUE) break;
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    return;
+                }
+            }
+            client.execute(() -> {
+                if (client.player != null) {
+                    client.player.networkHandler.sendChatCommand("voicechat invite " + target);
+                }
+            });
+        }, "pmchat-call-invite");
+        waiter.setDaemon(true);
+        waiter.start();
     }
 
     /** Уведомление о звонке — сам голосовой канал уже подключает сервер через /voicechat invite. */

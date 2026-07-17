@@ -122,6 +122,8 @@ public final class PmVlc {
 
         private volatile boolean playing = false;
         private volatile long lengthMs = 0;
+        private volatile boolean error = false;
+        private volatile float bufferPct = -1; // -1 — буферизация не сообщалась
 
         Session(String url) {
             this.player = factory.mediaPlayers().newEmbeddedMediaPlayer();
@@ -178,9 +180,24 @@ public final class PmVlc {
                 public void lengthChanged(MediaPlayer mp, long newLength) {
                     lengthMs = newLength;
                 }
+
+                @Override
+                public void buffering(MediaPlayer mp, float newCache) {
+                    bufferPct = newCache;
+                }
+
+                @Override
+                public void error(MediaPlayer mp) {
+                    // VLC не смог открыть/декодировать — UI покажет кнопку
+                    // «Открыть в браузере» сразу, а не по таймауту.
+                    error = true;
+                    LOGGER.warn("VLC failed to play: {}", url);
+                }
             });
 
-            player.media().play(url);
+            // network-caching — запас на сетевые потоки (HLS/HTTP), иначе VLC
+            // с дефолтным кэшем любит заикаться на первых секундах.
+            player.media().play(url, ":network-caching=2000");
         }
 
         /** Вызывать каждый кадр рендера — переносит новый буфер VLC в текстуру Minecraft. */
@@ -224,6 +241,16 @@ public final class PmVlc {
 
         public boolean isPlaying() {
             return playing;
+        }
+
+        /** true — VLC сообщил об ошибке воспроизведения (кадров уже не будет). */
+        public boolean hasError() {
+            return error;
+        }
+
+        /** Процент буферизации 0..100; -1 — VLC её не сообщал. */
+        public float bufferPercent() {
+            return bufferPct;
         }
 
         public void togglePause() {

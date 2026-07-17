@@ -25,10 +25,12 @@ Just paste a video link (`youtube.com/...` or `youtu.be/...`) as a regular
 message and send it. Clicking the link in the chat opens it in the built-in
 player, same as your own video.
 
-::: tip If YouTube doesn't open
-The player relies on VLC's own YouTube link parsing, which doesn't always
-keep up with changes on YouTube's side. If no video shows up after a few
-seconds, an "Open in browser" button appears instead — click that.
+::: tip How it works
+PocketChat fetches the direct stream link from YouTube itself (the same way
+official apps do) and hands it to VLC — VLC's own YouTube parsing has been
+broken for years, so we don't rely on it. While the link is being fetched the
+player shows "Fetching stream link". If it can't be fetched (private video,
+age restriction, etc.), an "Open in browser" button appears instead.
 :::
 
 ## Player controls
@@ -36,9 +38,10 @@ seconds, an "Open in browser" button appears instead — click that.
 | Control | What it does |
 |---|---|
 | ▶ / ❚❚ | Play and pause |
-| Bottom bar | Click to seek to that point |
+| Seek bar | Click or drag; hover shows a time tooltip |
+| Volume slider | Click or drag |
 | Speed number | Click cycles through: 0.5x → 0.75x → 1x → 1.25x → 1.5x → 2x |
-| Volume slider | Click at the spot you want |
-| ✖ or <kbd>Esc</kbd> | Close the player |
+| Arrow-out icon | Open the original link in your browser |
+| ✖ at the top or <kbd>Esc</kbd> | Close the player |
 
 Clicking directly on the video frame also toggles play/pause.
