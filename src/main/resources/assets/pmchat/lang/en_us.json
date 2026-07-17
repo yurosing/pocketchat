@@ -166,5 +166,7 @@
   "pmchat.tip.docs": "Documentation (website)",
   "pmchat.call.start": "NEW · Call (voice)",
   "pmchat.call.end": "End call",
-  "pmchat.call.incoming.toast": "Calling you — you're now in the voice chat"
+  "pmchat.call.incoming.toast": "Calling you — you're now in the voice chat",
+  "pmchat.spoiler.toggle": "NEW · Spoiler",
+  "pmchat.spoiler.label": "Spoiler · click"
 }

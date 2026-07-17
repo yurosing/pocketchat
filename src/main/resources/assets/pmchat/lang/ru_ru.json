@@ -166,5 +166,7 @@
   "pmchat.tip.docs": "Документация (сайт)",
   "pmchat.call.start": "NEW · Позвонить (голосом)",
   "pmchat.call.end": "Завершить звонок",
-  "pmchat.call.incoming.toast": "Звонит вам — вы автоматически в голосовом чате"
+  "pmchat.call.incoming.toast": "Звонит вам — вы автоматически в голосовом чате",
+  "pmchat.spoiler.toggle": "NEW · Спойлер",
+  "pmchat.spoiler.label": "Спойлер · нажмите"
 }

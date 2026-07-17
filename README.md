@@ -88,6 +88,18 @@ A small dot next to every name tells you at a glance whether that player has Poc
 
 Start an end-to-end encrypted chat with anyone running PocketChat — messages are locked with a key that only exists on your two computers, are never written to disk, and can be set to self-destruct a few seconds after they arrive. Even the server only ever sees scrambled text.
 
+## ▶️ NEW: Built-in video player, with YouTube links
+
+Watch your own video files or paste a YouTube link and it opens in a player right inside the messenger — pause, seek, volume, and a speed control, no browser or external player needed. Requires VLC installed on your computer.
+
+## 📞 NEW: Voice calls
+
+One button starts a call: PocketChat creates a private voice channel through Simple Voice Chat and drops both of you into it — no manual group setup. Requires Simple Voice Chat installed on the server.
+
+## 🙈 NEW: Spoiler photos & videos
+
+Send a photo or video blurred out, Telegram/Discord-style — your contact reveals it themselves with a click, whenever they're ready.
+
 ---
 
 ## 🧭 Commands

@@ -42,6 +42,22 @@ That's by design. Secret chats aren't saved anywhere — you'll need to start a
 new one the next time you launch the game. See
 [Secret chats](/en/guide/secret-chats) for details.
 
+## Video won't open in the built-in player <Badge type="tip" text="NEW" />
+
+This needs **VLC media player** installed on your computer. If you don't
+have it, grab it from [videolan.org](https://www.videolan.org/vlc/), or the
+mod falls back to opening the video the old way, externally. For YouTube
+links specifically, VLC sometimes can't parse a given link — after 8 seconds
+an "Open in browser" button appears instead. More in
+[Video and YouTube](/en/guide/video).
+
+## The "Call" button doesn't do anything <Badge type="tip" text="NEW" />
+
+Calls run through the **Simple Voice Chat** mod, which needs to be installed
+**on the server** (not just on your computer). If the server doesn't have
+it, the call command just fails silently — no errors, no crashes. More in
+[Voice calls](/en/guide/calls).
+
 ## The mod isn't in the mod list / the game doesn't see it
 
 Check that:

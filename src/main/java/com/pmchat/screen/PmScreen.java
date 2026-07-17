@@ -219,6 +219,7 @@ public class PmScreen extends Screen {
     private List<Path> stickers = List.of();
     /** NEW (4.9): следующее отправленное фото/видео уйдёт со спойлером (размытие до клика). */
     private boolean spoilerMode = false;
+    private int[] spoilerToggleRect;
 
     // Медиа-меню (5.9 видео / 6.0 аудиофайлы)
     private boolean mediaMode = false;
@@ -263,6 +264,7 @@ public class PmScreen extends Screen {
     private final List<Object[]> rowRects = new ArrayList<>(); // x,y,w,h,name
     private final List<Object[]> shotRects = new ArrayList<>(); // x,y,w,h,path,isSticker
     private final List<Object[]> bubbleRects = new ArrayList<>(); // x,y,w,h,msg
+    private final List<Object[]> spoilerRects = new ArrayList<>(); // NEW (4.9): x,y,w,h,msg — клик открывает спойлер
     private final List<Object[]> warnBtnRects = new ArrayList<>(); // x,y,w,h,nick (6.8 кнопка преда)
     private final List<Object[]> pollOptRects = new ArrayList<>(); // x,y,w,h,msg,optIndex
     private final List<Object[]> emojiRects = new ArrayList<>(); // x,y,w,h,emoji
@@ -1075,6 +1077,7 @@ public class PmScreen extends Screen {
             PmChatClient.sendMessage(selected, com.pmchat.client.PmWire.img(code, id));
             imageMode = false;
             stickerMode = false;
+            spoilerMode = false;
             msgScroll = 0;
             planeAt = System.currentTimeMillis();
             rebuild();
@@ -1095,6 +1098,7 @@ public class PmScreen extends Screen {
                         PmChatClient.sendMessage(target, com.pmchat.client.PmWire.img(res[0], res[1]));
                         imageMode = false;
                         stickerMode = false;
+                        spoilerMode = false;
                         msgScroll = 0;
                         planeAt = System.currentTimeMillis();
                     } else {
@@ -1161,6 +1165,11 @@ public class PmScreen extends Screen {
         int w = PANEL_W - LEFT_W - 16;
         context.fill(px + LEFT_W + 1, areaTop, px + PANEL_W - 1, py + PANEL_H - 2, PANEL_BG);
         context.drawText(textRenderer, Text.translatable("pmchat.media.pick"), x, areaTop + 2, 0xFF9CC4DC, false);
+
+        // NEW (4.9): переключатель «Спойлер» — применяется к следующему отправленному видео
+        Text spoilerLbl = Text.translatable("pmchat.spoiler.toggle");
+        int spoilerW = textRenderer.getWidth(spoilerLbl) + 18;
+        drawSpoilerToggle(context, mouseX, mouseY, px + PANEL_W - 10 - spoilerW, areaTop + 1);
 
         if (uploading) {
             Text label = Text.translatable("pmchat.image.uploading");
@@ -1255,6 +1264,7 @@ public class PmScreen extends Screen {
                         }
                         PmChatClient.sendMessage(target, com.pmchat.client.PmWire.voice(res[0], res[1], seconds));
                         mediaMode = false;
+                        spoilerMode = false;
                         msgScroll = 0;
                         planeAt = System.currentTimeMillis();
                     } else {
@@ -1506,6 +1516,48 @@ public class PmScreen extends Screen {
 
     private static boolean inRect(int mx, int my, int[] r) {
         return r != null && mx >= r[0] && mx < r[0] + r[2] && my >= r[1] && my < r[1] + r[3];
+    }
+
+    /** NEW (4.9): «замыленная» плашка вместо фото/видео — как в Telegram/Discord, до клика. */
+    private void drawSpoilerCover(DrawContext context, int x, int y, int w, int h, float alpha) {
+        context.fill(x, y, x + w, y + h, applyAlpha(0xFF1C1C1C, alpha));
+        // Мозаика из квадратов — намёк на «размытие» без реального блюра
+        int cell = Math.max(4, Math.min(w, h) / 8);
+        boolean toggle = false;
+        for (int cy = y; cy < y + h; cy += cell) {
+            toggle = !toggle;
+            boolean t2 = toggle;
+            for (int cx = x; cx < x + w; cx += cell) {
+                t2 = !t2;
+                if (t2) {
+                    context.fill(cx, cy, Math.min(cx + cell, x + w), Math.min(cy + cell, y + h),
+                            applyAlpha(0xFF2E2E2E, alpha));
+                }
+            }
+        }
+        int iconSize = Math.min(18, Math.min(w, h) - 4);
+        if (iconSize >= 9) {
+            PmIcons.draw(context, PmIcons.SPOILER, x + w / 2 - iconSize / 2, y + h / 2 - iconSize / 2 - 5,
+                    iconSize, iconSize, applyAlpha(0xFFEDF3F0, alpha));
+        }
+        Text label = Text.translatable("pmchat.spoiler.label");
+        int lw = textRenderer.getWidth(label);
+        if (lw + 4 <= w) {
+            context.drawText(textRenderer, label, x + w / 2 - lw / 2, y + h / 2 + 6,
+                    applyAlpha(0xFFEDF3F0, alpha), false);
+        }
+    }
+
+    /** NEW (4.9): маленький переключатель «Спойлер» — рисует и обновляет spoilerToggleRect для клика. */
+    private void drawSpoilerToggle(DrawContext context, int mouseX, int mouseY, int x, int y) {
+        Text label = Text.translatable("pmchat.spoiler.toggle");
+        int w = textRenderer.getWidth(label) + 18;
+        spoilerToggleRect = new int[]{x, y, w, 12};
+        boolean hov = inRect(mouseX, mouseY, spoilerToggleRect);
+        int bg = spoilerMode ? 0xFF4C8A66 : (hov ? ROW_HOVER : ROW_ALT);
+        context.fill(x, y, x + w, y + 11, bg);
+        PmIcons.draw(context, PmIcons.SPOILER, x + 2, y + 1, 9, 9, spoilerMode ? 0xFFEDF3F0 : SUBTLE);
+        context.drawText(textRenderer, label, x + 14, y + 2, spoilerMode ? 0xFFEDF3F0 : PREVIEW_TEXT, false);
     }
 
     private static String fmtTime(long ms) {
@@ -2009,6 +2061,7 @@ public class PmScreen extends Screen {
 
         // Пузыри снизу вверх (со scissor — ничего не вылезает за область чата)
         bubbleRects.clear();
+        spoilerRects.clear();
         warnBtnRects.clear();
         pinOffsets.clear();
         pollOptRects.clear();
@@ -2211,10 +2264,17 @@ public class PmScreen extends Screen {
                     pollOptRects.add(new Object[]{bx, oy, bw, 11, msg, oi});
                 }
             } else if (img != null) {
+                boolean imgSpoiler = com.pmchat.client.PmWire.isSpoiler(imgRef) && !msg.spoilerRevealed;
                 if (img.state == PmImages.State.READY && img.currentTexture() != null) {
                     int[] size = imageSize(img);
-                    context.drawTexture(RenderPipelines.GUI_TEXTURED, img.currentTexture(), bx + dx + 6, y + dy + 3 + quoteShift,
-                            0f, 0f, size[0], size[1], img.width, img.height, img.width, img.height);
+                    int ix = bx + dx + 6, iy = y + dy + 3 + quoteShift;
+                    if (imgSpoiler) {
+                        drawSpoilerCover(context, ix, iy, size[0], size[1], alpha);
+                        spoilerRects.add(new Object[]{ix, iy, size[0], size[1], msg});
+                    } else {
+                        context.drawTexture(RenderPipelines.GUI_TEXTURED, img.currentTexture(), ix, iy,
+                                0f, 0f, size[0], size[1], img.width, img.height, img.width, img.height);
+                    }
                 } else {
                     Text label = img.state == PmImages.State.FAILED
                             ? Text.translatable("pmchat.image.openweb")
@@ -2225,14 +2285,20 @@ public class PmScreen extends Screen {
             } else if (voice != null) {
                 drawVoiceContent(context, bx + dx, y + dy + quoteShift, bw, msg, voice, alpha);
             } else if (vid != null) {
+                boolean vidSpoiler = com.pmchat.client.PmWire.isSpoiler(vid) && !msg.spoilerRevealed;
                 if (vidReady) {
                     int[] size = imageSize(vent);
                     int ix = bx + dx + 6, iy = y + dy + 3 + quoteShift;
-                    context.drawTexture(RenderPipelines.GUI_TEXTURED, vent.currentTexture(), ix, iy,
-                            0f, 0f, size[0], size[1], vent.width, vent.height, vent.width, vent.height);
-                    // Значок ▶ по центру — намёк, что клик откроет со звуком
-                    context.drawText(textRenderer, "▶", ix + size[0] / 2 - 3, iy + size[1] / 2 - 4,
-                            applyAlpha(0xFFFFFFFF, alpha), true);
+                    if (vidSpoiler) {
+                        drawSpoilerCover(context, ix, iy, size[0], size[1], alpha);
+                        spoilerRects.add(new Object[]{ix, iy, size[0], size[1], msg});
+                    } else {
+                        context.drawTexture(RenderPipelines.GUI_TEXTURED, vent.currentTexture(), ix, iy,
+                                0f, 0f, size[0], size[1], vent.width, vent.height, vent.width, vent.height);
+                        // Значок ▶ по центру — намёк, что клик откроет со звуком
+                        context.drawText(textRenderer, "▶", ix + size[0] / 2 - 3, iy + size[1] / 2 - 4,
+                                applyAlpha(0xFFFFFFFF, alpha), true);
+                    }
                 } else {
                     int fg = msg.out ? OUT_TEXT : IN_TEXT;
                     Text lbl = vent != null && vent.state == PmImages.State.FAILED
@@ -2624,6 +2690,9 @@ public class PmScreen extends Screen {
         context.drawText(textRenderer, clipHint,
                 px + PANEL_W - 10 - textRenderer.getWidth(clipHint), areaTop + 2, SUBTLE, false);
 
+        // NEW (4.9): переключатель «Спойлер» — следующее отправленное фото будет размыто до клика
+        drawSpoilerToggle(context, mouseX, mouseY, x, areaTop + 13);
+
         if (uploading) {
             Text label = Text.translatable("pmchat.image.uploading");
             int hx = px + LEFT_W + (PANEL_W - LEFT_W - textRenderer.getWidth(label)) / 2;
@@ -2632,11 +2701,11 @@ public class PmScreen extends Screen {
         }
 
         if (screenshots.isEmpty() && stickers.isEmpty()) {
-            context.drawText(textRenderer, Text.translatable("pmchat.image.empty"), x, areaTop + 20, SUBTLE, false);
+            context.drawText(textRenderer, Text.translatable("pmchat.image.empty"), x, areaTop + 34, SUBTLE, false);
             return;
         }
 
-        int y = areaTop + 16;
+        int y = areaTop + 28;
         for (Path shot : screenshots) {
             if (y + 18 > areaBottom - 4) break;
             int w = PANEL_W - LEFT_W - 16;
@@ -3045,6 +3114,10 @@ public class PmScreen extends Screen {
             }
         }
         if (imageMode && !uploading) {
+            if (inRect((int) click.x(), (int) click.y(), spoilerToggleRect)) {
+                spoilerMode = !spoilerMode;
+                return true;
+            }
             for (Object[] r : shotRects) {
                 int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
                 if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
@@ -3059,6 +3132,10 @@ public class PmScreen extends Screen {
         }
         // Медиа-пикер: видео / аудиофайлы
         if (mediaMode && !uploading) {
+            if (inRect((int) click.x(), (int) click.y(), spoilerToggleRect)) {
+                spoilerMode = !spoilerMode;
+                return true;
+            }
             for (Object[] r : mediaRects) {
                 int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
                 if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
@@ -3162,6 +3239,19 @@ public class PmScreen extends Screen {
             for (Object[] r : warnBtnRects) {
                 if (hit(click, new int[]{(int) r[0], (int) r[1], (int) r[2], (int) r[3]})) {
                     PmChatClient.warnPlayer((String) r[4]);
+                    return true;
+                }
+            }
+        }
+        // NEW (4.9): клик по «замыленному» спойлеру — первым кликом только открываем
+        // (как в Telegram/Discord), второй клик по уже раскрытому фото/видео работает как обычно.
+        if (!imageMode && !statsMode && click.button() == 0) {
+            for (Object[] r : spoilerRects) {
+                int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
+                if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
+                    PmMessage msg = (PmMessage) r[4];
+                    msg.spoilerRevealed = true;
+                    history.save();
                     return true;
                 }
             }
