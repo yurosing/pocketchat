@@ -59,7 +59,11 @@ public final class PmVlc {
             }
             if (found) {
                 try {
-                    factory = new MediaPlayerFactory("--no-video-title-show", "--quiet");
+                    // --avcodec-hw=none: программное декодирование, иначе на GPU
+                    // с аппаратным декодом (AMD DXVA и др.) кадры не доходят до
+                    // memory-callback — звук есть, картинка чёрная.
+                    factory = new MediaPlayerFactory(
+                            "--no-video-title-show", "--quiet", "--avcodec-hw=none");
                 } catch (Throwable t) {
                     LOGGER.warn("VLC found but MediaPlayerFactory failed to start: {}", t.toString());
                     found = false;
@@ -113,7 +117,9 @@ public final class PmVlc {
     public static class Session {
         private final EmbeddedMediaPlayer player;
         private final Identifier textureId;
-        private final NativeImageBackedTexture texture;
+        private NativeImageBackedTexture texture; // пересоздаётся под размер кадра (render thread)
+        private NativeImage frameImage;           // переиспользуемый буфер кадра (render thread)
+        private int texW = -1, texH = -1;
 
         private volatile byte[] pendingFrame;
         private volatile int frameW, frameH;
@@ -132,6 +138,9 @@ public final class PmVlc {
         Session(String url, String audioSlaveUrl) {
             this.player = factory.mediaPlayers().newEmbeddedMediaPlayer();
             this.textureId = Identifier.of("pmchat", "video/" + System.nanoTime());
+            // Заглушка-текстура, пока не пришёл первый кадр (иначе drawTexture по
+            // незарегистрированному id). Настоящая текстура нужного размера
+            // создаётся в tick() на render-потоке, когда известны размеры кадра.
             NativeImage placeholder = new NativeImage(NativeImage.Format.RGBA, 2, 2, false);
             this.texture = new NativeImageBackedTexture(() -> "pmchat-video", placeholder);
             MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, texture);
@@ -205,33 +214,57 @@ public final class PmVlc {
             // input-slave, он сводит их в один поток на лету.
             java.util.List<String> opts = new java.util.ArrayList<>();
             opts.add(":network-caching=3000");
+            // ВАЖНО: без этого на многих GPU (в частности AMD с DXVA) VLC
+            // декодирует видео аппаратно — кадры остаются в памяти GPU и до
+            // нашего memory-callback НЕ доходят: звук есть, картинка чёрная.
+            // Форсируем программное декодирование, чтобы кадры были в RAM.
+            opts.add(":avcodec-hw=none");
             if (audioSlaveUrl != null && !audioSlaveUrl.isBlank()) {
                 opts.add(":input-slave=" + audioSlaveUrl);
             }
             player.media().play(url, opts.toArray(new String[0]));
         }
 
-        /** Вызывать каждый кадр рендера — переносит новый буфер VLC в текстуру Minecraft. */
+        /** Вызывать каждый кадр рендера (на render-потоке) — переносит буфер VLC в текстуру. */
         public void tick() {
             if (released.get() || !frameDirty.compareAndSet(true, false)) return;
             byte[] data = pendingFrame;
             int w = frameW, h = frameH;
             if (data == null || w <= 0 || h <= 0 || data.length < w * h * 4) return;
             try {
-                NativeImage img = new NativeImage(NativeImage.Format.RGBA, w, h, false);
+                // Первый кадр или сменился размер — пересоздаём изображение и
+                // текстуру ровно под кадр (нельзя заливать 640×360 в 2×2).
+                if (frameImage == null || texW != w || texH != h) {
+                    NativeImage img = new NativeImage(NativeImage.Format.RGBA, w, h, false);
+                    NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "pmchat-video", img);
+                    MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, tex);
+                    NativeImageBackedTexture old = texture;
+                    texture = tex;
+                    frameImage = img;
+                    texW = w;
+                    texH = h;
+                    if (old != null) {
+                        try {
+                            old.close();
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+                NativeImage img = frameImage;
                 int i = 0;
                 for (int y = 0; y < h; y++) {
                     for (int x = 0; x < w; x++) {
-                        // RV32 = BGRA байт-порядок в буфере
+                        // RV32 — это BGR + байт-заполнитель (X), а НЕ альфа: VLC
+                        // кладёт туда мусор/ноль. Читать его как альфу нельзя —
+                        // при 0 кадр рисуется полностью прозрачным (звук есть,
+                        // картинки нет). Поэтому альфу принудительно ставим 255.
                         int b = data[i] & 0xFF;
                         int g = data[i + 1] & 0xFF;
                         int r = data[i + 2] & 0xFF;
-                        int a = data[i + 3] & 0xFF;
-                        img.setColorArgb(x, y, (a << 24) | (r << 16) | (g << 8) | b);
+                        img.setColorArgb(x, y, 0xFF000000 | (r << 16) | (g << 8) | b);
                         i += 4;
                     }
                 }
-                texture.setImage(img);
                 texture.upload();
             } catch (Exception e) {
                 LOGGER.debug("Video frame upload failed: {}", e.toString());
