@@ -116,19 +116,18 @@ public class PmChatClient implements ClientModInitializer {
         history = PmHistory.load();
         compilePatterns();
 
+        // Категорию создаём ОДИН раз и переиспользуем для всех клавиш —
+        // повторный create() с тем же id падает «already registered».
+        KeyBinding.Category category = KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
         openKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.pmchat.open",
-                GLFW.GLFW_KEY_J,
-                KeyBinding.Category.create(Identifier.of(MOD_ID, "category"))
-        ));
+                "key.pmchat.open", GLFW.GLFW_KEY_J, category));
         // NEW (5.3): медиа/плейлисты
-        KeyBinding.Category mediaCat = KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
         mediaKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.pmchat.media", GLFW.GLFW_KEY_K, mediaCat));
+                "key.pmchat.media", GLFW.GLFW_KEY_K, category));
         mediaPlayKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.pmchat.media.play", GLFW.GLFW_KEY_UNKNOWN, mediaCat));
+                "key.pmchat.media.play", GLFW.GLFW_KEY_UNKNOWN, category));
         mediaNextKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.pmchat.media.next", GLFW.GLFW_KEY_UNKNOWN, mediaCat));
+                "key.pmchat.media.next", GLFW.GLFW_KEY_UNKNOWN, category));
 
         // Рисуем окошко медиаплеера поверх HUD, когда никакой наш экран не открыт —
         // так музыка/видео продолжают показываться в углу и когда чат закрыт.
