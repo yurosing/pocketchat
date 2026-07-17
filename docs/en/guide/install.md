@@ -36,7 +36,7 @@ Minecraft version — **1.21.11**.
 2. Inside, find (or create, if missing) a folder called **`mods`**.
 3. Drag the downloaded files into it:
    - `fabric-api-*.jar`
-   - `pmchat-mod-1.3.0.jar`
+   - `pmchat-mod-1.4.0.jar`
 
 <Shot src="/img/mods-folder.png" caption="The mods/ folder with fabric-api and pmchat." />
 

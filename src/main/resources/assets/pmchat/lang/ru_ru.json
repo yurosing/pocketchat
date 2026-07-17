@@ -149,5 +149,16 @@
   "pmchat.group.members": "Участники",
   "pmchat.group.members.hint": "Ники через запятую",
   "pmchat.group.create": "Создать",
-  "pmchat.group.hint": "Сообщения уходят каждому участнику через /m"
+  "pmchat.group.hint": "Сообщения уходят каждому участнику через /m",
+  "pmchat.secret.start": "NEW · Начать секретный чат",
+  "pmchat.secret.pending": "Ожидание собеседника…",
+  "pmchat.secret.end": "Завершить секретный чат",
+  "pmchat.secret.ttl": "Самоуничтожение: %s",
+  "pmchat.secret.ttl.off": "выкл",
+  "pmchat.secret.ttl.s": "с",
+  "pmchat.secret.ttl.m": "мин",
+  "pmchat.secret.ttl.h": "ч",
+  "pmchat.secret.input.hint": "Секретное сообщение…",
+  "pmchat.secret.toast": "Секретное сообщение",
+  "pmchat.secret.undecryptable": "Не удалось расшифровать"
 }

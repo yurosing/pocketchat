@@ -36,6 +36,12 @@ another one — just wait a bit.
 
 Most settings apply **after restarting the game** — just quit and reopen it.
 
+## A secret chat disappeared after restarting the game <Badge type="tip" text="NEW" />
+
+That's by design. Secret chats aren't saved anywhere — you'll need to start a
+new one the next time you launch the game. See
+[Secret chats](/en/guide/secret-chats) for details.
+
 ## The mod isn't in the mod list / the game doesn't see it
 
 Check that:

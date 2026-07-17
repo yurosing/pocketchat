@@ -20,6 +20,7 @@ const sidebarRu = [
       { text: 'Фото и стикеры', link: '/guide/media' },
       { text: 'Глобальный чат', link: '/guide/global' },
       { text: 'Каналы и группы', link: '/guide/channels' },
+      { text: 'Секретные чаты NEW', link: '/guide/secret-chats' },
       { text: 'Команды и клавиши', link: '/guide/commands' },
     ],
   },
@@ -65,6 +66,7 @@ const sidebarEn = [
       { text: 'Photos & stickers', link: '/en/guide/media' },
       { text: 'Global chat', link: '/en/guide/global' },
       { text: 'Channels & groups', link: '/en/guide/channels' },
+      { text: 'Secret chats NEW', link: '/en/guide/secret-chats' },
       { text: 'Commands & keys', link: '/en/guide/commands' },
     ],
   },
@@ -142,7 +144,7 @@ export default defineConfig({
         nav: [
           { text: 'Документация', link: '/guide/what-is' },
           { text: 'Настройка', link: '/config/' },
-          { text: 'v1.3.0', items: [
+          { text: 'v1.4.0', items: [
             { text: 'Minecraft 1.21.11', link: '/guide/install' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},
@@ -171,7 +173,7 @@ export default defineConfig({
         nav: [
           { text: 'Docs', link: '/en/guide/what-is' },
           { text: 'Config', link: '/en/config/' },
-          { text: 'v1.3.0', items: [
+          { text: 'v1.4.0', items: [
             { text: 'Minecraft 1.21.11', link: '/en/guide/install' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},

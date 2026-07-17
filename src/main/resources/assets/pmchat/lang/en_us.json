@@ -149,5 +149,16 @@
   "pmchat.group.members": "Members",
   "pmchat.group.members.hint": "Nicknames, comma-separated",
   "pmchat.group.create": "Create",
-  "pmchat.group.hint": "Messages are sent to each member via /m"
+  "pmchat.group.hint": "Messages are sent to each member via /m",
+  "pmchat.secret.start": "NEW · Start secret chat",
+  "pmchat.secret.pending": "Waiting for the other side…",
+  "pmchat.secret.end": "End secret chat",
+  "pmchat.secret.ttl": "Self-destruct: %s",
+  "pmchat.secret.ttl.off": "off",
+  "pmchat.secret.ttl.s": "s",
+  "pmchat.secret.ttl.m": "m",
+  "pmchat.secret.ttl.h": "h",
+  "pmchat.secret.input.hint": "Secret message…",
+  "pmchat.secret.toast": "Secret message",
+  "pmchat.secret.undecryptable": "Could not decrypt"
 }

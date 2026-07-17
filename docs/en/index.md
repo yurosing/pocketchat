@@ -20,6 +20,10 @@ hero:
       link: https://github.com/yurosing/pocketchat
 
 features:
+  - icon: 🔒
+    title: 'Secret chats NEW'
+    details: A conversation not even the server can read. Never touches the disk, and can self-destruct after a set time.
+    link: /en/guide/secret-chats
   - icon: 🧵
     title: Chats and history
     details: A separate conversation with each person, with an unread marker. Everything is saved on your own computer forever and searches instantly.

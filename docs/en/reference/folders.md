@@ -15,7 +15,7 @@ All of the mod's own files go into the game folder, next to `mods`, inside a
 ```
 .minecraft/
 ├─ mods/
-│  └─ pmchat-mod-1.3.0.jar        # the mod itself
+│  └─ pmchat-mod-1.4.0.jar        # the mod itself
 └─ config/
    ├─ pmchat.json                 # all settings
    ├─ pmchat-history.json         # your entire chat history
@@ -37,4 +37,10 @@ All of the mod's own files go into the game folder, next to `mods`, inside a
 ::: tip Back up your chat history
 To avoid losing your chat history, copy the `pmchat-history.json` file
 somewhere safe — for example, before reinstalling Windows.
+:::
+
+::: tip <Badge type="tip" text="NEW" /> Secret chats never end up here
+[Secret chats](/en/guide/secret-chats) aren't saved anywhere — on purpose, so
+they can't be read even by someone with access to this folder. They only
+exist while the game is running.
 :::

@@ -48,6 +48,12 @@ public class PmMessage {
         return pollQuestion != null && pollOptions != null;
     }
 
+    /** NEW: секретный чат (6.10) — сквозное шифрование, не сохраняется на диск. */
+    public transient boolean secret;
+
+    /** NEW: когда самоуничтожится (мс, 0 — никогда). Не сохраняется — секретные сообщения не пишутся в файл. */
+    public transient long destructAt;
+
     /** Голосов за вариант i (я + собеседник). */
     public int pollCount(int i) {
         int c = 0;

@@ -5,6 +5,7 @@ import com.pmchat.client.PmConfig;
 import com.pmchat.client.PmHistory;
 import com.pmchat.client.PmImages;
 import com.pmchat.client.PmMessage;
+import com.pmchat.client.PmSecretSession;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
@@ -154,6 +155,15 @@ public class PmScreen extends Screen {
         int r = Math.min(255, ((argb >> 16) & 0xFF) + amount);
         int g = Math.min(255, ((argb >> 8) & 0xFF) + amount);
         int b = Math.min(255, (argb & 0xFF) + amount);
+        return a | (r << 16) | (g << 8) | b;
+    }
+
+    /** NEW (6.10): смешивает цвет с целевым в заданной пропорции (0 — как есть, 1 — целевой). */
+    private static int tintTowards(int argb, int target, float mix) {
+        int a = argb & 0xFF000000;
+        int r = (int) (((argb >> 16) & 0xFF) * (1 - mix) + ((target >> 16) & 0xFF) * mix);
+        int g = (int) (((argb >> 8) & 0xFF) * (1 - mix) + ((target >> 8) & 0xFF) * mix);
+        int b = (int) ((argb & 0xFF) * (1 - mix) + (target & 0xFF) * mix);
         return a | (r << 16) | (g << 8) | b;
     }
 
@@ -561,11 +571,14 @@ public class PmScreen extends Screen {
                 addDrawableChild(icon(px + LEFT_W + 8, inputY, 16, 16, PmIcons.EMOJI, 0xFFF0C34E, "pmchat.tip.emoji",
                         btn -> { boolean was = emojiMode; closeModes(); emojiMode = !was; rebuild(); }));
                 addSttButton(inputY);
+                boolean secretActive = PmChatClient.isSecretActive(selected);
                 inputField = new TextFieldWidget(textRenderer, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
                         Text.translatable("pmchat.input.hint"));
-                inputField.setMaxLength(200);
+                // NEW (6.10): в секретном чате сообщения короче — шифротекст должен влезть в /m
+                inputField.setMaxLength(secretActive ? com.pmchat.client.PmWire.SECRET_MAX_CHARS : 200);
                 inputField.setText(inputText);
-                String inputHint = Text.translatable("pmchat.input.hint").getString();
+                String inputHint = Text.translatable(
+                        secretActive ? "pmchat.secret.input.hint" : "pmchat.input.hint").getString();
                 inputField.setSuggestion(inputText.isEmpty() ? inputHint : "");
                 String typingTarget = selected;
                 inputField.setChangedListener(s -> {
@@ -609,6 +622,42 @@ public class PmScreen extends Screen {
                         clearConfirm = false;
                         rebuild();
                     }));
+
+            // NEW (6.10): секретный чат — только для личного диалога с игроком, у кого стоит мод.
+            // Кнопки встают НАД рядами «в контакты»/«очистить» (те остаются на месте, -44/-24).
+            boolean secretEligible = selected != null && !isFeedTab()
+                    && !PmChatClient.isLocalChat(selected) && config.isModUser(selected);
+            if (secretEligible) {
+                PmSecretSession.State st = PmChatClient.secretState(selected);
+                String labelKey = switch (st) {
+                    case ACTIVE -> "pmchat.secret.end";
+                    case PENDING -> "pmchat.secret.pending";
+                    default -> "pmchat.secret.start";
+                };
+                int labelColor = st == PmSecretSession.State.ACTIVE ? 0xFF8FD8A8
+                        : st == PmSecretSession.State.PENDING ? 0xFFE0B040 : 0xFF9CC4DC;
+                addDrawableChild(FlatButton.centered(textRenderer,
+                        px + LEFT_W + 10, py + PANEL_H - 64, PANEL_W - LEFT_W - 20, 16,
+                        Text.translatable(labelKey), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, labelColor, btn -> {
+                            if (st == PmSecretSession.State.NONE) {
+                                PmChatClient.startSecretChat(selected);
+                            } else {
+                                PmChatClient.endSecretChat(selected);
+                            }
+                            rebuild();
+                        }));
+                if (st == PmSecretSession.State.ACTIVE) {
+                    int ttl = PmChatClient.secretTtl(selected);
+                    String ttlLabel = ttlLabel(ttl);
+                    addDrawableChild(FlatButton.centered(textRenderer,
+                            px + LEFT_W + 10, py + PANEL_H - 84, PANEL_W - LEFT_W - 20, 16,
+                            Text.translatable("pmchat.secret.ttl", ttlLabel), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
+                            0xFFCB8A8A, btn -> {
+                                PmChatClient.cycleSecretTtl(selected);
+                                rebuild();
+                            }));
+                }
+            }
 
             // В контакты / из контактов (личный диалог)
             if (selected != null && !isFeedTab()) {
@@ -682,6 +731,14 @@ public class PmScreen extends Screen {
         mediaMode = false;
         uploadFailed = false;
         groupCreateMode = false;
+    }
+
+    /** NEW (6.10): человекочитаемая метка таймера самоуничтожения. */
+    private static String ttlLabel(int seconds) {
+        if (seconds <= 0) return Text.translatable("pmchat.secret.ttl.off").getString();
+        if (seconds < 60) return seconds + Text.translatable("pmchat.secret.ttl.s").getString();
+        if (seconds < 3600) return (seconds / 60) + Text.translatable("pmchat.secret.ttl.m").getString();
+        return (seconds / 3600) + Text.translatable("pmchat.secret.ttl.h").getString();
     }
 
     /** Кнопка со своей пиксельной иконкой (PmIcons) и всплывающей подсказкой. */
@@ -763,6 +820,15 @@ public class PmScreen extends Screen {
             inputField.setText("");
             inputText = "";
             rebuild();
+            return;
+        }
+        // NEW (6.10): в активном секретном чате сообщение шифруется вместо обычной отправки
+        if (PmChatClient.isSecretActive(selected)) {
+            PmChatClient.sendSecretMessage(selected, text);
+            inputField.setText("");
+            inputText = "";
+            msgScroll = 0;
+            planeAt = System.currentTimeMillis();
             return;
         }
         String replyHash = replyTarget != null ? PmHistory.msgHash(replyTarget.text) : null;
@@ -1608,6 +1674,11 @@ public class PmScreen extends Screen {
             context.drawText(textRenderer, "●", headerX, py + 8, hasMod ? 0xFF6FBF8B : SUBTLE, false);
             headerX += 9;
         }
+        // NEW (6.10): замочек в шапке — секретный чат активен
+        if (!isGlobal && !localChat && PmChatClient.isSecretActive(selected)) {
+            PmIcons.draw(context, PmIcons.LOCK, headerX, py + 3, 9, 9, 0xFF8FD8A8);
+            headerX += 11;
+        }
         context.drawText(textRenderer, header, headerX, py + 8, TITLE, false);
         if (!isGlobal && !localChat && PmChatClient.isTyping(selected)) {
             int dots = (int) ((System.currentTimeMillis() / 350) % 4);
@@ -1871,6 +1942,8 @@ public class PmScreen extends Screen {
             int quoteShift = (quoted != null ? 11 : 0) + (senderName != null ? 10 : 0)
                     + (fwdLabel != null ? 10 : 0);
             int bg = msg.money > 0 ? MONEY_BG : (msg.out ? OUT_BG : IN_BG);
+            // NEW (6.10): секретные сообщения — лёгкий зелёный оттенок, как в Telegram
+            if (msg.secret) bg = tintTowards(bg, 0xFF1E4A32, 0.35f);
 
             // Фон пузыря
             context.fill(bx + dx + 1, y + dy, bx + dx + bw - 1, y + dy + bh, applyAlpha(bg, alpha));
@@ -2035,11 +2108,23 @@ public class PmScreen extends Screen {
 
             // Время сообщения — сбоку от пузыря (с меткой «ред.», если изменено)
             if (msg.time > 0) {
+                // NEW (6.10): у секретных сообщений с таймером — обратный отсчёт до самоуничтожения
+                String destructPart = "";
+                if (msg.secret && msg.destructAt > 0) {
+                    long left = Math.max(0, (msg.destructAt - now) / 1000);
+                    destructPart = " · " + left + Text.translatable("pmchat.secret.ttl.s").getString();
+                }
                 String time = (msg.edited ? Text.translatable("pmchat.edited.mark").getString() + " " : "")
-                        + timeFmt.format(new Date(msg.time));
+                        + timeFmt.format(new Date(msg.time)) + destructPart;
                 int tw = textRenderer.getWidth(time);
                 int tx = msg.out ? bx - 4 - tw : bx + bw + 4;
-                context.drawText(textRenderer, time, tx + dx, y + dy + bh - 10, SUBTLE, false);
+                int timeColor = msg.secret && msg.destructAt > 0 ? 0xFFCB8A8A : SUBTLE;
+                context.drawText(textRenderer, time, tx + dx, y + dy + bh - 10, timeColor, false);
+            }
+            // NEW (6.10): замочек на секретном сообщении, у самого пузыря
+            if (msg.secret) {
+                int lx = msg.out ? bx + dx + bw - 10 : bx + dx + 1;
+                PmIcons.draw(context, PmIcons.LOCK, lx, y + dy + 1, 9, 9, applyAlpha(0xFF8FD8A8, alpha));
             }
 
             // 5.5: значок закрепа на закреплённом пузыре (как в Telegram)
@@ -2925,33 +3010,38 @@ public class PmScreen extends Screen {
         if (ctxMsg == null) return;
 
         boolean global = isFeedTab();
-        boolean canReact = !global && selected != null && config.isModUser(selected)
+        // NEW (6.10): у секретных сообщений отключаем всё, что уходит по сети в открытом виде
+        // (ответ/цитата/пересылка/правка/закреп текстом) — остаются только локальные действия.
+        boolean secretMsg = ctxMsg.secret;
+        boolean canReact = !global && !secretMsg && selected != null && config.isModUser(selected)
                 && ctxMsg.text != null && !ctxMsg.text.isBlank();
 
         List<String[]> items = new ArrayList<>();
-        if (!global) items.add(new String[]{"reply", "↩ " + Text.translatable("pmchat.menu.reply").getString()});
-        if (!global && ctxMsg.text != null && !ctxMsg.text.isBlank()
+        if (!global && !secretMsg) items.add(new String[]{"reply", "↩ " + Text.translatable("pmchat.menu.reply").getString()});
+        if (!global && !secretMsg && ctxMsg.text != null && !ctxMsg.text.isBlank()
                 && imageIdOf(ctxMsg) == null && voiceOf(ctxMsg) == null && !ctxMsg.isPoll()
                 && ctxMsg.text.trim().contains(" ")) {
             items.add(new String[]{"quotefrag", "❝ " + Text.translatable("pmchat.menu.quotefrag").getString()});
         }
-        items.add(new String[]{"forward", "⤶ " + Text.translatable("pmchat.menu.forward").getString()});
-        if (!PmChatClient.SAVED.equals(selected)) {
+        if (!secretMsg) {
+            items.add(new String[]{"forward", "⤶ " + Text.translatable("pmchat.menu.forward").getString()});
+        }
+        if (!PmChatClient.SAVED.equals(selected) && !secretMsg) {
             items.add(new String[]{"save", "✦ " + Text.translatable("pmchat.menu.save").getString()});
         }
         if (ctxMsg.text != null && !ctxMsg.text.isBlank()) {
             items.add(new String[]{"copy", "⧉ " + Text.translatable("pmchat.menu.copy").getString()});
         }
         // Правка своего текстового сообщения — только в модовом диалоге/группе (или Избранное)
-        boolean editable = !global && ctxMsg.out && ctxMsg.text != null && !ctxMsg.text.isBlank()
+        boolean editable = !global && !secretMsg && ctxMsg.out && ctxMsg.text != null && !ctxMsg.text.isBlank()
                 && imageIdOf(ctxMsg) == null && voiceOf(ctxMsg) == null && !ctxMsg.isPoll() && ctxMsg.money <= 0
                 && selected != null
                 && (PmChatClient.isLocalChat(selected) || config.isModUser(selected));
         if (editable) {
             items.add(new String[]{"edit", "✎ " + Text.translatable("pmchat.menu.edit").getString()});
         }
-        // Закрепить/открепить — только в личных диалогах
-        if (!global && selected != null && ctxMsg.text != null && !ctxMsg.text.isBlank()) {
+        // Закрепить/открепить — только в личных диалогах (секретные сообщения не закрепляются)
+        if (!global && !secretMsg && selected != null && ctxMsg.text != null && !ctxMsg.text.isBlank()) {
             boolean isPinned = config.isPinned(selected, PmHistory.msgHash(ctxMsg.text));
             items.add(isPinned
                     ? new String[]{"unpin", "⚐ " + Text.translatable("pmchat.menu.unpin").getString()}

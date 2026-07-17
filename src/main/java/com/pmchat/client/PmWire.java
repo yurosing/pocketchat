@@ -44,6 +44,16 @@ public final class PmWire {
     // Групповое сообщение: pmc grp <hexИмя> <составЧерезДефис> <текст>
     private static final Pattern GRP = Pattern.compile("^pmc grp ([0-9a-f]*) ([A-Za-z0-9_-]+) (.+)$", Pattern.DOTALL);
 
+    // NEW (6.10): секретные чаты — сквозное шифрование.
+    // pmc sec req <pubHex 64> — запрос сессии со своим публичным ключом X25519
+    private static final Pattern SEC_REQ = Pattern.compile("^pmc sec req ([0-9a-f]{64})$");
+    // pmc sec ack <pubHex 64> — подтверждение с ответным ключом
+    private static final Pattern SEC_ACK = Pattern.compile("^pmc sec ack ([0-9a-f]{64})$");
+    // pmc sec end — закрыть секретный чат
+    private static final String SEC_END = "pmc sec end";
+    // pmc sec msg <ttlSeconds> <nonceHex 24> <cipherHex>
+    private static final Pattern SEC_MSG = Pattern.compile("^pmc sec msg (\\d+) ([0-9a-f]{24}) ([0-9a-f]+)$");
+
     public static final String POLL_DELIM = " // ";
 
     public static final String TYPING = "pmc typ";
@@ -262,6 +272,55 @@ public final class PmWire {
         return parseGroup(text) != null;
     }
 
+    // ---------- NEW: секретные чаты (6.10) ----------
+
+    public static String secretRequest(String pubHex) {
+        return "pmc sec req " + pubHex;
+    }
+
+    public static String secretAck(String pubHex) {
+        return "pmc sec ack " + pubHex;
+    }
+
+    public static String secretEnd() {
+        return SEC_END;
+    }
+
+    public static String secretMessage(int ttlSeconds, String nonceHex, String cipherHex) {
+        return "pmc sec msg " + ttlSeconds + " " + nonceHex + " " + cipherHex;
+    }
+
+    /** Публичный ключ (hex) из запроса или null. */
+    public static String parseSecretRequest(String text) {
+        if (text == null) return null;
+        Matcher m = SEC_REQ.matcher(text.trim());
+        return m.matches() ? m.group(1) : null;
+    }
+
+    /** Публичный ключ (hex) из подтверждения или null. */
+    public static String parseSecretAck(String text) {
+        if (text == null) return null;
+        Matcher m = SEC_ACK.matcher(text.trim());
+        return m.matches() ? m.group(1) : null;
+    }
+
+    public static boolean isSecretEnd(String text) {
+        return text != null && text.trim().equals(SEC_END);
+    }
+
+    /** {ttlSeconds, nonceHex, cipherHex} или null. */
+    public static String[] parseSecretMessage(String text) {
+        if (text == null) return null;
+        Matcher m = SEC_MSG.matcher(text.trim());
+        return m.matches() ? new String[]{m.group(1), m.group(2), m.group(3)} : null;
+    }
+
+    public static boolean isSecretMeta(String text) {
+        if (text == null) return false;
+        String t = text.trim();
+        return parseSecretRequest(t) != null || parseSecretAck(t) != null || isSecretEnd(t);
+    }
+
     // ---------- Разбор ----------
 
     /** {код хоста, id файла} или null. */
@@ -340,4 +399,7 @@ public final class PmWire {
         return t.startsWith("pmc ") || t.startsWith("[img:") || t.startsWith("[voice:")
                 || t.startsWith("[re:") || t.equals("[typ]") || t.equals("[seen]");
     }
+
+    /** Максимум символов текста для секретного сообщения (ограничение из-за шифрования, см. PmCrypto). */
+    public static final int SECRET_MAX_CHARS = 40;
 }

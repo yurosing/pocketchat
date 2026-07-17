@@ -37,7 +37,7 @@ PocketChat ставится только вам на компьютер — на
 2. Внутри найдите (или создайте, если её нет) папку **`mods`**.
 3. Перетащите туда скачанные файлы:
    - `fabric-api-*.jar`
-   - `pmchat-mod-1.3.0.jar`
+   - `pmchat-mod-1.4.0.jar`
 
 <Shot src="/img/mods-folder.png" caption="Папка mods/ с fabric-api и pmchat." />
 

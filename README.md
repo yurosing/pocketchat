@@ -84,6 +84,10 @@ Switch between dark and light themes, and pick your own bubble color from six ac
 
 A small dot next to every name tells you at a glance whether that player has PocketChat installed — so you know whether reactions, read receipts, and typing indicators will actually reach them.
 
+## 🔒 NEW: Secret chats
+
+Start an end-to-end encrypted chat with anyone running PocketChat — messages are locked with a key that only exists on your two computers, are never written to disk, and can be set to self-destruct a few seconds after they arrive. Even the server only ever sees scrambled text.
+
 ---
 
 ## 🧭 Commands
