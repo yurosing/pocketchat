@@ -126,6 +126,10 @@ public final class PmVlc {
         private volatile float bufferPct = -1; // -1 — буферизация не сообщалась
 
         Session(String url) {
+            this(url, null);
+        }
+
+        Session(String url, String audioSlaveUrl) {
             this.player = factory.mediaPlayers().newEmbeddedMediaPlayer();
             this.textureId = Identifier.of("pmchat", "video/" + System.nanoTime());
             NativeImage placeholder = new NativeImage(NativeImage.Format.RGBA, 2, 2, false);
@@ -195,9 +199,16 @@ public final class PmVlc {
                 }
             });
 
-            // network-caching — запас на сетевые потоки (HLS/HTTP), иначе VLC
-            // с дефолтным кэшем любит заикаться на первых секундах.
-            player.media().play(url, ":network-caching=2000");
+            // network-caching — запас на сетевые потоки (HTTP), иначе VLC с
+            // дефолтным кэшем любит заикаться на первых секундах. Для YouTube
+            // видео и звук приходят РАЗНЫМИ ссылками: звук отдаём VLC как
+            // input-slave, он сводит их в один поток на лету.
+            java.util.List<String> opts = new java.util.ArrayList<>();
+            opts.add(":network-caching=3000");
+            if (audioSlaveUrl != null && !audioSlaveUrl.isBlank()) {
+                opts.add(":input-slave=" + audioSlaveUrl);
+            }
+            player.media().play(url, opts.toArray(new String[0]));
         }
 
         /** Вызывать каждый кадр рендера — переносит новый буфер VLC в текстуру Minecraft. */
@@ -310,5 +321,14 @@ public final class PmVlc {
     /** Открывает URL (http-ссылку на видео) как новый сеанс. Вызывать только если {@link #isAvailable()}. */
     public static Session open(String url) {
         return new Session(url);
+    }
+
+    /**
+     * Как {@link #open(String)}, но со звуком из отдельной ссылки (input-slave) —
+     * для YouTube, где видео и звук отдаются раздельными потоками.
+     * {@code audioSlaveUrl} может быть null (тогда как обычный {@link #open(String)}).
+     */
+    public static Session open(String url, String audioSlaveUrl) {
+        return new Session(url, audioSlaveUrl);
     }
 }

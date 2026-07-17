@@ -29,3 +29,5 @@ replay_pid*.log
 node_modules/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+.yttest/
+.yttest2/

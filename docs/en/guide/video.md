@@ -26,11 +26,22 @@ message and send it. Clicking the link in the chat opens it in the built-in
 player, same as your own video.
 
 ::: tip How it works
-PocketChat fetches the direct stream link from YouTube itself (the same way
-official apps do) and hands it to VLC — VLC's own YouTube parsing has been
-broken for years, so we don't rely on it. While the link is being fetched the
-player shows "Fetching stream link". If it can't be fetched (private video,
-age restriction, etc.), an "Open in browser" button appears instead.
+You can't hand a YouTube link straight to VLC anymore — YouTube locks its
+streams behind protection that only the dedicated tool **yt-dlp** can get
+past. So on your first YouTube video PocketChat downloads `yt-dlp` into
+`config/pmchat-bin/` (the player shows "Getting yt-dlp"), then downloads the
+clip to a temp file ("Downloading N%") and plays it. The first time is a bit
+slower — the tool itself (~18 MB) is being fetched; after that it's just clips.
+
+Clips are grabbed at 360p (audio+video in one file, so no ffmpeg needed).
+:::
+
+::: warning If it says "Couldn't play"
+Some videos make YouTube ask you to sign in ("confirm you're not a bot"). In
+that case export your YouTube cookies to `config/pmchat-cookies.txt` (Netscape
+format — e.g. a "Get cookies.txt" browser extension) and PocketChat picks them
+up automatically. Without cookies those videos open via the "Open in browser"
+button.
 :::
 
 ## Player controls

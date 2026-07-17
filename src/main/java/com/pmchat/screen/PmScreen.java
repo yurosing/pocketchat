@@ -285,8 +285,10 @@ public class PmScreen extends Screen {
     private com.pmchat.client.PmVlc.Session videoSession = null;
     private String videoUrl;            // null — оверлей плеера закрыт
     private long videoOpenedAt;
-    private boolean videoResolving = false; // NEW (5.0): фоновый резолв YouTube-ссылки
+    private boolean videoResolving = false; // NEW (5.0): фоновая подготовка YouTube (yt-dlp)
     private boolean videoOpenFailed = false; // резолв/запуск не удался — сразу показываем fallback
+    private volatile String videoStatusText = null; // NEW (5.1): «yt-dlp» / «42%» при подготовке
+    private java.io.File videoTempFile = null;      // NEW (5.1): скачанный ролик — удалить при закрытии
     private int videoSeq = 0;           // защита от «просроченных» фоновых резолвов
     private int[] videoFallbackRect; // «Открыть в браузере», если VLC не смог показать
     private boolean videoDragSeek = false;
@@ -1417,30 +1419,46 @@ public class PmScreen extends Screen {
         videoUrl = url;
         videoOpenedAt = System.currentTimeMillis();
         final int seq = ++videoSeq;
-        if (com.pmchat.client.PmYouTube.videoId(url) != null) {
-            // NEW (5.0): VLC сам не умеет разбирать страницы YouTube (его
-            // youtube.lua давно сломан) — окно висело чёрным. Резолвим прямую
-            // ссылку на поток в фоне и отдаём VLC уже её.
+        if (com.pmchat.client.PmYouTube.isYouTube(url)) {
+            // NEW (5.1): напрямую отдать VLC ссылку на YouTube к 2026 нельзя —
+            // потоки заперты proof-of-origin токеном. Скачиваем ролик через
+            // yt-dlp во временный файл (в фоне, с прогрессом) и играем его.
             videoResolving = true;
+            videoStatusText = null;
             Thread t = new Thread(() -> {
-                String direct = com.pmchat.client.PmYouTube.resolve(url);
+                java.io.File file = com.pmchat.client.PmYtDlp.download(url, st ->
+                        MinecraftClient.getInstance().execute(() -> {
+                            if (seq == videoSeq) videoStatusText = st;
+                        }));
                 MinecraftClient.getInstance().execute(() -> {
-                    if (seq != videoSeq) return; // плеер уже закрыли/переоткрыли
+                    if (seq != videoSeq) {
+                        // плеер уже закрыли/переоткрыли — убираем осиротевший файл
+                        com.pmchat.client.PmYtDlp.cleanup(file);
+                        return;
+                    }
                     videoResolving = false;
+                    videoStatusText = null;
                     videoOpenedAt = System.currentTimeMillis();
-                    startVideoSession(direct != null ? direct : url);
+                    if (file != null) {
+                        videoTempFile = file;
+                        startVideoSession(file.getAbsolutePath(), null);
+                    } else {
+                        // yt-dlp не смог (бот-проверка/нет бинарника) — состояние
+                        // ошибки с кнопкой «Открыть в браузере».
+                        videoOpenFailed = true;
+                    }
                 });
-            }, "pmchat-yt-resolve");
+            }, "pmchat-ytdlp");
             t.setDaemon(true);
             t.start();
         } else {
-            startVideoSession(url);
+            startVideoSession(url, null);
         }
     }
 
-    private void startVideoSession(String mediaUrl) {
+    private void startVideoSession(String mediaUrl, String audioSlaveUrl) {
         try {
-            videoSession = com.pmchat.client.PmVlc.open(mediaUrl);
+            videoSession = com.pmchat.client.PmVlc.open(mediaUrl, audioSlaveUrl);
         } catch (Exception e) {
             videoSession = null;
             videoOpenFailed = true;
@@ -1448,13 +1466,28 @@ public class PmScreen extends Screen {
     }
 
     private void closeVideoPlayer() {
-        videoSeq++; // отменяем висящие фоновые резолвы
+        videoSeq++; // отменяем висящие фоновые загрузки
         if (videoSession != null) {
             videoSession.release();
             videoSession = null;
         }
+        // Временный файл yt-dlp освобождается VLC не сразу — удаляем чуть погодя.
+        if (videoTempFile != null) {
+            java.io.File f = videoTempFile;
+            videoTempFile = null;
+            Thread cleaner = new Thread(() -> {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ignored) {
+                }
+                com.pmchat.client.PmYtDlp.cleanup(f);
+            }, "pmchat-video-cleanup");
+            cleaner.setDaemon(true);
+            cleaner.start();
+        }
         videoResolving = false;
         videoOpenFailed = false;
+        videoStatusText = null;
         videoDragSeek = false;
         videoDragVolume = false;
         videoUrl = null;
@@ -1549,11 +1582,24 @@ public class PmScreen extends Screen {
                 PmIcons.draw(context, PmIcons.LINKOUT, bx2 + 2, by2 + 4, 12, 10, 0xFF8FD8A8);
                 context.drawText(textRenderer, openInBrowser, bx2 + 15, by2 + 5, 0xFF8FD8A8, false);
             } else {
-                // Загрузка: статус + бегущие точки (+ процент буферизации, если VLC его сообщает)
-                Text status = Text.translatable(videoResolving ? "pmchat.video.resolving" : "pmchat.video.decoding");
-                String base = status.getString();
-                if (s != null && s.bufferPercent() >= 0 && s.bufferPercent() < 100) {
-                    base += " " + (int) s.bufferPercent() + "%";
+                // Загрузка: статус + бегущие точки. Для YouTube показываем стадию
+                // yt-dlp: «Получаю yt-dlp» пока качается бинарник, «Скачивание N%»
+                // при загрузке ролика; иначе — VLC-декодирование.
+                String base;
+                String st = videoStatusText;
+                if (videoResolving) {
+                    if ("yt-dlp".equals(st)) {
+                        base = Text.translatable("pmchat.video.gettingtool").getString();
+                    } else if (st != null && st.endsWith("%")) {
+                        base = Text.translatable("pmchat.video.downloading").getString() + " " + st;
+                    } else {
+                        base = Text.translatable("pmchat.video.resolving").getString();
+                    }
+                } else {
+                    base = Text.translatable("pmchat.video.decoding").getString();
+                    if (s != null && s.bufferPercent() >= 0 && s.bufferPercent() < 100) {
+                        base += " " + (int) s.bufferPercent() + "%";
+                    }
                 }
                 int dots = (int) (System.currentTimeMillis() / 350 % 4);
                 // Центруем по тексту без точек, чтобы надпись не «дышала»
