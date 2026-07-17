@@ -139,6 +139,8 @@
   "pmchat.tip.stats": "Chat stats",
   "pmchat.tip.emoji": "Emoji",
   "pmchat.tip.clear": "Clear feed",
+  "pmchat.tip.call": "Call",
+  "pmchat.tip.more": "More",
   "pmchat.menu.quotefrag": "Quote fragment",
   "pmchat.frag.title": "Select a fragment",
   "pmchat.frag.hint": "Click start, then click end",
@@ -164,9 +166,7 @@
   "pmchat.secret.toast": "Secret message",
   "pmchat.secret.undecryptable": "Could not decrypt",
   "pmchat.tip.docs": "Documentation (website)",
-  "pmchat.call.start": "NEW · Call (voice)",
-  "pmchat.call.end": "End call",
-  "pmchat.call.incoming.toast": "Calling you — you're now in the voice chat",
+  "pmchat.call.incoming.toast": "Calling you — the voice chat invite is on its way",
   "pmchat.spoiler.toggle": "NEW · Spoiler",
   "pmchat.spoiler.label": "Spoiler · click"
 }

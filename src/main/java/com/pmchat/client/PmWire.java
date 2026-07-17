@@ -57,9 +57,9 @@ public final class PmWire {
     // pmc sec msg <ttlSeconds> <nonceHex 24> <cipherHex>
     private static final Pattern SEC_MSG = Pattern.compile("^pmc sec msg (\\d+) ([0-9a-f]{24}) ([0-9a-f]+)$");
 
-    // NEW (4.6.1 «звонки»): pmc call <имя группы SVC> <пароль> — приглашение в голосовую группу
-    private static final Pattern CALL = Pattern.compile("^pmc call ([A-Za-z0-9]{4,32}) ([A-Za-z0-9]{4,32})$");
-    private static final String CALL_END = "pmc call end";
+    // NEW (звонки): pmc call — просто уведомление «зову в войсчат» (сам звонок
+    // делает команда сервера /voicechat invite, у неё нет параметров группы/пароля)
+    private static final String CALL = "pmc call";
 
     public static final String POLL_DELIM = " // ";
 
@@ -343,29 +343,18 @@ public final class PmWire {
         return parseSecretRequest(t) != null || parseSecretAck(t) != null || isSecretEnd(t);
     }
 
-    // ---------- NEW: звонки через голосовую группу Simple Voice Chat ----------
+    // ---------- NEW: звонки через Simple Voice Chat (/voicechat invite) ----------
 
-    public static String call(String groupName, String password) {
-        return "pmc call " + groupName + " " + password;
+    public static String call() {
+        return CALL;
     }
 
-    public static String callEnd() {
-        return CALL_END;
-    }
-
-    /** {имя группы, пароль} или null. */
-    public static String[] parseCall(String text) {
-        if (text == null) return null;
-        Matcher m = CALL.matcher(text.trim());
-        return m.matches() ? new String[]{m.group(1), m.group(2)} : null;
-    }
-
-    public static boolean isCallEnd(String text) {
-        return text != null && text.trim().equals(CALL_END);
+    public static boolean isCall(String text) {
+        return text != null && text.trim().equals(CALL);
     }
 
     public static boolean isCallMeta(String text) {
-        return text != null && (parseCall(text) != null || isCallEnd(text));
+        return isCall(text);
     }
 
     // ---------- Разбор ----------

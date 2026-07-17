@@ -199,6 +199,32 @@ public final class PmIcons {
             "         ",
     };
 
+    /** NEW: телефонная трубка — «Позвонить» (Simple Voice Chat). */
+    public static final String[] CALL = {
+            "         ",
+            "   ###   ",
+            "  #   #  ",
+            "  #    # ",
+            "  #  ##  ",
+            "  ##  #  ",
+            " #    #  ",
+            " #   #   ",
+            "  ###    ",
+    };
+
+    /** NEW: три точки — «Ещё» (свёрнутое меню редких действий). */
+    public static final String[] MORE = {
+            "         ",
+            "   ##    ",
+            "         ",
+            "         ",
+            "   ##    ",
+            "         ",
+            "         ",
+            "   ##    ",
+            "         ",
+    };
+
     /** NEW (4.9): пиксельная мозаика — «Спойлер» (скрыть фото/видео до клика). */
     public static final String[] SPOILER = {
             "         ",

@@ -186,6 +186,8 @@ public class PmScreen extends Screen {
     private String selected = null;
     private boolean statsMode = false;
     private boolean moneyMode = false;
+    /** NEW: меню «⋮» — редкие действия (видео/аудио, опрос, деньги, статистика). */
+    private boolean moreMenuOpen = false;
 
     // Групповой чат (6.9): режим создания + поля
     private boolean groupCreateMode = false;
@@ -315,6 +317,48 @@ public class PmScreen extends Screen {
     private final java.util.Map<String, Integer> pinOffsets = new java.util.HashMap<>(); // hash -> offset снизу
     private String pendingJumpHash = null; // отложенный переход к сообщению (после смены диалога)
     private int pendingJumpOffset = -1;
+
+    /** NEW: выпадающее меню «⋮» — видео/аудио, опрос, деньги, статистика. */
+    private void buildMoreMenu() {
+        int w = 130;
+        int x = px + PANEL_W - 10 - w;
+        int y = py + 22;
+        int rowH = 18;
+
+        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                Text.literal("▶ " + Text.translatable("pmchat.media.pick").getString()),
+                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
+                    closeModes();
+                    mediaMode = true;
+                    loadMedia();
+                    rebuild();
+                }));
+        y += rowH + 2;
+        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                Text.literal("▤ " + Text.translatable("pmchat.tip.poll").getString()),
+                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
+                    closeModes();
+                    pollMode = true;
+                    rebuild();
+                }));
+        y += rowH + 2;
+        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                Text.literal("$ " + Text.translatable("pmchat.tip.money").getString()),
+                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFF0C34E, btn -> {
+                    closeModes();
+                    moneyMode = true;
+                    rebuild();
+                }));
+        y += rowH + 2;
+        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                Text.literal("▥ " + Text.translatable("pmchat.tip.stats").getString()),
+                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
+                    closeModes();
+                    statsMode = true;
+                    clearConfirm = false;
+                    rebuild();
+                }));
+    }
 
     // Композер опроса (только личный чат)
     private boolean pollMode = false;
@@ -520,17 +564,9 @@ public class PmScreen extends Screen {
 
         boolean isGlobal = isFeedTab();
         if (selected != null && !statsMode && !isGlobal && !groupCreateMode) {
-            // Медиа: видео + аудиофайлы (5.9/6.0)
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 174, py + 6, 18, 14,
-                    Text.literal("▶"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
-                        boolean was = mediaMode;
-                        closeModes();
-                        mediaMode = !was;
-                        if (mediaMode) loadMedia();
-                        rebuild();
-                    }));
-            // Стикеры/гифки
-            addDrawableChild(icon(px + PANEL_W - 154, py + 6, 18, 14, PmIcons.STICKERS, 0xFFE8A0C8, "pmchat.tip.stickers", btn -> {
+            // Меньше кнопок в ряд (по многочисленным просьбам): в строке — только
+            // самое частое (стикеры, голос, фото, звонок), редкое спрятано за «⋮».
+            addDrawableChild(icon(px + PANEL_W - 130, py + 6, 18, 14, PmIcons.STICKERS, 0xFFE8A0C8, "pmchat.tip.stickers", btn -> {
                 boolean was = stickerMode;
                 closeModes();
                 stickerMode = !was;
@@ -540,18 +576,10 @@ public class PmScreen extends Screen {
                 }
                 rebuild();
             }));
-            // Опрос (только личный чат)
-            addDrawableChild(icon(px + PANEL_W - 132, py + 6, 18, 14, PmIcons.POLL, 0xFF9CC4DC, "pmchat.tip.poll", btn -> {
-                boolean was = pollMode;
-                closeModes();
-                pollMode = !was;
-                rebuild();
-            }));
-            // Кнопки в шапке чата: голос, фото/стикеры, деньги, статистика
-            addDrawableChild(icon(px + PANEL_W - 110, py + 6, 18, 14, PmIcons.VOICE,
+            addDrawableChild(icon(px + PANEL_W - 108, py + 6, 18, 14, PmIcons.VOICE,
                     com.pmchat.client.PmVoice.isRecording() ? 0xFFE07A6A : 0xFFCB8A8A,
                     "pmchat.tip.voice", btn -> toggleVoice()));
-            addDrawableChild(icon(px + PANEL_W - 88, py + 6, 18, 14, PmIcons.PHOTO, 0xFF6FBF8B, "pmchat.tip.photo", btn -> {
+            addDrawableChild(icon(px + PANEL_W - 86, py + 6, 18, 14, PmIcons.PHOTO, 0xFF6FBF8B, "pmchat.tip.photo", btn -> {
                 boolean was = imageMode;
                 closeModes();
                 imageMode = !was;
@@ -561,18 +589,21 @@ public class PmScreen extends Screen {
                 }
                 rebuild();
             }));
-            addDrawableChild(icon(px + PANEL_W - 66, py + 6, 18, 14, PmIcons.MONEY, 0xFFF0C34E, "pmchat.tip.money", btn -> {
-                boolean was = moneyMode;
-                closeModes();
-                moneyMode = !was;
+            // NEW: звонок через Simple Voice Chat — прямо в строке, как и просили
+            if (config.isModUser(selected) && !PmChatClient.isLocalChat(selected)) {
+                addDrawableChild(icon(px + PANEL_W - 64, py + 6, 18, 14, PmIcons.CALL, 0xFF8FD8A8, "pmchat.tip.call", btn -> {
+                    PmChatClient.startCall(selected);
+                }));
+            }
+            // «⋮» — остальное реже нужное: видео/аудио, опрос, деньги, статистика
+            addDrawableChild(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.MORE, WBTN_TEXT, "pmchat.tip.more", btn -> {
+                moreMenuOpen = !moreMenuOpen;
                 rebuild();
             }));
-            addDrawableChild(icon(px + PANEL_W - 44, py + 6, 18, 14, PmIcons.STATS, WBTN_TEXT, "pmchat.tip.stats", btn -> {
-                closeModes();
-                statsMode = true;
-                clearConfirm = false;
-                rebuild();
-            }));
+
+            if (moreMenuOpen) {
+                buildMoreMenu();
+            }
 
             int inputY = py + PANEL_H - 24;
             if (moneyMode) {
@@ -681,23 +712,6 @@ public class PmScreen extends Screen {
                     extraRow += 20;
                 }
             }
-            // NEW: звонок через голосовую группу Simple Voice Chat
-            if (secretEligible) {
-                boolean inCall = PmChatClient.isInCall(selected);
-                addDrawableChild(FlatButton.centered(textRenderer,
-                        px + LEFT_W + 10, py + PANEL_H - extraRow, PANEL_W - LEFT_W - 20, 16,
-                        Text.translatable(inCall ? "pmchat.call.end" : "pmchat.call.start"),
-                        WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, inCall ? 0xFFE07A6A : 0xFF8FD8A8, btn -> {
-                            if (inCall) {
-                                PmChatClient.endCall(selected);
-                            } else {
-                                PmChatClient.startCall(selected);
-                            }
-                            rebuild();
-                        }));
-                extraRow += 20;
-            }
-
             // В контакты / из контактов (личный диалог)
             if (selected != null && !isFeedTab()) {
                 boolean isC = config.isContact(selected);
@@ -771,6 +785,7 @@ public class PmScreen extends Screen {
         uploadFailed = false;
         groupCreateMode = false;
         spoilerMode = false;
+        moreMenuOpen = false;
     }
 
     /** NEW (6.10): человекочитаемая метка таймера самоуничтожения. */

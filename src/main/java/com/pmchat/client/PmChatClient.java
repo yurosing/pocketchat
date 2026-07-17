@@ -101,10 +101,6 @@ public class PmChatClient implements ClientModInitializer {
             new java.util.concurrent.ConcurrentHashMap<>();
     private static long lastSecretSweep = 0;
 
-    /** NEW: звонки через Simple Voice Chat — с кем сейчас активный звонок (ник в нижнем регистре). */
-    private static final java.util.Set<String> activeCalls =
-            java.util.concurrent.ConcurrentHashMap.newKeySet();
-
     @Override
     public void onInitializeClient() {
         // Разблокируем AWT-буфер обмена для Ctrl+V картинок (кроме macOS,
@@ -671,17 +667,11 @@ public class PmChatClient implements ClientModInitializer {
             return 1;
         }
 
-        // NEW: входящий звонок — сразу заходим в голосовую группу (без ручного приёма,
-        // как и в секретных чатах — чтобы не городить ещё один экран подтверждения)
-        String[] call = PmWire.parseCall(text);
-        if (call != null) {
+        // NEW: входящий звонок — просто уведомление; само приглашение в голосовой
+        // канал уже пришло от сервера через команду /voicechat invite отправителя.
+        if (PmWire.isCall(text)) {
             config.addModUser(sender);
-            onIncomingCall(sender, call[0], call[1]);
-            return 2;
-        }
-        if (PmWire.isCallEnd(text)) {
-            config.addModUser(sender);
-            activeCalls.remove(sender.toLowerCase(Locale.ROOT));
+            onIncomingCall(sender);
             return 2;
         }
         String[] rx = PmWire.parseReaction(text);
@@ -1157,57 +1147,27 @@ public class PmChatClient implements ClientModInitializer {
         }
     }
 
-    // ---------- NEW: звонки через голосовую группу Simple Voice Chat ----------
-
-    private static final java.security.SecureRandom RNG = new java.security.SecureRandom();
-    private static final String ALNUM = "abcdefghijklmnopqrstuvwxyz0123456789";
-
-    private static String randomAlnum(int len) {
-        StringBuilder sb = new StringBuilder(len);
-        for (int i = 0; i < len; i++) sb.append(ALNUM.charAt(RNG.nextInt(ALNUM.length())));
-        return sb.toString();
-    }
-
-    public static boolean isInCall(String target) {
-        return target != null && activeCalls.contains(target.toLowerCase(Locale.ROOT));
-    }
+    // ---------- NEW: звонки через Simple Voice Chat ----------
 
     /**
-     * Позвонить: создаём приватную голосовую группу в Simple Voice Chat,
-     * сами в неё заходим и зовём собеседника через /m. Работает, только
-     * если у сервера установлен сам плагин/мод Simple Voice Chat — если
-     * его нет, команды просто не сработают (ничего не ломается).
+     * Позвонить: официальная команда Simple Voice Chat — «/voicechat invite
+     * ник» зовёт игрока в вашу текущую голосовую группу (создаёт её, если вы
+     * ещё не в группе). Никаких своих групп/паролей — так работает сам плагин.
+     * Плюс лёгкое уведомление через /m, чтобы собеседник увидел тост в моде.
+     * Работает, только если на сервере установлен сам Simple Voice Chat —
+     * если его нет, команда просто не выполнится, ничего не ломается.
      */
     public static void startCall(String target) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target == null || target.isBlank()) return;
-        String name = "pmc" + randomAlnum(6);
-        String password = randomAlnum(8);
-        client.player.networkHandler.sendChatCommand("voicechat group create " + name + " " + password);
-        client.player.networkHandler.sendChatCommand("voicechat group join " + name + " " + password);
+        client.player.networkHandler.sendChatCommand("voicechat invite " + target);
         client.player.networkHandler.sendChatCommand(
-                config.msgCommand + " " + target + " " + PmWire.call(name, password));
-        activeCalls.add(target.toLowerCase(Locale.ROOT));
+                config.msgCommand + " " + target + " " + PmWire.call());
     }
 
-    /** Завершить звонок: выходим из голосовой группы, сообщаем собеседнику. */
-    public static void endCall(String target) {
+    /** Уведомление о звонке — сам голосовой канал уже подключает сервер через /voicechat invite. */
+    private static void onIncomingCall(String sender) {
         MinecraftClient client = MinecraftClient.getInstance();
-        activeCalls.remove(target == null ? "" : target.toLowerCase(Locale.ROOT));
-        if (client.player == null) return;
-        client.player.networkHandler.sendChatCommand("voicechat group leave");
-        if (target != null && !target.isBlank()) {
-            client.player.networkHandler.sendChatCommand(
-                    config.msgCommand + " " + target + " " + PmWire.callEnd());
-        }
-    }
-
-    /** Нас позвали — заходим в ту же голосовую группу автоматически. */
-    private static void onIncomingCall(String sender, String groupName, String password) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null) return;
-        client.player.networkHandler.sendChatCommand("voicechat group join " + groupName + " " + password);
-        activeCalls.add(sender.toLowerCase(Locale.ROOT));
         if (!config.dnd) {
             client.getToastManager().add(new PmToast(sender,
                     Text.translatable("pmchat.call.incoming.toast").getString()));

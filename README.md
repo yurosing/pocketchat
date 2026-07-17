@@ -94,7 +94,7 @@ Watch your own video files or paste a YouTube link and it opens in a player righ
 
 ## 📞 NEW: Voice calls
 
-One button starts a call: PocketChat creates a private voice channel through Simple Voice Chat and drops both of you into it — no manual group setup. Requires Simple Voice Chat installed on the server.
+One button sends your contact a Simple Voice Chat invite — no manual group setup or typed commands. Requires Simple Voice Chat installed on the server.
 
 ## 🙈 NEW: Spoiler photos & videos
 
