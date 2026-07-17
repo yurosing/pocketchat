@@ -129,6 +129,7 @@ public final class PmVlc {
         private volatile boolean playing = false;
         private volatile long lengthMs = 0;
         private volatile boolean error = false;
+        private volatile boolean finished = false; // дошёл до конца (для авто-перехода плейлиста)
         private volatile float bufferPct = -1; // -1 — буферизация не сообщалась
 
         Session(String url) {
@@ -187,6 +188,12 @@ public final class PmVlc {
                 @Override
                 public void stopped(MediaPlayer mp) {
                     playing = false;
+                }
+
+                @Override
+                public void finished(MediaPlayer mp) {
+                    playing = false;
+                    finished = true;
                 }
 
                 @Override
@@ -290,6 +297,11 @@ public final class PmVlc {
         /** true — VLC сообщил об ошибке воспроизведения (кадров уже не будет). */
         public boolean hasError() {
             return error;
+        }
+
+        /** true — воспроизведение дошло до конца (для авто-перехода к следующему треку). */
+        public boolean isFinished() {
+            return finished;
         }
 
         /** Процент буферизации 0..100; -1 — VLC её не сообщал. */

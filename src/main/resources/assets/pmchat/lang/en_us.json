@@ -53,7 +53,7 @@
   "pmchat.media.pick": "Send media",
   "pmchat.media.video": "Video",
   "pmchat.media.audio": "Audio",
-  "pmchat.media.empty": "Empty — put files in the folder",
+  "pmchat.media.empty": "Nothing here yet.",
   "pmchat.pin.list": "Pinned",
   "pmchat.search.results": "Found",
   "pmchat.set.msgtextcolor": "Message text color",
@@ -173,5 +173,12 @@
   "pmchat.tip.docs": "Documentation (website)",
   "pmchat.call.incoming.toast": "Calling you — the voice chat invite is on its way",
   "pmchat.spoiler.toggle": "NEW · Spoiler",
-  "pmchat.spoiler.label": "Spoiler · click"
+  "pmchat.spoiler.label": "Spoiler · click",
+  "key.pmchat.media": "Media/playlists",
+  "key.pmchat.media.play": "Media: play/pause",
+  "key.pmchat.media.next": "Media: next track",
+  "pmchat.media.title": "Media & playlists",
+  "pmchat.media.openfolder": "Open folder",
+  "pmchat.media.hint": "Drop mp3 into config/pmchat-music (folders work too)",
+  "pmchat.media.tracks": "tracks"
 }

@@ -281,17 +281,15 @@ public class PmScreen extends Screen {
     // Просмотр фото на весь экран
     private PmImages.Entry fullscreenImg = null;
 
-    // NEW (4.3): встроенный видеоплеер (VLC) на весь экран
-    private com.pmchat.client.PmVlc.Session videoSession = null;
-    private String videoUrl;            // null — оверлей плеера закрыт
+    // NEW (4.3): встроенный видеоплеер (VLC). Сама сессия и её жизненный цикл
+    // теперь живут в персистентном com.pmchat.client.PmMedia (играет и когда чат
+    // закрыт). Здесь остаётся лишь состояние ПОДГОТОВКИ (скачивание через yt-dlp).
+    private String videoUrl;            // ссылка готовящегося/текущего видео
     private long videoOpenedAt;
     private boolean videoResolving = false; // NEW (5.0): фоновая подготовка YouTube (yt-dlp)
     private boolean videoOpenFailed = false; // резолв/запуск не удался — сразу показываем fallback
     private volatile String videoStatusText = null; // NEW (5.1): «yt-dlp» / «42%» при подготовке
     private boolean videoNeedsCookies = false;      // NEW (5.1): провал из-за требования входа YouTube
-    private java.io.File videoTempFile = null;      // NEW (5.1): скачанное видео — удалить при закрытии
-    private java.io.File videoTempAudioFile = null; // NEW (5.2): отдельная звук-дорожка (для качества >360p)
-    private boolean videoMinimized = false;         // NEW (5.2): плеер свёрнут в окошко
     private int videoSeq = 0;           // защита от «просроченных» фоновых резолвов
     private int[] videoFallbackRect; // «Открыть в браузере», если VLC не смог показать
     private boolean videoDragSeek = false;
@@ -305,9 +303,6 @@ public class PmScreen extends Screen {
     private int[] videoBrowserRect; // NEW (5.0): кнопка «в браузере» в панели
     private int[] videoImgRect;   // x,y,w,h самого видеокадра (клик — пауза/плей)
     private int[] videoMinRect;   // NEW (5.2): кнопка «свернуть» в полноэкранном плеере
-    private int[] videoMiniWinRect;   // NEW (5.2): всё мини-окно (клик по кадру — пауза)
-    private int[] videoMiniExpandRect;// NEW (5.2): кнопка «развернуть» в мини-окне
-    private int[] videoMiniCloseRect; // NEW (5.2): крестик в мини-окне
 
     // Пересылка: выбранное сообщение ждёт, пока кликнут диалог-получатель
     private PmMessage forwardBuffer = null;
@@ -1414,9 +1409,14 @@ public class PmScreen extends Screen {
         if (fullscreenImg != null) {
             renderFullscreenImage(context);
         }
-        // NEW (4.3): видеоплеер — поверх всего (в т.ч. пока идёт подготовка YouTube)
-        if (videoUrl != null) {
-            if (videoMinimized) renderVideoMini(context, mouseX, mouseY);
+        // NEW (5.3): видео/медиа — поверх всего. Подготовка (yt-dlp) и
+        // полноэкранное видео рисуются здесь; активную сессию хранит PmMedia,
+        // свёрнутое окошко (видео или музыка) рисует сам PmMedia.
+        com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
+        if (videoResolving || videoOpenFailed) {
+            renderVideoPlayer(context, mouseX, mouseY);
+        } else if (media.hasActive()) {
+            if (media.isMinimized()) media.renderMini(context, mouseX, mouseY, true);
             else renderVideoPlayer(context, mouseX, mouseY);
         }
     }
@@ -1451,10 +1451,9 @@ public class PmScreen extends Screen {
                     videoStatusText = null;
                     videoOpenedAt = System.currentTimeMillis();
                     if (media != null) {
-                        videoTempFile = media.video();
-                        videoTempAudioFile = media.audio();
                         String audioPath = media.audio() != null ? media.audio().getAbsolutePath() : null;
-                        startVideoSession(media.video().getAbsolutePath(), audioPath);
+                        startVideoSession(media.video().getAbsolutePath(), audioPath,
+                                media.video(), media.audio(), url);
                     } else {
                         // yt-dlp не смог (бот-проверка/нет бинарника) — состояние
                         // ошибки с кнопкой «Открыть в браузере».
@@ -1466,45 +1465,29 @@ public class PmScreen extends Screen {
             t.setDaemon(true);
             t.start();
         } else {
-            startVideoSession(url, null);
+            startVideoSession(url, null, null, null, url);
         }
     }
 
-    private void startVideoSession(String mediaUrl, String audioSlaveUrl) {
+    /** Создаёт VLC-сеанс и передаёт владение персистентному PmMedia. */
+    private void startVideoSession(String mediaUrl, String audioSlaveUrl,
+                                   java.io.File videoFile, java.io.File audioFile, String sourceUrl) {
         try {
-            videoSession = com.pmchat.client.PmVlc.open(mediaUrl, audioSlaveUrl);
+            com.pmchat.client.PmVlc.Session s = com.pmchat.client.PmVlc.open(mediaUrl, audioSlaveUrl);
+            String title = sourceUrl != null ? sourceUrl.replaceFirst("^https?://(www\\.)?", "") : "";
+            com.pmchat.client.PmMedia.get().startVideo(s, videoFile, audioFile, sourceUrl, title);
         } catch (Exception e) {
-            videoSession = null;
             videoOpenFailed = true;
         }
     }
 
+    /** Полное закрытие плеера (крестик/Esc): останавливает воспроизведение и подготовку. */
     private void closeVideoPlayer() {
         videoSeq++; // отменяем висящие фоновые загрузки
-        if (videoSession != null) {
-            videoSession.release();
-            videoSession = null;
-        }
-        // Временные файлы yt-dlp освобождаются VLC не сразу — удаляем чуть погодя.
-        if (videoTempFile != null || videoTempAudioFile != null) {
-            java.io.File vf = videoTempFile, af = videoTempAudioFile;
-            videoTempFile = null;
-            videoTempAudioFile = null;
-            Thread cleaner = new Thread(() -> {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException ignored) {
-                }
-                com.pmchat.client.PmYtDlp.cleanup(vf);
-                com.pmchat.client.PmYtDlp.cleanup(af);
-            }, "pmchat-video-cleanup");
-            cleaner.setDaemon(true);
-            cleaner.start();
-        }
+        com.pmchat.client.PmMedia.get().stop();
         videoResolving = false;
         videoOpenFailed = false;
         videoNeedsCookies = false;
-        videoMinimized = false;
         videoStatusText = null;
         videoDragSeek = false;
         videoDragVolume = false;
@@ -1521,8 +1504,10 @@ public class PmScreen extends Screen {
      * ползунков (перемотка и громкость тянутся мышью).
      */
     private void renderVideoPlayer(DrawContext context, int mouseX, int mouseY) {
-        if (videoUrl == null) return;
-        com.pmchat.client.PmVlc.Session s = videoSession;
+        com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
+        String url = media.sourceUrl() != null ? media.sourceUrl() : videoUrl;
+        if (url == null && !videoResolving && !videoOpenFailed) return;
+        com.pmchat.client.PmVlc.Session s = media.session();
         if (s != null) s.tick();
 
         // Драг ползунков: пока зажата ЛКМ — тянем, отпустили — закончили.
@@ -1546,7 +1531,7 @@ public class PmScreen extends Screen {
         context.fill(0, 0, width, height, 0xF0070B09);
 
         // ---- Заголовок ----
-        String title = videoUrl.replaceFirst("^https?://(www\\.)?", "");
+        String title = url != null ? url.replaceFirst("^https?://(www\\.)?", "") : "";
         if (title.length() > 64) title = title.substring(0, 61) + "…";
         context.drawText(textRenderer, "▶ " + title, 14, 13, 0xFF9CC4DC, false);
 
@@ -1733,64 +1718,6 @@ public class PmScreen extends Screen {
 
     private static boolean inRect(int mx, int my, int[] r) {
         return r != null && mx >= r[0] && mx < r[0] + r[2] && my >= r[1] && my < r[1] + r[3];
-    }
-
-    /**
-     * NEW (5.2): свёрнутый плеер — маленькое окошко в правом нижнем углу.
-     * Экран не затемняется, чат остаётся рабочим; клик по кадру — пауза,
-     * кнопки сверху — развернуть/закрыть. Кадры продолжают идти (tick).
-     */
-    private void renderVideoMini(DrawContext context, int mouseX, int mouseY) {
-        if (videoUrl == null) return;
-        com.pmchat.client.PmVlc.Session s = videoSession;
-        if (s != null) s.tick();
-
-        int mw = 240, mh = 135; // 16:9
-        int mx0 = width - mw - 10;
-        int my0 = height - mh - 10;
-        videoMiniWinRect = new int[]{mx0, my0, mw, mh};
-
-        // Рамка + фон
-        context.fill(mx0 - 2, my0 - 2, mx0 + mw + 2, my0 + mh + 2, 0xE60B120F);
-        context.drawStrokedRectangle(mx0 - 2, my0 - 2, mw + 4, mh + 4, 0xFF2A4A5C);
-
-        // Кадр или статус
-        if (s != null && s.width() > 0 && s.height() > 0) {
-            int vw = s.width(), vh = s.height();
-            float scale = Math.min((float) mw / vw, (float) mh / vh);
-            int w = Math.max(1, Math.round(vw * scale));
-            int h = Math.max(1, Math.round(vh * scale));
-            int ix = mx0 + (mw - w) / 2, iy = my0 + (mh - h) / 2;
-            context.drawTexture(RenderPipelines.GUI_TEXTURED, s.textureId(), ix, iy,
-                    0f, 0f, w, h, vw, vh, vw, vh);
-        } else {
-            Text st = Text.translatable(videoResolving ? "pmchat.video.resolving" : "pmchat.video.decoding");
-            context.drawText(textRenderer, st, mx0 + (mw - textRenderer.getWidth(st)) / 2,
-                    my0 + mh / 2 - 4, 0xFFB8C6CE, false);
-        }
-
-        // Верхняя панелька с кнопками (появляется всегда — окно маленькое)
-        boolean hovWin = inRect(mouseX, mouseY, videoMiniWinRect);
-        int btn = 16;
-        int closeX = mx0 + mw - btn - 3, btnY = my0 + 3;
-        int expandX = closeX - btn - 3;
-        videoMiniCloseRect = new int[]{closeX, btnY, btn, btn};
-        videoMiniExpandRect = new int[]{expandX, btnY, btn, btn};
-        if (hovWin) {
-            // затемняем узкую полосу под кнопками для читаемости
-            context.fill(expandX - 3, btnY - 3, mx0 + mw, btnY + btn + 1, 0x99000000);
-        }
-        boolean hovClose = inRect(mouseX, mouseY, videoMiniCloseRect);
-        boolean hovExp = inRect(mouseX, mouseY, videoMiniExpandRect);
-        context.fill(closeX, btnY, closeX + btn, btnY + btn, hovClose ? 0xFF6E2A22 : 0x66121A16);
-        context.fill(expandX, btnY, expandX + btn, btnY + btn, hovExp ? 0xFF2A4A5C : 0x66121A16);
-        PmIcons.draw(context, PmIcons.CLEAR, closeX, btnY, btn, btn, hovClose ? 0xFFE07A6A : 0xFFCFE0DA);
-        PmIcons.draw(context, PmIcons.EXPAND, expandX, btnY, btn, btn, hovExp ? 0xFFEDF3F0 : 0xFFCFE0DA);
-
-        // Значок паузы по центру, если на паузе
-        if (s != null && !s.isPlaying()) {
-            PmIcons.draw(context, PmIcons.PLAY, mx0 + mw / 2 - 9, my0 + mh / 2 - 9, 18, 18, 0xCCEDF3F0);
-        }
     }
 
     /** NEW (4.9): «замыленная» плашка вместо фото/видео — как в Telegram/Discord, до клика. */
@@ -3161,32 +3088,21 @@ public class PmScreen extends Screen {
             fullscreenImg = null;
             return true;
         }
-        // NEW (5.2): свёрнутый плеер — маленькое окошко, ловим только клики по нему,
+        com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
+        // NEW (5.3): свёрнутое окошко медиа — ловим только клики по нему,
         // остальной экран (чат) работает как обычно.
-        if (videoUrl != null && videoMinimized) {
-            int mx = (int) click.x(), my = (int) click.y();
-            if (inRect(mx, my, videoMiniCloseRect)) {
-                closeVideoPlayer();
-                return true;
-            }
-            if (inRect(mx, my, videoMiniExpandRect)) {
-                videoMinimized = false;
-                return true;
-            }
-            if (inRect(mx, my, videoMiniWinRect)) {
-                if (videoSession != null) videoSession.togglePause();
-                return true;
-            }
-            return false; // клик мимо окошка — отдаём чату
+        if (!videoResolving && !videoOpenFailed && media.hasActive() && media.isMinimized()) {
+            return media.handleMiniClick((int) click.x(), (int) click.y());
         }
-        // NEW (4.3): встроенный видеоплеер — свои контролы
-        if (videoUrl != null) {
+        // NEW (4.3): встроенный видеоплеер (полноэкранный) — свои контролы
+        if (videoResolving || videoOpenFailed || media.hasActive()) {
             int mx = (int) click.x(), my = (int) click.y();
+            com.pmchat.client.PmVlc.Session vsession = media.session();
+            String link = media.sourceUrl() != null ? media.sourceUrl() : videoUrl;
             if (inRect(mx, my, videoFallbackRect) || inRect(mx, my, videoBrowserRect)) {
-                String link = videoUrl;
                 closeVideoPlayer();
                 try {
-                    net.minecraft.util.Util.getOperatingSystem().open(link);
+                    if (link != null) net.minecraft.util.Util.getOperatingSystem().open(link);
                 } catch (Exception ignored) {
                 }
                 return true;
@@ -3196,35 +3112,35 @@ public class PmScreen extends Screen {
                 return true;
             }
             if (inRect(mx, my, videoMinRect)) {
-                videoMinimized = true;
+                media.setMinimized(true);
                 return true;
             }
-            if (videoSession != null) {
+            if (vsession != null) {
                 if (inRect(mx, my, videoPlayRect)) {
-                    videoSession.togglePause();
+                    vsession.togglePause();
                     return true;
                 }
                 if (inRect(mx, my, videoRateRect)) {
-                    float cur = videoSession.getRate();
+                    float cur = vsession.getRate();
                     int idx = 0;
                     for (int i = 0; i < VIDEO_RATES.length; i++) {
                         if (Math.abs(VIDEO_RATES[i] - cur) < 0.01f) { idx = i; break; }
                     }
-                    videoSession.setRate(VIDEO_RATES[(idx + 1) % VIDEO_RATES.length]);
+                    vsession.setRate(VIDEO_RATES[(idx + 1) % VIDEO_RATES.length]);
                     return true;
                 }
                 if (inRect(mx, my, videoBarRect)) {
                     videoDragSeek = true;
-                    videoSession.seekFraction((mx - videoBarRect[0]) / (float) videoBarRect[2]);
+                    vsession.seekFraction((mx - videoBarRect[0]) / (float) videoBarRect[2]);
                     return true;
                 }
                 if (inRect(mx, my, videoVolRect)) {
                     videoDragVolume = true;
-                    videoSession.setVolume(Math.round((mx - videoVolRect[0]) / (float) videoVolRect[2] * 150));
+                    vsession.setVolume(Math.round((mx - videoVolRect[0]) / (float) videoVolRect[2] * 150));
                     return true;
                 }
                 if (inRect(mx, my, videoImgRect)) {
-                    videoSession.togglePause();
+                    vsession.togglePause();
                     return true;
                 }
             }
@@ -3831,9 +3747,12 @@ public class PmScreen extends Screen {
             fullscreenImg = null;
             return true;
         }
-        // NEW (4.3): Esc закрывает полноэкранный видеоплеер (и останавливает VLC).
-        // Свёрнутое окошко Esc не трогает — оно поверх рабочего чата.
-        if (videoUrl != null && !videoMinimized && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
+        // NEW (5.3): Esc закрывает полноэкранный видеоплеер (и останавливает VLC).
+        // Свёрнутое окошко Esc не трогает — оно поверх рабочего чата, играет дальше.
+        com.pmchat.client.PmMedia pmMedia = com.pmchat.client.PmMedia.get();
+        boolean fullscreenVideo = videoResolving || videoOpenFailed
+                || (pmMedia.hasActive() && !pmMedia.isMinimized());
+        if (fullscreenVideo && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
             closeVideoPlayer();
             return true;
         }
@@ -4127,17 +4046,29 @@ public class PmScreen extends Screen {
         return false;
     }
 
-    // NEW (4.3): закрываем окно мессенджера — обязательно гасим VLC, иначе он
-    // продолжит играть в фоне (звук и занятая память) даже без видимого окна.
+    // NEW (5.3): закрытие окна мессенджера НЕ останавливает медиа — PmMedia
+    // продолжает играть и рисует окошко поверх HUD. Но если идёт ПОДГОТОВКА
+    // видео (yt-dlp), а сессии ещё нет и юзер закрыл экран — отменяем её,
+    // чтобы не тратить трафик впустую (кроме уже свёрнутого сценария).
     @Override
     public void close() {
-        closeVideoPlayer();
+        cancelPrepIfNoSession();
         super.close();
     }
 
     @Override
     public void removed() {
-        closeVideoPlayer();
+        cancelPrepIfNoSession();
         super.removed();
+    }
+
+    /** Отменяет незавершённую подготовку видео (нет активной сессии) при закрытии экрана. */
+    private void cancelPrepIfNoSession() {
+        if ((videoResolving || videoOpenFailed) && !com.pmchat.client.PmMedia.get().hasActive()) {
+            videoSeq++; // «просрочить» фоновый резолв — результат будет отброшен
+            videoResolving = false;
+            videoOpenFailed = false;
+            videoUrl = null;
+        }
     }
 }

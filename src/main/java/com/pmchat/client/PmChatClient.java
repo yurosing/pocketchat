@@ -34,6 +34,9 @@ public class PmChatClient implements ClientModInitializer {
     private static PmConfig config;
     private static PmHistory history;
     private static KeyBinding openKey;
+    private static KeyBinding mediaKey;      // NEW (5.3): открыть меню медиа/плейлистов
+    private static KeyBinding mediaPlayKey;  // NEW (5.3): пауза/воспроизведение в игре
+    private static KeyBinding mediaNextKey;  // NEW (5.3): следующий трек в игре
 
     private static Pattern incoming;
     private static Pattern outgoing;
@@ -118,6 +121,24 @@ public class PmChatClient implements ClientModInitializer {
                 GLFW.GLFW_KEY_J,
                 KeyBinding.Category.create(Identifier.of(MOD_ID, "category"))
         ));
+        // NEW (5.3): медиа/плейлисты
+        KeyBinding.Category mediaCat = KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
+        mediaKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.pmchat.media", GLFW.GLFW_KEY_K, mediaCat));
+        mediaPlayKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.pmchat.media.play", GLFW.GLFW_KEY_UNKNOWN, mediaCat));
+        mediaNextKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.pmchat.media.next", GLFW.GLFW_KEY_UNKNOWN, mediaCat));
+
+        // Рисуем окошко медиаплеера поверх HUD, когда никакой наш экран не открыт —
+        // так музыка/видео продолжают показываться в углу и когда чат закрыт.
+        net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((ctx, tick) -> {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.currentScreen != null) return; // экраны рисуют окошко сами
+            if (PmMedia.get().hasActive()) {
+                PmMedia.get().renderMini(ctx, -1, -1, false);
+            }
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             // Только ОТКРЫВАЕМ по клавише (закрытие — Esc/крестик), иначе на русской
@@ -127,6 +148,16 @@ public class PmChatClient implements ClientModInitializer {
                     client.setScreen(new PmScreen());
                 }
             }
+            // NEW (5.3): медиа-меню и управление плеером в игре
+            while (mediaKey.wasPressed()) {
+                if (client.currentScreen == null) {
+                    client.setScreen(new com.pmchat.screen.PmMediaScreen());
+                }
+            }
+            while (mediaPlayKey.wasPressed()) PmMedia.get().togglePause();
+            while (mediaNextKey.wasPressed()) PmMedia.get().next();
+            // Авто-переход к следующему треку, когда текущий доиграл
+            PmMedia.get().tick();
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
                 float hp = client.player.getHealth();

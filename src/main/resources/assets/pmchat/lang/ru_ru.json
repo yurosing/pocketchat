@@ -53,7 +53,7 @@
   "pmchat.media.pick": "Отправить медиа",
   "pmchat.media.video": "Видео",
   "pmchat.media.audio": "Аудио",
-  "pmchat.media.empty": "Пусто — положите файлы в папку",
+  "pmchat.media.empty": "Пока пусто.",
   "pmchat.pin.list": "Закреплённые",
   "pmchat.search.results": "Найдено",
   "pmchat.set.msgtextcolor": "Цвет текста сообщений",
@@ -173,5 +173,12 @@
   "pmchat.tip.docs": "Документация (сайт)",
   "pmchat.call.incoming.toast": "Звонит вам — приглашение в голосовой чат уже пришло",
   "pmchat.spoiler.toggle": "NEW · Спойлер",
-  "pmchat.spoiler.label": "Спойлер · нажмите"
+  "pmchat.spoiler.label": "Спойлер · нажмите",
+  "key.pmchat.media": "Медиа/плейлисты",
+  "key.pmchat.media.play": "Медиа: пауза/играть",
+  "key.pmchat.media.next": "Медиа: следующий трек",
+  "pmchat.media.title": "Медиа и плейлисты",
+  "pmchat.media.openfolder": "Открыть папку",
+  "pmchat.media.hint": "Положите mp3 в config/pmchat-music (можно папками)",
+  "pmchat.media.tracks": "трек."
 }
