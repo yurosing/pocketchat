@@ -25,6 +25,7 @@ import java.util.Locale;
  */
 public final class PmMedia {
 
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("pmchat-media");
     private static final PmMedia INSTANCE = new PmMedia();
 
     public static PmMedia get() {
@@ -120,14 +121,26 @@ public final class PmMedia {
 
     private void playIndex(int index) {
         if (index < 0 || index >= playlist.size()) return;
+        // ВАЖНО: инициализирует фабрику VLC. Без этого вызова factory == null
+        // и открытие сессии падает NPE — музыка «молча» не играла.
+        if (!PmVlc.isAvailable()) {
+            LOGGER.warn("Cannot play music: VLC not available");
+            return;
+        }
         releaseSession();
         trackIndex = index;
         File track = playlist.get(index);
         title = stripExt(track.getName());
         try {
-            session = PmVlc.open(track.getAbsolutePath());
+            // file-URI (ASCII, percent-encoded) вместо плоского пути — надёжно
+            // для кириллицы/пробелов/скобок при системной кодировке Cp1251.
+            // ВАЖНО: именно тройной слэш file:///C:/... — Java's toURI() даёт
+            // file:/C:/... (один слэш), а VLC принимает это за относительный путь.
+            session = PmVlc.open("file://" + track.toURI().getRawPath());
             applyVolume();
+            LOGGER.info("Playing track {}/{}: {}", index + 1, playlist.size(), track.getName());
         } catch (Exception e) {
+            LOGGER.warn("Failed to play track {}: {}", track.getAbsolutePath(), e.toString());
             session = null;
         }
     }
