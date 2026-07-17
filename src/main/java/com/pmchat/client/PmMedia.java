@@ -113,6 +113,19 @@ public final class PmMedia {
         }
     }
 
+    /**
+     * Надёжный file-URI для VLC. Тонкости:
+     *  • toASCIIString() percent-кодирует ВСЁ не-ASCII (кириллицу и т.п.) —
+     *    getRawPath()/toString() на некоторых JVM оставляли кириллицу как есть,
+     *    и VLC через JNA (Cp1251) не открывал файл;
+     *  • нужен тройной слэш file:///C:/..., а Java даёт file:/C:/... (один) —
+     *    VLC иначе принимает путь за относительный.
+     */
+    private static String fileUri(File f) {
+        String u = f.toURI().toASCIIString();      // file:/C:/...%D0%94...
+        return u.replaceFirst("^file:/(?!/)", "file:///");
+    }
+
     public static boolean isAudio(File f) {
         String n = f.getName().toLowerCase(Locale.ROOT);
         for (String e : AUDIO_EXT) if (n.endsWith(e)) return true;
@@ -132,11 +145,7 @@ public final class PmMedia {
         File track = playlist.get(index);
         title = stripExt(track.getName());
         try {
-            // file-URI (ASCII, percent-encoded) вместо плоского пути — надёжно
-            // для кириллицы/пробелов/скобок при системной кодировке Cp1251.
-            // ВАЖНО: именно тройной слэш file:///C:/... — Java's toURI() даёт
-            // file:/C:/... (один слэш), а VLC принимает это за относительный путь.
-            session = PmVlc.open("file://" + track.toURI().getRawPath());
+            session = PmVlc.open(fileUri(track));
             applyVolume();
             LOGGER.info("Playing track {}/{}: {}", index + 1, playlist.size(), track.getName());
         } catch (Exception e) {
@@ -352,12 +361,32 @@ public final class PmMedia {
             int bh = playing ? (int) (4 + (Math.sin(t / 180.0 + i) + 1) * 5) : 4;
             ctx.fill(bx, ay + art - bh, bx + 3, ay + art, 0xFF4C8A66);
         }
-        // Название трека + «плейлист (n/m)»
+        // Название трека — бегущей строкой, если не влезает; «плейлист n/m» снизу
         int tx = ax + art + 30;
-        String name = trim(tr, title, mw - (tx - x0) - 8);
-        ctx.drawText(tr, name, tx, y0 + 8, 0xFFEDF3F0, false);
+        int avail = mw - (tx - x0) - 8;
+        drawMarquee(ctx, tr, title, tx, y0 + 8, avail, 0xFFEDF3F0);
         String sub = playlistName + "  " + (trackIndex + 1) + "/" + playlist.size();
-        ctx.drawText(tr, trim(tr, sub, mw - (tx - x0) - 8), tx, y0 + 22, 0xFF7FA694, false);
+        ctx.drawText(tr, trim(tr, sub, avail), tx, y0 + 22, 0xFF7FA694, false);
+    }
+
+    /**
+     * Рисует текст в пределах ширины maxW; если не влезает — плавно прокручивает
+     * его по горизонтали (бесшовно, с разрывом), обрезая по scissor.
+     */
+    private static void drawMarquee(DrawContext ctx, TextRenderer tr, String text, int x, int y, int maxW, int color) {
+        int tw = tr.getWidth(text);
+        if (tw <= maxW) {
+            ctx.drawText(tr, text, x, y, color, false);
+            return;
+        }
+        int gap = 24;                 // разрыв между повторами
+        int period = tw + gap;
+        int speed = 30;               // пикселей в секунду
+        int off = (int) ((System.currentTimeMillis() / 1000.0 * speed) % period);
+        ctx.enableScissor(x, y - 1, x + maxW, y + tr.fontHeight + 1);
+        ctx.drawText(tr, text, x - off, y, color, false);
+        ctx.drawText(tr, text, x - off + period, y, color, false); // второй экземпляр для бесшовности
+        ctx.disableScissor();
     }
 
     private void renderControlBar(DrawContext ctx, TextRenderer tr, int x0, int y0, int mw, int h,
