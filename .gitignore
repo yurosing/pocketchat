@@ -24,3 +24,8 @@ run/
 *.log
 hs_err_pid*.log
 replay_pid*.log
+
+# Node / VitePress docs
+node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/

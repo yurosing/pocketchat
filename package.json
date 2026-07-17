@@ -1,0 +1,29 @@
+{
+  "name": "pmchat-mod",
+  "version": "1.0.0",
+  "description": "![PocketChat](docs/banner.png)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yurosing/pocketchat.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/yurosing/pocketchat/issues"
+  },
+  "homepage": "https://github.com/yurosing/pocketchat#readme",
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
