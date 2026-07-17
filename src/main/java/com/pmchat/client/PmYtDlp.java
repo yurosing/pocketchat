@@ -32,22 +32,30 @@ import java.util.regex.Pattern;
  * yt-dlp умеет всё это обходить и постоянно обновляется под изменения сайта.
  *
  * Схема: находим (а при первом запуске — скачиваем в config/pmchat-bin)
- * yt-dlp, скачиваем им ролик в один mp4-файл (itag 18, 360p — без ffmpeg,
- * звук+видео уже вместе), а VLC играет уже локальный файл. Клиент
- * {@code default,mweb} обычно пролезает анонимно; если видео требует вход,
+ * yt-dlp и качаем им ролик во временные файлы, а VLC играет их локально.
+ * Для качества выше 360p берём РАЗДЕЛЬНЫЕ дорожки (видео ≤720p + звук) —
+ * так не нужен ffmpeg: VLC сводит их сам через input-slave. Если раздельно
+ * не вышло — запасной вариант: один файл 360p (itag 18, звук+видео вместе).
+ * Клиент {@code android} обычно пролезает анонимно; если видео требует вход,
  * можно положить экспортированные куки в {@code config/pmchat-cookies.txt}.
  */
 public final class PmYtDlp {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("pmchat-ytdlp");
 
-    /** Формат: только одиночные файлы со звуком И видео — иначе без ffmpeg не свести. */
-    private static final String FORMAT = "b[vcodec!=none][acodec!=none][ext=mp4]/b[vcodec!=none][acodec!=none]/b";
-    // Клиент android отдаёт прогрессивный itag 18 (360p, звук+видео вместе) и
-    // часто проходит без входа там, где default/web упираются в бот-проверку.
-    // Ставим его первым, остальные — как фолбэк в рамках одного запуска.
+    /** Видео ≤720p (H.264 предпочтительно) — отдельной дорожкой, звук отдельно. */
+    private static final String FMT_VIDEO = "bv[height<=720][ext=mp4]/bv[height<=720]/bv";
+    private static final String FMT_AUDIO = "ba[ext=m4a]/ba";
+    /** Запасной: один файл со звуком И видео (обычно 360p) — играет и без input-slave. */
+    private static final String FMT_SINGLE = "b[vcodec!=none][acodec!=none][ext=mp4]/b[vcodec!=none][acodec!=none]/b";
+    // Клиент android отдаёт прямые ссылки и часто проходит без входа там, где
+    // default/web упираются в бот-проверку. Первым, остальные — фолбэк.
     private static final String EXTRACTOR_ARGS = "youtube:player_client=android,default,mweb";
     private static final Pattern PROGRESS = Pattern.compile("(\\d{1,3}(?:\\.\\d+)?)%");
+
+    /** Результат: видеофайл и (для раздельных дорожек) отдельный звук; audio=null — один файл. */
+    public record Media(File video, File audio) {
+    }
 
     private static volatile boolean downloadingBinary = false;
     /** Последняя попытка провалилась из-за требования входа (нужны куки). */
@@ -139,19 +147,23 @@ public final class PmYtDlp {
     }
 
     /**
-     * Скачивает ролик в локальный mp4 и возвращает файл (звать с фонового
-     * потока — блокирует!). {@code status} получает стадии («yt-dlp» пока
-     * качается бинарник, «12%» — прогресс загрузки). null — не удалось
-     * (нет yt-dlp / бот-проверка без кук / формат недоступен).
+     * Скачивает ролик в локальные файлы и возвращает {@link Media} (звать с
+     * фонового потока — блокирует!). Сначала пробует качество ≤720p раздельными
+     * дорожками (видео+звук), при неудаче — один файл 360p. {@code status}
+     * получает стадии («yt-dlp» пока качается бинарник, «12%» — прогресс).
+     * null — не удалось (нет yt-dlp / бот-проверка без кук / формат недоступен).
      */
-    public static File download(String youtubeUrl, Consumer<String> status) {
+    public static Media download(String youtubeUrl, Consumer<String> status) {
         lastNeededSignIn = false;
         File bin = ensureBinary(status);
         if (bin == null) return null;
 
         String id = PmYouTube.videoId(youtubeUrl);
         if (id == null) id = "video";
-        deleteQuiet(findProduced(id)); // не проиграть устаревший результат
+        // Чистим прошлые результаты (все три возможных имени), чтобы не проиграть устаревшее
+        deleteQuiet(findProduced("yt-" + id + "-v"));
+        deleteQuiet(findProduced("yt-" + id + "-a"));
+        deleteQuiet(findProduced("yt-" + id));
 
         // Стратегии по куки, по очереди до первой удачной. Многие ролики
         // проходят анонимно; на тех, где YouTube требует вход, спасают куки —
@@ -170,15 +182,28 @@ public final class PmYtDlp {
         }
 
         for (String[] cookieArgs : strategies) {
-            File f = runOnce(bin, id, youtubeUrl, cookieArgs, status);
-            if (f != null) return f;
+            // 1) Качество ≤720p раздельными дорожками (без ffmpeg — сведёт VLC).
+            File video = runOnce(bin, id, "-v", FMT_VIDEO, youtubeUrl, cookieArgs, status);
+            if (video != null) {
+                File audio = runOnce(bin, id, "-a", FMT_AUDIO, youtubeUrl, cookieArgs, status);
+                if (audio != null) return new Media(video, audio);
+                deleteQuiet(video); // звук не скачался — откатываемся на один файл
+            }
+            // 2) Запасной: один файл (обычно 360p), звук+видео вместе.
+            File single = runOnce(bin, id, "", FMT_SINGLE, youtubeUrl, cookieArgs, status);
+            if (single != null) return new Media(single, null);
         }
         return null;
     }
 
-    /** Одна попытка yt-dlp с заданными куки-аргументами. Возвращает файл или null. */
-    private static File runOnce(File bin, String id, String youtubeUrl, String[] cookieArgs,
-                                Consumer<String> status) {
+    /**
+     * Одна попытка yt-dlp: формат {@code format} в файл {@code yt-<id><suffix>.<ext>}.
+     * Возвращает созданный файл или null.
+     */
+    private static File runOnce(File bin, String id, String suffix, String format,
+                                String youtubeUrl, String[] cookieArgs, Consumer<String> status) {
+        String prefix = "yt-" + id + suffix;
+        deleteQuiet(findProduced(prefix)); // на случай остатка от прошлой стратегии
         List<String> cmd = new ArrayList<>();
         cmd.add(bin.getAbsolutePath());
         cmd.add("--no-playlist");
@@ -186,9 +211,9 @@ public final class PmYtDlp {
         cmd.add("--extractor-args");
         cmd.add(EXTRACTOR_ARGS);
         cmd.add("-f");
-        cmd.add(FORMAT);
+        cmd.add(format);
         cmd.add("-o");
-        cmd.add(new File(binDir(), "yt-" + id + ".%(ext)s").getAbsolutePath());
+        cmd.add(new File(binDir(), prefix + ".%(ext)s").getAbsolutePath());
         java.util.Collections.addAll(cmd, cookieArgs);
         cmd.add(youtubeUrl);
 
@@ -206,14 +231,14 @@ public final class PmYtDlp {
                 return null;
             }
             if (proc.exitValue() != 0) {
-                LOGGER.warn("yt-dlp exited {} for {} (cookies: {})",
-                        proc.exitValue(), youtubeUrl,
+                LOGGER.warn("yt-dlp exited {} for {} [{}] (cookies: {})",
+                        proc.exitValue(), youtubeUrl, format,
                         cookieArgs.length > 0 ? cookieArgs[cookieArgs.length - 1] : "none");
                 return null;
             }
-            File produced = findProduced(id);
+            File produced = findProduced(prefix);
             if (produced == null || produced.length() == 0) {
-                LOGGER.warn("yt-dlp finished but no output file for {}", youtubeUrl);
+                LOGGER.warn("yt-dlp finished but no output file for {} [{}]", youtubeUrl, format);
                 return null;
             }
             return produced;
@@ -254,9 +279,10 @@ public final class PmYtDlp {
         return lastNeededSignIn;
     }
 
-    private static File findProduced(String id) {
+    /** Находит файл вида {@code <prefix>.<ext>} (напр. yt-<id>-v.mp4) в папке. */
+    private static File findProduced(String prefix) {
         File[] files = binDir().listFiles((d, name) ->
-                name.startsWith("yt-" + id + ".") && !name.endsWith(".part"));
+                name.startsWith(prefix + ".") && !name.endsWith(".part"));
         if (files == null || files.length == 0) return null;
         File best = files[0];
         for (File f : files) if (f.lastModified() > best.lastModified()) best = f;
