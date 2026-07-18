@@ -172,7 +172,7 @@ public class PmFiltersScreen extends Screen {
     private TextFieldWidget makeField(int y, String text, String hintKey) {
         TextFieldWidget f = new TextFieldWidget(textRenderer, px + 10, y, PANEL_W - 72, 16,
                 Text.translatable(hintKey));
-        f.setMaxLength(64);
+        f.setMaxLength(200);
         f.setText(text);
         String hint = Text.translatable(hintKey).getString();
         f.setSuggestion(text.isEmpty() ? hint : "");
@@ -189,12 +189,22 @@ public class PmFiltersScreen extends Screen {
         return y + ROW_H;
     }
 
-    /** Строка списка: значение + кнопка «✕». */
+    /** Строка списка: значение + кнопка «✕». Длинное значение обрезаем по ширине. */
     private int addEntryRow(int y, String value, String suffix, Runnable remove) {
-        labels.add(new Object[]{"• " + value + (suffix == null ? "" : suffix), px + 14, y + 3, VALUE});
+        String suf = suffix == null ? "" : suffix;
+        int avail = PANEL_W - 44 - textRenderer.getWidth(suf); // от px+14 до кнопки ✕
+        String shown = "• " + trim(value, Math.max(20, avail)) + suf;
+        labels.add(new Object[]{shown, px + 14, y + 3, VALUE});
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 26, y, 18, 14,
                 Text.literal("✕"), 0xFF3A1E1E, 0xFF522626, 0xFF6E2A22, 0xFFE07A6A, btn -> remove.run()));
         return y + ROW_H;
+    }
+
+    /** Обрезает строку по ширине в пикселях с многоточием. */
+    private String trim(String s, int maxW) {
+        if (textRenderer.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        return s + "…";
     }
 
     private int addToggle(int y, String labelKey, boolean on, Runnable toggle) {
