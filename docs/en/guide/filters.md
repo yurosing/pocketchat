@@ -13,15 +13,29 @@ the filters window.
 
 - **Disable global chat** — hides all global chat messages.
 - **Disable Discord** — hides messages like `(Discord) Nick » text`.
-- **Ignore players (chat)** — like `/ignoreplayer`: add a nick and their chat
-  messages disappear.
-- **Ignore players (Discord)** — same, but for authors of Discord messages (by
-  nick).
-- **Text filters** — hides messages containing the given text. Each filter has a
-  scope: **Both**, **Global**, or **Discord**.
 
-To add an entry, type a nick or text into the field and press **Add**. To remove
-it, use the `✕` on the right of the row.
+Both are toggles right in the main window.
+
+## Category folders
+
+Below the toggles are three sticker-like folder tiles: **Chat ignore**, **Discord
+ignore**, and **Text filters**. Each tile shows how many entries it holds.
+Clicking a tile opens that category in its own window — so the nick/message list
+never runs off-screen, even with lots of entries.
+
+### Inside a folder
+
+- **Add** — type a nick or text in the top field and press **Add**.
+- **Edit** — the pencil `✎` next to an entry loads it into the field; fix it and
+  press **Save**. For text filters the scope (**Both / Global / Discord**) is
+  edited here too.
+- **Delete** — the `✕`.
+- **Nick autocomplete** — start typing a nick and press **Tab** (cycles through
+  online players), like the normal chat.
+- Long messages wrap to several lines and are shown in full; the list
+  **scrolls** with the mouse wheel.
+
+One entry can be up to **256 characters**.
 
 ## What is NEVER filtered
 

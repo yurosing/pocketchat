@@ -5,22 +5,23 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Экран «Фильтры чата» («No Global Chat»): в стиле настроек PocketChat.
- * Позволяет отключить глобальный чат и Discord целиком, игнорировать
- * отдельных игроков (в чате и в Discord) и прятать сообщения по тексту
- * с выбором области (глобал/Discord/везде).
+ * Экран «Фильтры чата» — верхний уровень. Два тумблера (глобал/Discord) и три
+ * плитки-«папки» (как стикеры): игнор в чате, игнор в Discord, фильтры текста.
+ * Клик по плитке открывает {@link PmFilterListScreen} с редактированием списка.
  */
 @Environment(EnvType.CLIENT)
 public class PmFiltersScreen extends Screen {
+
+    public static final int CAT_CHAT = 0, CAT_DISCORD = 1, CAT_TEXT = 2;
 
     private static final int PANEL_W = 300;
     private static final int ROW_H = 17;
@@ -34,22 +35,17 @@ public class PmFiltersScreen extends Screen {
     private static final int BTN_HOVER = 0xFF0F2833;
     private static final int BTN_BORDER = 0xFF2A4A5C;
     private static final int VALUE = 0xFFEDF3F0;
+    private static final int TILE_BG = 0xFF13293A;
+    private static final int TILE_HOVER = 0xFF1B3B52;
+    private static final int TILE_BORDER = 0xFF2E5C48;
 
     private final Screen parent;
     private final PmConfig config = PmChatClient.getConfig();
 
     private int px, py, panelH;
-
-    // Тексты полей ввода сохраняем между reinit, чтобы не терять при добавлении/удалении.
-    private String playerInput = "";
-    private String discordInput = "";
-    private String textInput = "";
-    private int textScope = PmConfig.SCOPE_BOTH;
-
-    private TextFieldWidget playerField, discordField, textField;
-
-    /** Метки для render(): {текст, x, y, цвет}. */
     private final List<Object[]> labels = new ArrayList<>();
+    /** Плитки-папки: {x,y,w,h,category}. */
+    private final List<int[]> tiles = new ArrayList<>();
 
     public PmFiltersScreen(Screen parent) {
         super(Text.translatable("pmchat.filters.title"));
@@ -58,170 +54,63 @@ public class PmFiltersScreen extends Screen {
 
     @Override
     protected void init() {
-        // Сохраняем введённое перед пересборкой
-        if (playerField != null) playerInput = playerField.getText();
-        if (discordField != null) discordInput = discordField.getText();
-        if (textField != null) textInput = textField.getText();
-
         clearChildren();
         labels.clear();
+        tiles.clear();
 
-        // Высота панели зависит от длины списков
-        int rows = 2                                  // два тумблера
-                + 2 + config.filterPlayers.size()      // заголовок+поле+строки
-                + 2 + config.filterDiscordPlayers.size()
-                + 2 + config.filterRules.size();
-        panelH = 30 + rows * ROW_H + 30;
-        panelH = Math.min(panelH, height - 20);
+        panelH = 26 + 2 * ROW_H + 12 + 70 + 34;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
         int y = py + 26;
-
-        // --- Тумблеры ---
         y = addToggle(y, "pmchat.filters.global", config.filterGlobal,
                 () -> config.filterGlobal = !config.filterGlobal);
         y = addToggle(y, "pmchat.filters.discord", config.filterDiscord,
                 () -> config.filterDiscord = !config.filterDiscord);
 
-        // --- Игнор игроков (чат) ---
-        y = section(y, "pmchat.filters.players");
-        y = addInputRow(y, playerField = makeField(y, playerInput, "pmchat.filters.nick"),
-                () -> {
-                    config.addFilteredPlayer(playerField.getText());
-                    playerInput = "";
-                    reinit();
-                });
-        for (int i = 0; i < config.filterPlayers.size(); i++) {
-            final int idx = i;
-            y = addEntryRow(y, config.filterPlayers.get(i), null, () -> {
-                config.filterPlayers.remove(idx);
-                config.save();
-                reinit();
-            });
+        // Плитки-папки категорий (в ряд, как стикеры)
+        int gap = 8;
+        int tw = (PANEL_W - 20 - 2 * gap) / 3;
+        int th = 62;
+        int ty = y + 6;
+        int tx = px + 10;
+        int[] cats = {CAT_CHAT, CAT_DISCORD, CAT_TEXT};
+        for (int cat : cats) {
+            tiles.add(new int[]{tx, ty, tw, th, cat});
+            tx += tw + gap;
         }
 
-        // --- Игнор Discord-игроков ---
-        y = section(y, "pmchat.filters.discordplayers");
-        y = addInputRow(y, discordField = makeField(y, discordInput, "pmchat.filters.nick"),
-                () -> {
-                    config.addFilteredDiscordPlayer(discordField.getText());
-                    discordInput = "";
-                    reinit();
-                });
-        for (int i = 0; i < config.filterDiscordPlayers.size(); i++) {
-            final int idx = i;
-            y = addEntryRow(y, config.filterDiscordPlayers.get(i), null, () -> {
-                config.filterDiscordPlayers.remove(idx);
-                config.save();
-                reinit();
-            });
-        }
-
-        // --- Текстовые фильтры ---
-        y = section(y, "pmchat.filters.text");
-        textField = makeField(y, textInput, "pmchat.filters.texthint");
-        // поле уже, чтобы влезла кнопка области
-        textField.setWidth(PANEL_W - 132);
-        addDrawableChild(textField);
-        // Кнопка выбора области
-        FlatButton scopeBtn = FlatButton.centered(textRenderer, px + PANEL_W - 118, y, 54, 16,
-                Text.translatable(scopeKey(textScope)), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
-                    textInput = textField.getText();
-                    textScope = (textScope + 1) % 3;
-                    reinit();
-                });
-        addDrawableChild(scopeBtn);
-        // Кнопка «+»
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 60, y, 52, 16,
-                Text.translatable("pmchat.filters.add"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> {
-                    String t = textField.getText().trim();
-                    if (!t.isEmpty()) {
-                        config.filterRules.add(new PmConfig.FilterRule(t, textScope));
-                        config.save();
-                    }
-                    textInput = "";
-                    reinit();
-                }));
-        y += ROW_H;
-        for (int i = 0; i < config.filterRules.size(); i++) {
-            final int idx = i;
-            PmConfig.FilterRule r = config.filterRules.get(i);
-            String suffix = " (" + Text.translatable(scopeKey(r.scope)).getString() + ")";
-            y = addEntryRow(y, r.text, suffix, () -> {
-                config.filterRules.remove(idx);
-                config.save();
-                reinit();
-            });
-        }
-
-        // Готово
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Text.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
     }
 
-    private static String scopeKey(int scope) {
-        return switch (scope) {
-            case PmConfig.SCOPE_GLOBAL -> "pmchat.filters.scope.global";
-            case PmConfig.SCOPE_DISCORD -> "pmchat.filters.scope.discord";
-            default -> "pmchat.filters.scope.both";
+    static int categoryCount(PmConfig config, int cat) {
+        return switch (cat) {
+            case CAT_CHAT -> config.filterPlayers.size();
+            case CAT_DISCORD -> config.filterDiscordPlayers.size();
+            default -> config.filterRules.size();
         };
     }
 
-    private TextFieldWidget makeField(int y, String text, String hintKey) {
-        TextFieldWidget f = new TextFieldWidget(textRenderer, px + 10, y, PANEL_W - 72, 16,
-                Text.translatable(hintKey));
-        f.setMaxLength(200);
-        f.setText(text);
-        String hint = Text.translatable(hintKey).getString();
-        f.setSuggestion(text.isEmpty() ? hint : "");
-        f.setChangedListener(s -> f.setSuggestion(s.isEmpty() ? hint : ""));
-        return f;
-    }
-
-    /** Строка с полем ввода и кнопкой «+». */
-    private int addInputRow(int y, TextFieldWidget field, Runnable add) {
-        addDrawableChild(field);
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 60, y, 52, 16,
-                Text.translatable("pmchat.filters.add"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA,
-                btn -> add.run()));
-        return y + ROW_H;
-    }
-
-    /** Строка списка: значение + кнопка «✕». Длинное значение обрезаем по ширине. */
-    private int addEntryRow(int y, String value, String suffix, Runnable remove) {
-        String suf = suffix == null ? "" : suffix;
-        int avail = PANEL_W - 44 - textRenderer.getWidth(suf); // от px+14 до кнопки ✕
-        String shown = "• " + trim(value, Math.max(20, avail)) + suf;
-        labels.add(new Object[]{shown, px + 14, y + 3, VALUE});
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 26, y, 18, 14,
-                Text.literal("✕"), 0xFF3A1E1E, 0xFF522626, 0xFF6E2A22, 0xFFE07A6A, btn -> remove.run()));
-        return y + ROW_H;
-    }
-
-    /** Обрезает строку по ширине в пикселях с многоточием. */
-    private String trim(String s, int maxW) {
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
-        return s + "…";
+    static String categoryKey(int cat) {
+        return switch (cat) {
+            case CAT_CHAT -> "pmchat.filters.cat.chat";
+            case CAT_DISCORD -> "pmchat.filters.cat.discord";
+            default -> "pmchat.filters.cat.text";
+        };
     }
 
     private int addToggle(int y, String labelKey, boolean on, Runnable toggle) {
         labels.add(new Object[]{Text.translatable(labelKey).getString(), px + 10, y + 3, LABEL});
-        FlatButton button = FlatButton.centered(textRenderer, px + PANEL_W - 92, y, 84, 14,
+        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 92, y, 84, 14,
                 Text.translatable(on ? "pmchat.set.on" : "pmchat.set.off"),
                 BTN_BG, BTN_HOVER, BTN_BORDER, on ? 0xFF8FD8A8 : VALUE, btn -> {
                     toggle.run();
                     config.save();
+                    PmChatClient.reloadPatterns();
                     reinit();
-                });
-        addDrawableChild(button);
-        return y + ROW_H;
-    }
-
-    private int section(int y, String key) {
-        labels.add(new Object[]{Text.translatable(key).getString(), px + 10, y + 4, SECTION});
+                }));
         return y + ROW_H;
     }
 
@@ -238,7 +127,57 @@ public class PmFiltersScreen extends Screen {
         for (Object[] l : labels) {
             context.drawText(textRenderer, (String) l[0], (int) l[1], (int) l[2], (int) l[3], false);
         }
+
+        // Плитки
+        for (int[] t : tiles) {
+            boolean hov = mouseX >= t[0] && mouseX < t[0] + t[2] && mouseY >= t[1] && mouseY < t[1] + t[3];
+            context.fill(t[0], t[1], t[0] + t[2], t[1] + t[3], hov ? TILE_HOVER : TILE_BG);
+            context.drawStrokedRectangle(t[0], t[1], t[2], t[3], TILE_BORDER);
+            int cat = t[4];
+            String count = String.valueOf(categoryCount(config, cat));
+            // Крупное число по центру
+            context.drawText(textRenderer, count,
+                    t[0] + (t[2] - textRenderer.getWidth(count)) / 2, t[1] + 14, VALUE, false);
+            // Подпись снизу (в 1–2 строки)
+            String label = Text.translatable(categoryKey(cat)).getString();
+            List<String> lines = wrap(label, t[2] - 8);
+            int ly = t[1] + t[3] - lines.size() * 10 - 4;
+            for (String line : lines) {
+                context.drawText(textRenderer, line,
+                        t[0] + (t[2] - textRenderer.getWidth(line)) / 2, ly, SECTION, false);
+                ly += 10;
+            }
+        }
         super.render(context, mouseX, mouseY, delta);
+    }
+
+    private List<String> wrap(String text, int maxW) {
+        List<String> out = new ArrayList<>();
+        String[] words = text.split(" ");
+        StringBuilder cur = new StringBuilder();
+        for (String w : words) {
+            String test = cur.length() == 0 ? w : cur + " " + w;
+            if (textRenderer.getWidth(test) > maxW && cur.length() > 0) {
+                out.add(cur.toString());
+                cur = new StringBuilder(w);
+            } else {
+                cur = new StringBuilder(test);
+            }
+        }
+        if (cur.length() > 0) out.add(cur.toString());
+        return out;
+    }
+
+    @Override
+    public boolean mouseClicked(Click click, boolean doubled) {
+        int mx = (int) click.x(), my = (int) click.y();
+        for (int[] t : tiles) {
+            if (mx >= t[0] && mx < t[0] + t[2] && my >= t[1] && my < t[1] + t[3]) {
+                MinecraftClient.getInstance().setScreen(new PmFilterListScreen(this, t[4]));
+                return true;
+            }
+        }
+        return super.mouseClicked(click, doubled);
     }
 
     private void reinit() {
@@ -249,8 +188,7 @@ public class PmFiltersScreen extends Screen {
     public void close() {
         config.save();
         PmChatClient.reloadPatterns();
-        MinecraftClient client = MinecraftClient.getInstance();
-        client.setScreen(parent);
+        MinecraftClient.getInstance().setScreen(parent);
     }
 
     @Override
