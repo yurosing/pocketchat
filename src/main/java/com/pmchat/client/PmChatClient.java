@@ -342,6 +342,13 @@ public class PmChatClient implements ClientModInitializer {
                 if (gm.groupCount() >= 1) globalAuthor = gm.group(1);
             }
         }
+        // ВАЖНО: свои собственные сообщения не прячем НИКОГДА. На серверах, где
+        // локальный и глобальный чат выглядят одинаково («Ник » текст»),
+        // включённый «отключить глобальный чат» иначе съедал и твою локальную
+        // реплику — писал в локал, а сообщения не видно.
+        String self = selfName();
+        if (isGlobal && !self.isBlank() && self.equalsIgnoreCase(globalAuthor)) return false;
+
         if (isGlobal) {
             if (config.filterGlobal) return true;                                   // фича 1
             if (config.isFilteredPlayer(globalAuthor)) return true;                 // фича 3

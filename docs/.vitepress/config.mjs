@@ -22,6 +22,7 @@ const sidebarRu = [
       { text: 'Музыка и плейлисты<span class="new-badge">NEW</span>', link: '/guide/music' },
       { text: 'Глобальный чат', link: '/guide/global' },
       { text: 'Каналы и группы', link: '/guide/channels' },
+      { text: 'Фильтры чата<span class="new-badge">NEW</span>', link: '/guide/filters' },
       { text: 'Секретные чаты<span class="new-badge">NEW</span>', link: '/guide/secret-chats' },
       { text: 'Звонки<span class="new-badge">NEW</span>', link: '/guide/calls' },
       { text: 'Команды и клавиши', link: '/guide/commands' },
@@ -71,6 +72,7 @@ const sidebarEn = [
       { text: 'Music & playlists<span class="new-badge">NEW</span>', link: '/en/guide/music' },
       { text: 'Global chat', link: '/en/guide/global' },
       { text: 'Channels & groups', link: '/en/guide/channels' },
+      { text: 'Chat filters<span class="new-badge">NEW</span>', link: '/en/guide/filters' },
       { text: 'Secret chats<span class="new-badge">NEW</span>', link: '/en/guide/secret-chats' },
       { text: 'Calls<span class="new-badge">NEW</span>', link: '/en/guide/calls' },
       { text: 'Commands & keys', link: '/en/guide/commands' },
@@ -150,7 +152,7 @@ export default defineConfig({
         nav: [
           { text: 'Документация', link: '/guide/what-is' },
           { text: 'Настройка', link: '/config/' },
-          { text: 'v1.4.0', items: [
+          { text: 'v1.7.5', items: [
             { text: 'Minecraft 1.21.11', link: '/guide/install' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},
@@ -179,7 +181,7 @@ export default defineConfig({
         nav: [
           { text: 'Docs', link: '/en/guide/what-is' },
           { text: 'Config', link: '/en/config/' },
-          { text: 'v1.4.0', items: [
+          { text: 'v1.7.5', items: [
             { text: 'Minecraft 1.21.11', link: '/en/guide/install' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},
