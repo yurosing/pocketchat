@@ -1592,6 +1592,14 @@ public class PmScreen extends Screen {
             context.drawStrokedRectangle(ix - 2, iy - 2, w + 4, h + 4, 0xFF2A4A5C);
             context.drawTexture(RenderPipelines.GUI_TEXTURED, s.textureId(), ix, iy,
                     0f, 0f, w, h, vw, vh, vw, vh);
+            // Видео доиграло — затемняем кадр и предлагаем пересмотреть.
+            if (media.isVideoFinished()) {
+                context.fill(ix, iy, ix + w, iy + h, 0x99050907);
+                Text again = Text.translatable("pmchat.video.again");
+                PmIcons.draw(context, PmIcons.PLAY, ix + w / 2 - 12, iy + h / 2 - 20, 24, 24, 0xFFEDF3F0);
+                context.drawText(textRenderer, again,
+                        ix + (w - textRenderer.getWidth(again)) / 2, iy + h / 2 + 10, 0xFFEDF3F0, false);
+            }
         } else {
             videoImgRect = null;
             // ---- Плашка состояния по центру ----
@@ -3241,13 +3249,17 @@ public class PmScreen extends Screen {
             }
             return true; // клик по оверлею — поглощаем
         }
-        // NEW (5.3): свёрнутое окошко медиа — ловим только клики по нему,
-        // остальной экран (чат) работает как обычно.
+        // NEW (5.3): свёрнутое окошко медиа — ловим ТОЛЬКО клики по нему.
+        // Раньше здесь был безусловный return, из-за чего активный плеер
+        // (музыка всегда свёрнута) съедал вообще все клики и экран «залипал».
+        // Теперь мимо окошка клик проходит дальше в обычную обработку.
         if (!videoResolving && !videoOpenFailed && media.hasActive() && media.isMinimized()) {
-            return media.handleMiniClick((int) click.x(), (int) click.y());
+            if (media.handleMiniClick((int) click.x(), (int) click.y())) return true;
         }
-        // NEW (4.3): встроенный видеоплеер (полноэкранный) — свои контролы
-        if (videoResolving || videoOpenFailed || media.hasActive()) {
+        // NEW (4.3): встроенный видеоплеер (полноэкранный) — свои контролы.
+        // Только когда плеер РАЗВёрнут (или идёт подготовка/ошибка); свёрнутое
+        // окошко уже обработано выше и клики мимо него должны идти на чат.
+        if (videoResolving || videoOpenFailed || (media.hasActive() && !media.isMinimized())) {
             int mx = (int) click.x(), my = (int) click.y();
             com.pmchat.client.PmVlc.Session vsession = media.session();
             String link = media.sourceUrl() != null ? media.sourceUrl() : videoUrl;
@@ -3269,7 +3281,8 @@ public class PmScreen extends Screen {
             }
             if (vsession != null) {
                 if (inRect(mx, my, videoPlayRect)) {
-                    vsession.togglePause();
+                    if (media.isVideoFinished()) media.restart();
+                    else vsession.togglePause();
                     return true;
                 }
                 if (inRect(mx, my, videoRateRect)) {
@@ -3292,7 +3305,8 @@ public class PmScreen extends Screen {
                     return true;
                 }
                 if (inRect(mx, my, videoImgRect)) {
-                    vsession.togglePause();
+                    if (media.isVideoFinished()) media.restart();
+                    else vsession.togglePause();
                     return true;
                 }
             }

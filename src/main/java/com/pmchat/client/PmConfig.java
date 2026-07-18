@@ -136,6 +136,67 @@ public class PmConfig {
     public boolean coreProtectEnabled = false;
     public String coreProtectPattern = "(?i)(coreprotect|/co\\b|\\bco\\s+(lookup|inspect|rollback|restore)|\\d+(?:\\.\\d+)?\\s*/\\s*[hчd]\\s+(ago|назад))";
 
+    // ---------- Фильтры чата («No Global Chat») ----------
+
+    /** Полностью прятать глобальный чат из игрового чата (по паттерну global). */
+    public boolean filterGlobal = false;
+    /** Прятать сообщения из Discord (по паттерну discordPattern). */
+    public boolean filterDiscord = false;
+
+    /**
+     * Паттерн Discord-строк. Группа 1 — ник автора в Discord. Пример строки:
+     * "(Discord) 🔥 ENA_6543 » ⚚ Vahf, о привета".
+     */
+    public String discordPattern = "\\(Discord\\).*?([A-Za-z0-9_]{2,32})\\s*»\\s*(.+)";
+
+    /** Игнор игроков в общем чате (как /ignoreplayer): ники. */
+    public List<String> filterPlayers = new ArrayList<>();
+    /** Игнор игроков в Discord: ники. */
+    public List<String> filterDiscordPlayers = new ArrayList<>();
+
+    /** Область действия текстового фильтра. */
+    public static final int SCOPE_BOTH = 0, SCOPE_GLOBAL = 1, SCOPE_DISCORD = 2;
+
+    /** Текстовый фильтр: прятать сообщения, содержащие подстроку, в выбранной области. */
+    public static class FilterRule {
+        public String text = "";
+        public int scope = SCOPE_BOTH; // 0 везде, 1 глобал, 2 discord
+
+        public FilterRule() {
+        }
+
+        public FilterRule(String text, int scope) {
+            this.text = text;
+            this.scope = scope;
+        }
+    }
+
+    public List<FilterRule> filterRules = new ArrayList<>();
+
+    private static boolean listContainsIgnoreCase(List<String> list, String name) {
+        return name != null && list.stream().anyMatch(n -> n.equalsIgnoreCase(name.trim()));
+    }
+
+    public boolean isFilteredPlayer(String name) {
+        return listContainsIgnoreCase(filterPlayers, name);
+    }
+
+    public boolean isFilteredDiscordPlayer(String name) {
+        return listContainsIgnoreCase(filterDiscordPlayers, name);
+    }
+
+    public void addFilteredPlayer(String name) {
+        if (name == null || name.isBlank()) return;
+        if (!isFilteredPlayer(name)) filterPlayers.add(name.trim());
+        save();
+    }
+
+    public void addFilteredDiscordPlayer(String name) {
+        if (name == null || name.isBlank()) return;
+        if (!isFilteredDiscordPlayer(name)) filterDiscordPlayers.add(name.trim());
+        save();
+    }
+
     /** Канал серверного чата (клан/альянс/группа): вкладка в мессенджере. */
     public static class PmChannel {
         public String id;
@@ -349,6 +410,12 @@ public class PmConfig {
                         if (g.members == null) g.members = new ArrayList<>();
                     }
                     if (cfg.warnReason == null) cfg.warnReason = "";
+                    if (cfg.filterPlayers == null) cfg.filterPlayers = new ArrayList<>();
+                    if (cfg.filterDiscordPlayers == null) cfg.filterDiscordPlayers = new ArrayList<>();
+                    if (cfg.filterRules == null) cfg.filterRules = new ArrayList<>();
+                    if (cfg.discordPattern == null || cfg.discordPattern.isBlank()) {
+                        cfg.discordPattern = new PmConfig().discordPattern;
+                    }
                     // Миграция: одиночный alphacephei-URL -> список зеркал с GitHub
                     if (cfg.sttModelUrlRu == null || !cfg.sttModelUrlRu.contains(",")) {
                         cfg.sttModelUrlRu = new PmConfig().sttModelUrlRu;

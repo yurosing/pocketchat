@@ -192,6 +192,16 @@ public final class PmMedia {
         minimized = m;
     }
 
+    /** true — играет видео и оно доиграло до конца (показываем «Просмотреть ещё»). */
+    public boolean isVideoFinished() {
+        return !music && session != null && session.isFinished();
+    }
+
+    /** Пересмотреть текущее видео с начала. */
+    public void restart() {
+        if (session != null) session.restart();
+    }
+
     public boolean isMinimized() {
         return minimized;
     }
@@ -290,8 +300,14 @@ public final class PmMedia {
         int sh = mc.getWindow().getScaledHeight();
         if (session != null) session.tick();
 
-        int mw = 232, mediaH = music ? 0 : 122, barH = 34;
-        int mh = (music ? 46 : mediaH) + barH;
+        // Музыка — тонкой полоской сверху экрана (как в Telegram), а не окошком:
+        // не заслоняет обзор, всегда под рукой.
+        if (music) {
+            return renderMusicBar(ctx, tr, sw, mouseX, mouseY, interactive);
+        }
+
+        int mw = 232, mediaH = 122, barH = 34;
+        int mh = mediaH + barH;
         int x0 = sw - mw - 8;
         int y0 = sh - mh - 8;
         winRect = new int[]{x0, y0, mw, mh};
@@ -300,20 +316,16 @@ public final class PmMedia {
         ctx.fill(x0 - 2, y0 - 2, x0 + mw + 2, y0 + mh + 2, 0xF00B120F);
         ctx.drawStrokedRectangle(x0 - 2, y0 - 2, mw + 4, mh + 4, 0xFF2E5C48);
 
-        if (music) {
-            renderMusicArt(ctx, tr, x0, y0, mw, 46);
-        } else {
-            renderVideoArt(ctx, tr, x0, y0, mw, mediaH);
-        }
+        renderVideoArt(ctx, tr, x0, y0, mw, mediaH);
 
-        renderControlBar(ctx, tr, x0, y0 + (music ? 46 : mediaH), mw, barH, mouseX, mouseY, interactive);
+        renderControlBar(ctx, tr, x0, y0 + mediaH, mw, barH, mouseX, mouseY, interactive);
 
         // Кнопки развернуть/закрыть (правый верх)
         int b = 15;
         int cx = x0 + mw - b - 3, cy = y0 + 3;
         int ex = cx - b - 3;
         closeRect = new int[]{cx, cy, b, b};
-        expandRect = music ? null : new int[]{ex, cy, b, b};
+        expandRect = new int[]{ex, cy, b, b};
         boolean hovC = interactive && inRect(mouseX, mouseY, closeRect);
         ctx.fill(cx, cy, cx + b, cy + b, hovC ? 0xE06E2A22 : 0x99101A16);
         PmIcons.draw(ctx, PmIcons.CLEAR, cx, cy, b, b, hovC ? 0xFFE07A6A : 0xFFCFE0DA);
@@ -340,33 +352,70 @@ public final class PmMedia {
             Text st = Text.translatable("pmchat.video.decoding");
             ctx.drawText(tr, st, x0 + (mw - tr.getWidth(st)) / 2, y0 + h / 2 - 4, 0xFFB8C6CE, false);
         }
-        if (s != null && !s.isPlaying()) {
+        if (s != null && s.isFinished()) {
+            // Кадр доиграл — предлагаем пересмотреть (клик по окошку/play перезапустит)
+            ctx.fill(x0, y0, x0 + mw, y0 + h, 0x99050907);
+            Text again = Text.translatable("pmchat.video.again");
+            PmIcons.draw(ctx, PmIcons.PLAY, x0 + mw / 2 - 8, y0 + h / 2 - 12, 16, 16, 0xFFEDF3F0);
+            ctx.drawText(tr, again, x0 + (mw - tr.getWidth(again)) / 2, y0 + h / 2 + 6, 0xFFEDF3F0, false);
+        } else if (s != null && !s.isPlaying()) {
             PmIcons.draw(ctx, PmIcons.PLAY, x0 + mw / 2 - 8, y0 + h / 2 - 8, 16, 16, 0xCCEDF3F0);
         }
     }
 
-    private void renderMusicArt(DrawContext ctx, TextRenderer tr, int x0, int y0, int mw, int h) {
-        ctx.fillGradient(x0, y0, x0 + mw, y0 + h, 0xFF14322A, 0xFF0B120F);
-        // «Обложка» — квадрат с ноткой и мягкими эквалайзер-полосками
-        int art = h - 10;
-        int ax = x0 + 6, ay = y0 + 5;
-        ctx.fill(ax, ay, ax + art, ay + art, 0xFF1C3D33);
-        ctx.drawStrokedRectangle(ax, ay, art, art, 0xFF2E5C48);
+    /**
+     * Музыкальный плеер тонкой полоской вдоль верха экрана (как мини-плеер
+     * Telegram): нотка + бегущее название слева, prev/play/next и крестик
+     * справа, тонкая полоска прогресса по нижней кромке. Полоска не забирает
+     * фокус — клики мимо неё проходят на экран под ней.
+     */
+    private int[] renderMusicBar(DrawContext ctx, TextRenderer tr, int sw,
+                                 int mouseX, int mouseY, boolean interactive) {
+        int h = 22;
+        winRect = new int[]{0, 0, sw, h};
+        expandRect = null;
+
+        // Фон + нижняя кромка
+        ctx.fillGradient(0, 0, sw, h, 0xF014322A, 0xF00B120F);
+        ctx.fill(0, h - 1, sw, h, 0xFF2E5C48);
+
+        // Нотка слева
+        int art = 14, ax = 6, ay = (h - art) / 2;
         PmIcons.draw(ctx, PmIcons.NOTE, ax, ay, art, art, 0xFF8FD8A8);
-        // Бегущие полоски-эквалайзер (декоративно, если играет)
-        boolean playing = session != null && session.isPlaying();
-        long t = System.currentTimeMillis();
-        for (int i = 0; i < 4; i++) {
-            int bx = ax + art + 6 + i * 5;
-            int bh = playing ? (int) (4 + (Math.sin(t / 180.0 + i) + 1) * 5) : 4;
-            ctx.fill(bx, ay + art - bh, bx + 3, ay + art, 0xFF4C8A66);
+
+        // Кнопки справа: [prev][play][next]   [close]
+        int bsz = 16, by = (h - bsz) / 2;
+        int closeX = sw - bsz - 6;
+        closeRect = new int[]{closeX, by, bsz, bsz};
+        int nextX = closeX - bsz - 10;
+        nextRect = new int[]{nextX, by, bsz, bsz};
+        int playX = nextX - bsz - 4;
+        playRect = new int[]{playX, by, bsz, bsz};
+        int prevX = playX - bsz - 4;
+        prevRect = new int[]{prevX, by, bsz, bsz};
+
+        // Название + «плейлист n/m» бегущей строкой между иконкой и кнопками
+        int tx = ax + art + 8;
+        int avail = prevX - 10 - tx;
+        String sub = (playlistName.isEmpty() ? "" : playlistName + "  ") + (trackIndex + 1) + "/" + playlist.size();
+        if (avail > 40) {
+            int subW = tr.getWidth(sub) + 10;
+            drawMarquee(ctx, tr, title, tx, (h - tr.fontHeight) / 2, avail - subW, 0xFFEDF3F0);
+            ctx.drawText(tr, trim(tr, sub, subW), prevX - 10 - subW + 4, (h - tr.fontHeight) / 2, 0xFF7FA694, false);
         }
-        // Название трека — бегущей строкой, если не влезает; «плейлист n/m» снизу
-        int tx = ax + art + 30;
-        int avail = mw - (tx - x0) - 8;
-        drawMarquee(ctx, tr, title, tx, y0 + 8, avail, 0xFFEDF3F0);
-        String sub = playlistName + "  " + (trackIndex + 1) + "/" + playlist.size();
-        ctx.drawText(tr, trim(tr, sub, avail), tx, y0 + 22, 0xFF7FA694, false);
+
+        boolean playing = session != null && session.isPlaying();
+        drawBtnIcon(ctx, prevRect, PmIcons.PREV, mouseX, mouseY, interactive, 0xFFCFE0DA);
+        drawBtnIcon(ctx, playRect, playing ? PmIcons.PAUSE : PmIcons.PLAY, mouseX, mouseY, interactive, 0xFFEDF3F0);
+        drawBtnIcon(ctx, nextRect, PmIcons.NEXT, mouseX, mouseY, interactive, 0xFFCFE0DA);
+        boolean hovC = interactive && inRect(mouseX, mouseY, closeRect);
+        drawBtnIcon(ctx, closeRect, PmIcons.CLEAR, mouseX, mouseY, interactive, hovC ? 0xFFE07A6A : 0xFFCFE0DA);
+
+        // Полоска прогресса по нижней кромке
+        float pos = session != null ? Math.max(0f, Math.min(1f, session.positionFraction())) : 0f;
+        ctx.fill(0, h - 2, Math.round(sw * pos), h, 0xFF6FBF8B);
+
+        return winRect;
     }
 
     /**
@@ -456,9 +505,18 @@ public final class PmMedia {
             return true;
         }
         if (inRect(mx, my, playRect)) {
-            togglePause();
+            if (isVideoFinished()) restart();
+            else togglePause();
             return true;
         }
+        // Клик по телу окошка доигравшего видео — пересмотреть с начала
+        if (isVideoFinished() && inRect(mx, my, winRect)) {
+            restart();
+            return true;
+        }
+        // Полоску музыки сверху НЕ поглощаем целиком (иначе блокируем UI под ней) —
+        // реагируем только на её кнопки. Тело видео-окошка поглощаем как раньше.
+        if (music) return false;
         return inRect(mx, my, winRect); // клик по телу окна — поглощаем, но ничего
     }
 

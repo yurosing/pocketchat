@@ -41,6 +41,7 @@ public class PmChatClient implements ClientModInitializer {
     private static Pattern incoming;
     private static Pattern outgoing;
     private static Pattern global;
+    private static Pattern discord;
     private static float lastHealth = 20f;
 
     /** Сентинел «диалога» общего чата. */
@@ -193,6 +194,11 @@ public class PmChatClient implements ClientModInitializer {
         // Перехват системных строк чата (Essentials шлёт ЛС именно так)
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
             if (overlay) return true;
+            // Фильтры «No Global Chat»: глобалка/Discord/игроки/текст — прячем
+            // ДО остальной обработки, чтобы отфильтрованное не попадало ни в
+            // игровой чат, ни во вкладки мода.
+            String plain = message.getString().replaceAll("§.", "");
+            if (shouldFilter(plain)) return false;
             int matched = handleChatLine(message); // 0 нет, 1 ЛС, 2 служебная метка
             if (matched == 2) return false;        // мету прячем всегда
             return !(matched == 1 && config.hideChatLines);
@@ -277,12 +283,103 @@ public class PmChatClient implements ClientModInitializer {
             global = null;
         }
         try {
+            discord = config.discordPattern == null || config.discordPattern.isBlank()
+                    ? null : Pattern.compile(config.discordPattern, Pattern.UNICODE_CASE);
+        } catch (Exception e) {
+            LOGGER.warn("Bad discord pattern, disabled: {}", e.getMessage());
+            discord = null;
+        }
+        try {
             coreProtect = config.coreProtectPattern == null || config.coreProtectPattern.isBlank()
                     ? null : Pattern.compile(config.coreProtectPattern);
         } catch (Exception e) {
             LOGGER.warn("Bad CoreProtect pattern, disabled: {}", e.getMessage());
             coreProtect = null;
         }
+    }
+
+    /**
+     * Фильтры «No Global Chat»: решает, спрятать ли строку игрового чата
+     * целиком. Порядок: сначала Discord (его строки специфичнее), потом
+     * глобальный/обычный чат, затем текстовые фильтры с областью.
+     *
+     * @return true — строку скрыть (не показывать и не собирать в моде)
+     */
+    private static boolean shouldFilter(String raw) {
+        if (raw == null) return false;
+        String plain = raw.replaceAll("§.", "").trim();
+        if (plain.isEmpty()) return false;
+
+        // Личные сообщения — ядро мода, их не фильтруем НИКОГДА (иначе входящие
+        // ЛС перестанут доходить до истории). Паттерн глобалки очень широкий и
+        // тоже ловит «» », поэтому проверяем ЛС до всего остального.
+        if (incoming != null && incoming.matcher(plain).find()) return false;
+        if (outgoing != null && outgoing.matcher(plain).find()) return false;
+
+        // Discord-строка?
+        boolean isDiscord = false;
+        String discordAuthor = null;
+        if (discord != null) {
+            Matcher dm = discord.matcher(plain);
+            if (dm.find()) {
+                isDiscord = true;
+                if (dm.groupCount() >= 1) discordAuthor = dm.group(1);
+            }
+        }
+        if (isDiscord) {
+            if (config.filterDiscord) return true;                                  // фича 2
+            if (config.isFilteredDiscordPlayer(discordAuthor)) return true;         // фича 4
+        }
+
+        // Глобальный/обычный чат? Каналы (клан/альянс/группа) исключаем — они
+        // специфичнее и не должны попадать под «отключить глобальный чат».
+        boolean isGlobal = false;
+        String globalAuthor = null;
+        if (!isDiscord && global != null && !matchesAnyChannel(plain)) {
+            Matcher gm = global.matcher(plain);
+            if (gm.find()) {
+                isGlobal = true;
+                if (gm.groupCount() >= 1) globalAuthor = gm.group(1);
+            }
+        }
+        if (isGlobal) {
+            if (config.filterGlobal) return true;                                   // фича 1
+            if (config.isFilteredPlayer(globalAuthor)) return true;                 // фича 3
+        }
+
+        // Текстовые фильтры с областью (фича 5)
+        String lower = plain.toLowerCase(Locale.ROOT);
+        for (PmConfig.FilterRule rule : config.filterRules) {
+            if (rule == null || rule.text == null || rule.text.isBlank()) continue;
+            boolean scopeOk = switch (rule.scope) {
+                case PmConfig.SCOPE_GLOBAL -> isGlobal;
+                case PmConfig.SCOPE_DISCORD -> isDiscord;
+                default -> true; // SCOPE_BOTH — где угодно
+            };
+            if (scopeOk && lower.contains(rule.text.toLowerCase(Locale.ROOT))) return true;
+        }
+        return false;
+    }
+
+    /** Совпадает ли строка с каким-либо каналом (клан/альянс/группа). */
+    private static boolean matchesAnyChannel(String plain) {
+        for (PmConfig.PmChannel channel : config.channels) {
+            Pattern pattern = channelPatterns.computeIfAbsent(channel.id, k -> {
+                try {
+                    return Pattern.compile(channel.pattern,
+                            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+                } catch (Exception e) {
+                    return Pattern.compile("$^");
+                }
+            });
+            if (pattern.matcher(plain).find()) return true;
+        }
+        return false;
+    }
+
+    /** Пересобрать паттерны фильтров после правки discordPattern из UI. */
+    public static void reloadPatterns() {
+        compilePatterns();
     }
 
     /** @return 0 — не ЛС, 1 — обычное ЛС, 2 — служебная метка (прятать всегда) */

@@ -48,7 +48,7 @@ public class PmSettingsScreen extends Screen {
     protected void init() {
         optionLabels.clear();
         clearChildren();
-        int rows = 21;
+        int rows = 22;
         panelH = 26 + rows * ROW_H + 28;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
@@ -184,6 +184,12 @@ public class PmSettingsScreen extends Screen {
                 () -> Text.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),
                 () -> PmPalettes.BADGE[Math.floorMod(config.badgeColor, PmPalettes.BADGE.length)],
                 () -> config.badgeColor = (config.badgeColor + 1) % PmPalettes.BADGE.length);
+
+        // Отдельный экран фильтров чата («No Global Chat»)
+        y = addOption(y, "pmchat.filters.open",
+                () -> Text.literal("▸"),
+                () -> 0xFF8FD8A8,
+                () -> MinecraftClient.getInstance().setScreen(new PmFiltersScreen(this)));
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Text.translatable("pmchat.settings.done"),

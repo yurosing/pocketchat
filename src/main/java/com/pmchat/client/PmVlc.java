@@ -313,6 +313,23 @@ public final class PmVlc {
             player.controls().pause();
         }
 
+        /**
+         * Пересмотреть с начала. После конца ролика VLC переходит в stopped и
+         * обычный pause()/play() уже не оживляет его — нужно заново play() со
+         * сбросом позиции. Используется кнопкой «Просмотреть ещё».
+         */
+        public void restart() {
+            finished = false;
+            try {
+                player.controls().setPosition(0f);
+            } catch (Exception ignored) {
+            }
+            try {
+                player.controls().play();
+            } catch (Exception ignored) {
+            }
+        }
+
         public void setVolume(int percent) {
             player.audio().setVolume(Math.max(0, Math.min(200, percent)));
         }
