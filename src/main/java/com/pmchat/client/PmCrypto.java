@@ -89,6 +89,38 @@ public final class PmCrypto {
         }
     }
 
+    // ---------- Шифрование «на диске» (1.7.8, #15): произвольные байты ----------
+
+    /** AES-ключ из 32 сырых байт. */
+    public static SecretKey aesKey(byte[] raw32) {
+        return new SecretKeySpec(raw32, "AES");
+    }
+
+    /** Зашифровать байты: результат = nonce(12) ‖ ciphertext+tag. */
+    public static byte[] seal(SecretKey key, byte[] plain) throws GeneralSecurityException {
+        byte[] nonce = new byte[NONCE_LEN];
+        new SecureRandom().nextBytes(nonce);
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, nonce));
+        byte[] ct = c.doFinal(plain);
+        byte[] out = new byte[NONCE_LEN + ct.length];
+        System.arraycopy(nonce, 0, out, 0, NONCE_LEN);
+        System.arraycopy(ct, 0, out, NONCE_LEN, ct.length);
+        return out;
+    }
+
+    /** Расшифровать байты формата seal(). Бросает исключение при неверном ключе/повреждении. */
+    public static byte[] open(SecretKey key, byte[] blob) throws GeneralSecurityException {
+        if (blob.length < NONCE_LEN + 16) throw new GeneralSecurityException("blob too short");
+        byte[] nonce = new byte[NONCE_LEN];
+        System.arraycopy(blob, 0, nonce, 0, NONCE_LEN);
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, nonce));
+        byte[] ct = new byte[blob.length - NONCE_LEN];
+        System.arraycopy(blob, NONCE_LEN, ct, 0, ct.length);
+        return c.doFinal(ct);
+    }
+
     // ---------- hex (0-9a-f — безопасно для анти-рекламных фильтров) ----------
 
     public static String hex(byte[] data) {

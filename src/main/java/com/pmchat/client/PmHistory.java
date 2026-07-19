@@ -5,12 +5,13 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.fabricmc.loader.api.FabricLoader;
 
+import javax.crypto.SecretKey;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -27,6 +28,12 @@ public class PmHistory {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("pmchat-history.json");
+    // NEW (1.7.8, #15): ключ шифрования истории — 32 случайных байта, лежат рядом
+    // с файлом. Даёт шифрование «на диске»: скопировав только историю, её не
+    // прочитать. Магия в начале файла отличает зашифрованный формат от старого
+    // открытого JSON (для миграции).
+    private static final Path KEY_FILE = FabricLoader.getInstance().getConfigDir().resolve("pmchat-history.key");
+    private static final byte[] MAGIC = "PMHENC1\n".getBytes(StandardCharsets.US_ASCII);
     private static final Type TYPE = new TypeToken<LinkedHashMap<String, List<PmMessage>>>() {}.getType();
 
     private LinkedHashMap<String, List<PmMessage>> conversations = new LinkedHashMap<>();
@@ -37,15 +44,53 @@ public class PmHistory {
     public static PmHistory load() {
         PmHistory history = new PmHistory();
         if (Files.exists(FILE)) {
-            try (Reader reader = Files.newBufferedReader(FILE)) {
-                LinkedHashMap<String, List<PmMessage>> data = GSON.fromJson(reader, TYPE);
-                if (data != null) {
-                    history.conversations = data;
+            try {
+                byte[] raw = Files.readAllBytes(FILE);
+                String json = decodeFile(raw);
+                if (json != null) {
+                    LinkedHashMap<String, List<PmMessage>> data = GSON.fromJson(json, TYPE);
+                    if (data != null) {
+                        history.conversations = data;
+                    }
                 }
-            } catch (IOException ignored) {
+            } catch (Exception ignored) {
             }
         }
         return history;
+    }
+
+    /** Достаём JSON: если файл начинается с магии — расшифровываем, иначе это
+     *  старый открытый JSON (мигрируем при следующем save). */
+    private static String decodeFile(byte[] raw) {
+        if (startsWithMagic(raw)) {
+            try {
+                byte[] blob = new byte[raw.length - MAGIC.length];
+                System.arraycopy(raw, MAGIC.length, blob, 0, blob.length);
+                byte[] plain = PmCrypto.open(PmCrypto.aesKey(loadOrCreateKey()), blob);
+                return new String(plain, StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                return null; // ключ потерян/файл повреждён — начинаем с пустой истории
+            }
+        }
+        return new String(raw, StandardCharsets.UTF_8); // старый формат
+    }
+
+    private static boolean startsWithMagic(byte[] raw) {
+        if (raw.length < MAGIC.length) return false;
+        for (int i = 0; i < MAGIC.length; i++) if (raw[i] != MAGIC[i]) return false;
+        return true;
+    }
+
+    /** 32-байтный ключ рядом с историей; создаём при первом запуске. */
+    private static byte[] loadOrCreateKey() throws IOException {
+        if (Files.exists(KEY_FILE)) {
+            byte[] k = Files.readAllBytes(KEY_FILE);
+            if (k.length == 32) return k;
+        }
+        byte[] k = new byte[32];
+        new SecureRandom().nextBytes(k);
+        Files.write(KEY_FILE, k);
+        return k;
     }
 
     /**
@@ -66,9 +111,15 @@ public class PmHistory {
                 if (!filtered.isEmpty()) toWrite.put(e.getKey(), filtered);
             }
         }
-        try (Writer writer = Files.newBufferedWriter(FILE)) {
-            GSON.toJson(toWrite, TYPE, writer);
-        } catch (IOException ignored) {
+        try {
+            String json = GSON.toJson(toWrite, TYPE);
+            SecretKey key = PmCrypto.aesKey(loadOrCreateKey());
+            byte[] blob = PmCrypto.seal(key, json.getBytes(StandardCharsets.UTF_8));
+            byte[] out = new byte[MAGIC.length + blob.length];
+            System.arraycopy(MAGIC, 0, out, 0, MAGIC.length);
+            System.arraycopy(blob, 0, out, MAGIC.length, blob.length);
+            Files.write(FILE, out);
+        } catch (Exception ignored) {
         }
     }
 
