@@ -206,5 +206,6 @@
   "pmchat.media.openfolder": "Открыть папку",
   "pmchat.media.hint": "Положите mp3 в config/pmchat-music (можно папками)",
   "pmchat.media.tracks": "трек.",
+  "pmchat.media.playall": "▶ Всё",
   "pmchat.tip.media": "Музыка и плейлисты"
 }

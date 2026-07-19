@@ -322,8 +322,15 @@ public class PmScreen extends Screen {
     // NEW (5.3): оверлей плейлистов прямо в мессенджере
     private boolean playlistOpen = false;
     private int playlistScroll = 0;
-    private final List<Object[]> playlistRowRects = new ArrayList<>(); // x,y,w,h,File
+    private final List<Object[]> playlistRowRects = new ArrayList<>(); // x,y,w,h,File,type,queueIdx
     private int[] playlistCloseRect, playlistFolderBtnRect;
+    // NEW (1.7.8, #12): навигация по папкам внутри оверлея плейлистов.
+    private java.io.File playlistDir = null; // null → корень config/pmchat-music
+    private int[] playlistUpRect, playlistPlayAllRect;
+    // NEW (1.7.8, #6/#8/#11): компактная панель управления музыкой в оверлее.
+    private int[] plPrevRect, plPlayRect, plNextRect, plSeekRect;
+    // NEW (1.7.8, #13): кнопки ↑/↓ переноса треков в очереди (x,y,w,h,dir,idx).
+    private final List<int[]> playlistMoveRects = new ArrayList<>();
 
     private boolean searchOpen = false;
     private int searchScroll = 0;
@@ -575,6 +582,13 @@ public class PmScreen extends Screen {
                     closeModes();
                     playlistOpen = !was;
                     playlistScroll = 0;
+                    // Открывая браузер плейлистов, начинаем с папки текущей очереди
+                    // (если музыка играет), иначе — с корня.
+                    if (playlistOpen) {
+                        com.pmchat.client.PmMedia m = com.pmchat.client.PmMedia.get();
+                        playlistDir = (m.isMusic() && !m.playlistFiles().isEmpty())
+                                ? m.playlistFiles().get(0).getParentFile() : null;
+                    }
                     rebuild();
                 }));
 
@@ -1493,8 +1507,19 @@ public class PmScreen extends Screen {
         if (videoResolving || videoOpenFailed) {
             renderVideoPlayer(context, mouseX, mouseY);
         } else if (media.hasActive()) {
-            if (media.isMinimized()) media.renderMini(context, mouseX, mouseY, true);
-            else renderVideoPlayer(context, mouseX, mouseY);
+            // NEW (1.7.8, #6/#8): музыкальную полоску во весь верх экрана НЕ рисуем
+            // поверх панели мессенджера — она перекрывала заголовок/кнопки и
+            // воровала клики. Управление музыкой доступно в оверлее плейлистов.
+            // Видео-окошко (угол) рисуем как раньше.
+            if (media.isMinimized()) {
+                // Музыкой управляем через компактную панель внутри оверлея
+                // плейлистов (renderPlaylistOverlay), а не полосой во весь верх.
+                if (!media.isMusic()) {
+                    media.renderMini(context, mouseX, mouseY, true);
+                }
+            } else {
+                renderVideoPlayer(context, mouseX, mouseY);
+            }
         }
     }
 
@@ -1811,11 +1836,15 @@ public class PmScreen extends Screen {
      * с выбранного. Управление воспроизведением — в свёрнутом окошке в углу.
      */
     private void renderPlaylistOverlay(DrawContext ctx, int mouseX, int mouseY) {
+        com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
         int x0 = px + LEFT_W, y0 = py, x1 = px + PANEL_W, y1 = py + PANEL_H;
         int w = x1 - x0;
         ctx.fill(x0, y0, x1, y1, 0xF20E1A15);
-        // Заголовок
-        ctx.drawText(textRenderer, Text.translatable("pmchat.media.title"), x0 + 10, y0 + 8, 0xFFEDF3F0, false);
+        // Заголовок = «Музыка» либо путь текущей папки
+        String header = playlistDir == null
+                ? Text.translatable("pmchat.media.title").getString()
+                : playlistDir.getName();
+        ctx.drawText(textRenderer, trim(header, w - 110), x0 + 10, y0 + 8, 0xFFEDF3F0, false);
         // Кнопка «открыть папку»
         Text openLbl = Text.translatable("pmchat.media.openfolder");
         int owL = textRenderer.getWidth(openLbl) + 14;
@@ -1833,46 +1862,146 @@ public class PmScreen extends Screen {
         PmIcons.draw(ctx, PmIcons.CLEAR, cX, cY, 15, 15, hovC ? 0xFFE07A6A : 0xFFCFE0DA);
 
         int listTop = y0 + 26;
-        // Окошко плеера снизу справа рисуется отдельно (media dispatch) — оставим
-        // под него место, чтобы список не залезал.
-        int listBottom = y1 - (com.pmchat.client.PmMedia.get().hasActive() ? 92 : 10);
+        // Снизу — компактная панель управления музыкой (если что-то играет).
+        int playerH = media.isMusic() && media.hasActive() ? 40 : 0;
+        int listBottom = y1 - 8 - playerH;
 
-        java.util.List<java.io.File> entries = scanMusicEntries();
         playlistRowRects.clear();
-        if (entries.isEmpty()) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.media.empty"), x0 + 10, listTop + 6, 0xFF7FA694, false);
-            ctx.drawText(textRenderer, Text.translatable("pmchat.media.hint"), x0 + 10, listTop + 20, 0xFF7FA694, false);
-            return;
-        }
+        playlistMoveRects.clear();
+        playlistUpRect = null;
+        playlistPlayAllRect = null;
+
+        // Очередь воспроизведения совпадает с открытой папкой? — тогда показываем
+        // треки в порядке очереди и даём переставлять их (#13).
+        boolean queueHere = playlistDir != null && media.isMusic()
+                && !media.playlistFiles().isEmpty()
+                && sameDir(media.playlistFiles().get(0).getParentFile(), playlistDir);
+
+        java.util.List<java.io.File> entries = queueHere ? media.playlistFiles() : scanMusicEntries();
+
         int rowH = 18;
         int y = listTop - playlistScroll;
         ctx.enableScissor(x0, listTop, x1, listBottom);
-        int curIdx = com.pmchat.client.PmMedia.get().trackIndex();
-        String curPl = com.pmchat.client.PmMedia.get().playlistName();
-        for (java.io.File f : entries) {
+
+        // Ряд «..» (вверх по папкам) + «играть всё»
+        if (playlistDir != null) {
             if (y + rowH >= listTop && y <= listBottom) {
-                boolean hov = mouseX >= x0 + 6 && mouseX < x1 - 6 && mouseY >= y && mouseY < y + rowH;
-                boolean dir = f.isDirectory();
-                boolean playingThis = !dir && com.pmchat.client.PmMedia.get().isMusic()
-                        && f.getParentFile() != null && f.getParentFile().getName().equals(curPl);
+                boolean hov = inRow(mouseX, mouseY, x0, x1, y, rowH);
                 ctx.fill(x0 + 6, y, x1 - 6, y + rowH - 2, hov ? 0xFF23423A : 0xFF16241E);
-                PmIcons.draw(ctx, dir ? PmIcons.NOTE : PmIcons.PLAY, x0 + 9, y + 3, 12, 12,
-                        dir ? 0xFF8FD8A8 : 0xFF9CC4DC);
-                String label = f.getName();
-                ctx.drawText(textRenderer, trim(label, w - 60), x0 + 26, y + 5, 0xFFEDF3F0, false);
-                if (dir) {
-                    String cnt = countMusic(f) + "";
-                    ctx.drawText(textRenderer, cnt, x1 - 14 - textRenderer.getWidth(cnt), y + 5, 0xFF7FA694, false);
-                }
-                playlistRowRects.add(new Object[]{x0 + 6, y, w - 12, rowH, f});
+                PmIcons.draw(ctx, PmIcons.EXPAND, x0 + 9, y + 3, 12, 12, 0xFF8FD8A8);
+                ctx.drawText(textRenderer, "..", x0 + 26, y + 5, 0xFFEDF3F0, false);
+                // «играть всё» справа
+                Text pa = Text.translatable("pmchat.media.playall");
+                int paw = textRenderer.getWidth(pa) + 12;
+                int pax = x1 - 14 - paw;
+                playlistPlayAllRect = new int[]{pax, y + 1, paw, rowH - 3};
+                boolean hovPa = inRect(mouseX, mouseY, playlistPlayAllRect);
+                ctx.fill(pax, y + 1, pax + paw, y + rowH - 2, hovPa ? 0xFF2E6E4E : 0xFF23423A);
+                ctx.drawText(textRenderer, pa, pax + 6, y + 5, 0xFFCFEEDA, false);
+                playlistUpRect = new int[]{x0 + 6, y, pax - x0 - 6, rowH};
             }
             y += rowH;
         }
+
+        if (entries.isEmpty()) {
+            ctx.disableScissor();
+            ctx.drawText(textRenderer, Text.translatable("pmchat.media.empty"), x0 + 10, listTop + rowH + 6, 0xFF7FA694, false);
+            ctx.drawText(textRenderer, Text.translatable("pmchat.media.hint"), x0 + 10, listTop + rowH + 20, 0xFF7FA694, false);
+            if (playerH > 0) renderMusicPlayer(ctx, mouseX, mouseY, x0, x1, y1 - playerH - 4, w);
+            return;
+        }
+
+        int qidx = 0;
+        for (java.io.File f : entries) {
+            boolean dir = f.isDirectory();
+            if (y + rowH >= listTop && y <= listBottom) {
+                boolean hov = inRow(mouseX, mouseY, x0, x1, y, rowH);
+                boolean playingThis = media.isPlayingFile(f);
+                ctx.fill(x0 + 6, y, x1 - 6, y + rowH - 2,
+                        playingThis ? 0xFF2E5F46 : (hov ? 0xFF23423A : 0xFF16241E));
+                PmIcons.draw(ctx, dir ? PmIcons.NOTE : (playingThis ? PmIcons.PAUSE : PmIcons.PLAY),
+                        x0 + 9, y + 3, 12, 12, dir ? 0xFF8FD8A8 : 0xFF9CC4DC);
+                int labelRight = x1 - 14;
+                if (dir) {
+                    String cnt = countMusic(f) + "";
+                    ctx.drawText(textRenderer, cnt, x1 - 14 - textRenderer.getWidth(cnt), y + 5, 0xFF7FA694, false);
+                    labelRight -= textRenderer.getWidth(cnt) + 6;
+                } else if (queueHere) {
+                    // Кнопки переноса ↑/↓ (#13)
+                    int au = x1 - 16, ad = au - 16;
+                    boolean hu = mouseX >= au && mouseX < au + 14 && mouseY >= y + 2 && mouseY < y + 16;
+                    boolean hd = mouseX >= ad && mouseX < ad + 14 && mouseY >= y + 2 && mouseY < y + 16;
+                    ctx.drawText(textRenderer, "▲", au + 3, y + 5, hu ? 0xFFEDF3F0 : 0xFF7FA694, false);
+                    ctx.drawText(textRenderer, "▼", ad + 3, y + 5, hd ? 0xFFEDF3F0 : 0xFF7FA694, false);
+                    playlistMoveRects.add(new int[]{au, y + 2, 14, 14, -1, qidx});
+                    playlistMoveRects.add(new int[]{ad, y + 2, 14, 14, 1, qidx});
+                    labelRight = ad - 4;
+                }
+                String label = f.getName();
+                ctx.drawText(textRenderer, trim(label, labelRight - (x0 + 26)), x0 + 26, y + 5, 0xFFEDF3F0, false);
+                playlistRowRects.add(new Object[]{x0 + 6, y, x1 - 6 - (x0 + 6), rowH, f,
+                        dir ? "dir" : "track", queueHere ? qidx : -1});
+            }
+            y += rowH;
+            qidx++;
+        }
         ctx.disableScissor();
+
+        if (playerH > 0) renderMusicPlayer(ctx, mouseX, mouseY, x0, x1, y1 - playerH - 4, w);
+    }
+
+    /** NEW (1.7.8): компактная панель управления музыкой внизу оверлея. */
+    private void renderMusicPlayer(DrawContext ctx, int mouseX, int mouseY, int x0, int x1, int y, int w) {
+        com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
+        com.pmchat.client.PmVlc.Session s = media.session();
+        ctx.fill(x0 + 4, y, x1 - 4, y + 40, 0xFF101A16);
+        ctx.drawStrokedRectangle(x0 + 4, y, x1 - x0 - 8, 40, 0xFF2E5C48);
+        // Строка прогресса (кликабельная перемотка — #11)
+        float pos = s != null ? Math.max(0f, Math.min(1f, s.positionFraction())) : 0f;
+        int sx = x0 + 12, sw = (x1 - 12) - sx, syy = y + 26;
+        plSeekRect = new int[]{sx, syy - 3, sw, 10};
+        ctx.fill(sx, syy, sx + sw, syy + 3, 0xFF23352E);
+        ctx.fill(sx, syy, sx + Math.round(sw * pos), syy + 3, 0xFF6FBF8B);
+        // Кнопки prev/play/next слева
+        int bsz = 16, by = y + 4;
+        plPrevRect = new int[]{x0 + 12, by, bsz, bsz};
+        plPlayRect = new int[]{x0 + 12 + bsz + 6, by, bsz, bsz};
+        plNextRect = new int[]{x0 + 12 + (bsz + 6) * 2, by, bsz, bsz};
+        boolean playing = s != null && s.isPlaying();
+        drawPlBtn(ctx, plPrevRect, PmIcons.PREV, mouseX, mouseY);
+        drawPlBtn(ctx, plPlayRect, playing ? PmIcons.PAUSE : PmIcons.PLAY, mouseX, mouseY);
+        drawPlBtn(ctx, plNextRect, PmIcons.NEXT, mouseX, mouseY);
+        // Название + время справа
+        String tt = media.title();
+        int tx = plNextRect[0] + bsz + 10;
+        if (s != null) {
+            String time = fmtTime(s.timeMs()) + " / " + fmtTime(s.lengthMs());
+            ctx.drawText(textRenderer, time, x1 - 12 - textRenderer.getWidth(time), by + 4, 0xFF7FA694, false);
+        }
+        ctx.drawText(textRenderer, trim(tt, x1 - 90 - tx), tx, by + 4, 0xFFEDF3F0, false);
+    }
+
+    private void drawPlBtn(DrawContext ctx, int[] r, String[] icon, int mx, int my) {
+        boolean hov = inRect(mx, my, r);
+        ctx.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hov ? 0xFF2A4A5C : 0xFF16241E);
+        PmIcons.draw(ctx, icon, r[0], r[1], r[2], r[3], hov ? 0xFFEDF3F0 : 0xFFCFE0DA);
+    }
+
+    private boolean inRow(int mx, int my, int x0, int x1, int y, int rowH) {
+        return mx >= x0 + 6 && mx < x1 - 6 && my >= y && my < y + rowH;
+    }
+
+    private static boolean sameDir(java.io.File a, java.io.File b) {
+        if (a == null || b == null) return false;
+        try {
+            return a.getCanonicalFile().equals(b.getCanonicalFile());
+        } catch (Exception e) {
+            return a.getAbsoluteFile().equals(b.getAbsoluteFile());
+        }
     }
 
     private java.util.List<java.io.File> scanMusicEntries() {
-        java.io.File dir = com.pmchat.client.PmMedia.musicDir();
+        java.io.File dir = playlistDir != null ? playlistDir : com.pmchat.client.PmMedia.musicDir();
         java.io.File[] all = dir.listFiles();
         java.util.List<java.io.File> dirs = new ArrayList<>(), files = new ArrayList<>();
         if (all != null) {
@@ -3323,10 +3452,6 @@ public class PmScreen extends Screen {
         // NEW (5.3): оверлей плейлистов — обрабатываем его клики первым
         if (playlistOpen) {
             int mx = (int) click.x(), my = (int) click.y();
-            // Управление плеером в окошке (если играет и свёрнуто)
-            if (media.hasActive() && media.isMinimized() && media.handleMiniClick(mx, my)) {
-                return true;
-            }
             if (inRect(mx, my, playlistCloseRect)) {
                 playlistOpen = false;
                 rebuild();
@@ -3334,21 +3459,61 @@ public class PmScreen extends Screen {
             }
             if (inRect(mx, my, playlistFolderBtnRect)) {
                 try {
-                    net.minecraft.util.Util.getOperatingSystem().open(com.pmchat.client.PmMedia.musicDir());
+                    net.minecraft.util.Util.getOperatingSystem().open(
+                            playlistDir != null ? playlistDir : com.pmchat.client.PmMedia.musicDir());
                 } catch (Exception ignored) {
                 }
+                return true;
+            }
+            // Компактный плеер снизу: prev/play/next + перемотка (#11)
+            if (inRect(mx, my, plPrevRect)) { media.prev(); return true; }
+            if (inRect(mx, my, plPlayRect)) { media.togglePause(); return true; }
+            if (inRect(mx, my, plNextRect)) { media.next(); return true; }
+            if (inRect(mx, my, plSeekRect) && media.session() != null) {
+                float frac = (mx - plSeekRect[0]) / (float) plSeekRect[2];
+                media.session().seekFraction(Math.max(0f, Math.min(1f, frac)));
+                return true;
+            }
+            // Кнопки переноса треков ↑/↓ (#13)
+            for (int[] r : playlistMoveRects) {
+                if (inRect(mx, my, r)) {
+                    int dir = r[4], idx = r[5];
+                    media.moveTrack(idx, idx + dir);
+                    return true;
+                }
+            }
+            // «..» — вверх по папкам
+            if (inRect(mx, my, playlistUpRect)) {
+                java.io.File root = com.pmchat.client.PmMedia.musicDir();
+                java.io.File parent = playlistDir != null ? playlistDir.getParentFile() : null;
+                playlistDir = (parent != null && !sameDir(playlistDir, root)) ? parent : null;
+                playlistScroll = 0;
+                return true;
+            }
+            // «играть всё» в текущей папке
+            if (inRect(mx, my, playlistPlayAllRect) && playlistDir != null) {
+                media.startMusicFolder(playlistDir);
                 return true;
             }
             for (Object[] r : playlistRowRects) {
                 if (mx >= (int) r[0] && mx < (int) r[0] + (int) r[2]
                         && my >= (int) r[1] && my < (int) r[1] + (int) r[3]) {
                     java.io.File f = (java.io.File) r[4];
-                    if (f.isDirectory()) {
-                        media.startMusicFolder(f);
+                    String type = (String) r[5];
+                    int qidx = (int) r[6];
+                    if ("dir".equals(type)) {
+                        // NEW (#12): вход в папку — показать её треки, не запуская сразу
+                        playlistDir = f;
+                        playlistScroll = 0;
+                    } else if (qidx >= 0) {
+                        // Клик по треку в активной очереди — перейти к нему
+                        media.jumpTo(qidx);
                     } else {
+                        // Клик по конкретному треку в папке (#12): очередь = все треки
+                        // папки, старт с выбранного.
                         java.io.File parent = f.getParentFile();
-                        java.io.File[] sib = parent != null ? parent.listFiles() : new java.io.File[]{f};
                         java.util.List<java.io.File> list = new ArrayList<>();
+                        java.io.File[] sib = parent != null ? parent.listFiles() : new java.io.File[]{f};
                         if (sib != null) {
                             java.util.Arrays.sort(sib, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
                             for (java.io.File s : sib) if (com.pmchat.client.PmMedia.isAudio(s)) list.add(s);

@@ -286,6 +286,35 @@ public final class PmMedia {
         return playlist.size();
     }
 
+    /** NEW (1.7.8, #12/#13): текущая очередь воспроизведения (копия). */
+    public List<File> playlistFiles() {
+        return new ArrayList<>(playlist);
+    }
+
+    /** Играет ли сейчас именно этот файл. */
+    public boolean isPlayingFile(File f) {
+        return music && trackIndex >= 0 && trackIndex < playlist.size()
+                && playlist.get(trackIndex).equals(f);
+    }
+
+    /** Перейти к конкретному треку очереди по индексу. */
+    public void jumpTo(int index) {
+        if (music && index >= 0 && index < playlist.size()) playIndex(index);
+    }
+
+    /**
+     * NEW (1.7.8, #13): переставить трек в очереди с позиции {@code from} на
+     * {@code to}, сохранив указатель на текущий играющий трек.
+     */
+    public void moveTrack(int from, int to) {
+        if (!music || from == to) return;
+        if (from < 0 || from >= playlist.size() || to < 0 || to >= playlist.size()) return;
+        File current = trackIndex >= 0 && trackIndex < playlist.size() ? playlist.get(trackIndex) : null;
+        File moved = playlist.remove(from);
+        playlist.add(to, moved);
+        if (current != null) trackIndex = playlist.indexOf(current);
+    }
+
     // ---------- окошко в углу ----------
 
     /**

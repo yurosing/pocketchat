@@ -140,6 +140,11 @@ public class PmChatClient implements ClientModInitializer {
             }
         });
 
+        // NEW (1.7.8, #9): выход с сервера/в главное меню останавливает музыку и
+        // видео — иначе плеер продолжал играть «в пустоте» после дисконнекта.
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) -> client.execute(() -> PmMedia.get().stop()));
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             // Только ОТКРЫВАЕМ по клавише (закрытие — Esc/крестик), иначе на русской
             // раскладке клавиша J = «о» закрывала бы меню при вводе текста.
