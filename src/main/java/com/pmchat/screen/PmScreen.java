@@ -14,6 +14,7 @@ import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.EditBoxWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.option.KeyBinding;
@@ -232,6 +233,10 @@ public class PmScreen extends Screen {
     // Редактирование своего сообщения (5.7): цель правки + плашка-отмена
     private PmMessage editTarget = null;
     private int editCancelX = -1, editCancelY = -1;
+    // NEW (1.7.8): отдельное многострочное окно правки — весь текст виден целиком,
+    // а не «прокручивается» в однострочном поле ввода.
+    private EditBoxWidget editBox = null;
+    private int[] editSaveRect, editCancelRect;
 
     // Ответ-цитата и эмодзи
     private PmMessage replyTarget = null;
@@ -794,6 +799,56 @@ public class PmScreen extends Screen {
                         rebuild();
                     }));
         }
+
+        // NEW (1.7.8): многострочное окно правки поверх чата
+        if (editTarget != null && selected != null) {
+            int ew = Math.min(360, PANEL_W - LEFT_W - 40);
+            int eh = 96;
+            int ex = px + LEFT_W + (PANEL_W - LEFT_W - ew) / 2;
+            int ey = py + (PANEL_H - eh) / 2 - 6;
+            String prev = editBox != null ? editBox.getText()
+                    : (editTarget.text != null ? editTarget.text : "");
+            editBox = EditBoxWidget.builder()
+                    .x(ex).y(ey)
+                    .textColor(0xFFEDF3F0)
+                    .textShadow(false)
+                    .hasBackground(true)
+                    .build(textRenderer, ew, eh, Text.translatable("pmchat.edit.editor.title"));
+            editBox.setMaxLength(PmChatClient.isSecretActive(selected)
+                    ? com.pmchat.client.PmWire.SECRET_MAX_CHARS : 200);
+            editBox.setText(prev);
+            addDrawableChild(editBox);
+            setFocused(editBox);
+            editBox.setFocused(true);
+        } else {
+            editBox = null;
+        }
+    }
+
+    /** NEW (1.7.8): открыть отдельное окно правки сообщения. */
+    private void openEditor(PmMessage msg) {
+        editTarget = msg;
+        editBox = null; // пересоздастся в rebuild() с текстом сообщения
+        clearReply();
+        closeModes();
+        rebuild();
+    }
+
+    /** NEW (1.7.8): закрыть окно правки без сохранения. */
+    private void closeEditor() {
+        editTarget = null;
+        editBox = null;
+        rebuild();
+    }
+
+    /** NEW (1.7.8): сохранить правку из окна редактора. */
+    private void saveEditor() {
+        if (editTarget == null || editBox == null || selected == null) return;
+        String text = editBox.getText().replace('\n', ' ').trim();
+        if (!text.isEmpty()) {
+            PmChatClient.editMessage(selected, editTarget, text);
+        }
+        closeEditor();
     }
 
     private boolean clearConfirm = false;
@@ -1388,7 +1443,9 @@ public class PmScreen extends Screen {
             renderChat(context, mouseX, mouseY);
         }
 
+        renderEditorBackdrop(context);
         super.render(context, mouseX, mouseY, delta);
+        renderEditorButtons(context, mouseX, mouseY);
 
         renderPlane(context);
         renderCtxMenu(context, mouseX, mouseY);
@@ -2897,9 +2954,56 @@ public class PmScreen extends Screen {
         replyCancelY = y;
     }
 
-    /** Плашка «Изменение сообщения…» над полем ввода. */
+    /** NEW (1.7.8): затемнение + рамка окна правки под многострочным полем. */
+    private void renderEditorBackdrop(DrawContext context) {
+        editSaveRect = null;
+        editCancelRect = null;
+        if (editTarget == null || editBox == null) return;
+        // Затемняем область чата (не левый список)
+        context.fill(px + LEFT_W + 1, py + 2, px + PANEL_W - 2, py + PANEL_H - 2, 0xC00A130F);
+        int ew = editBox.getWidth();
+        int ex = editBox.getX();
+        int ey = editBox.getY();
+        // Заголовок над полем
+        context.fill(ex - 6, ey - 22, ex + ew + 6, ey - 4, 0xFF16241E);
+        context.drawStrokedRectangle(ex - 6, ey - 22, ew + 12, 18, 0xFF2E5C48);
+        context.drawText(textRenderer, "✎ " + Text.translatable("pmchat.edit.editor.title").getString(),
+                ex, ey - 17, 0xFFF0C34E, false);
+        // Рамка вокруг самого поля
+        context.drawStrokedRectangle(ex - 2, ey - 2, ew + 4, editBox.getHeight() + 4, 0xFF2E5C48);
+    }
+
+    /** NEW (1.7.8): кнопки Сохранить/Отмена окна правки (поверх поля). */
+    private void renderEditorButtons(DrawContext context, int mouseX, int mouseY) {
+        if (editTarget == null || editBox == null) return;
+        int ew = editBox.getWidth();
+        int ex = editBox.getX();
+        int by = editBox.getY() + editBox.getHeight() + 6;
+        Text saveLbl = Text.translatable("pmchat.edit.editor.save");
+        Text cancelLbl = Text.translatable("pmchat.edit.editor.cancel");
+        int sw = textRenderer.getWidth(saveLbl) + 18;
+        int cw = textRenderer.getWidth(cancelLbl) + 18;
+        int cx = ex + ew - cw;
+        int sx = cx - sw - 6;
+        editSaveRect = new int[]{sx, by, sw, 16};
+        editCancelRect = new int[]{cx, by, cw, 16};
+        boolean hovS = inRect(mouseX, mouseY, editSaveRect);
+        boolean hovC = inRect(mouseX, mouseY, editCancelRect);
+        context.fill(sx, by, sx + sw, by + 16, hovS ? 0xFF2E6E4E : 0xFF23423A);
+        context.drawStrokedRectangle(sx, by, sw, 16, 0xFF3A8A5E);
+        context.drawText(textRenderer, saveLbl, sx + 9, by + 4, 0xFFEDF3F0, false);
+        context.fill(cx, by, cx + cw, by + 16, hovC ? 0xFF6E2A22 : 0xFF16241E);
+        context.drawStrokedRectangle(cx, by, cw, 16, 0xFF5C2E2E);
+        context.drawText(textRenderer, cancelLbl, cx + 9, by + 4, hovC ? 0xFFE07A6A : 0xFFCFE0DA, false);
+        // Подсказка о горячих клавишах
+        context.drawText(textRenderer, Text.translatable("pmchat.edit.editor.hint"),
+                ex, by + 20, 0xFF7FA694, false);
+    }
+
+    /** Плашка «Изменение сообщения…» над полем ввода (устарела — правка в окне). */
     private void renderEditBar(DrawContext context) {
         editCancelX = -1;
+        if (true) return;
         if (editTarget == null || moneyMode) return;
         int y = py + PANEL_H - 36;
         int x = px + LEFT_W + 8;
@@ -3207,6 +3311,14 @@ public class PmScreen extends Screen {
             fullscreenImg = null;
             return true;
         }
+        // NEW (1.7.8): окно правки перехватывает клики
+        if (editTarget != null && editBox != null) {
+            int mx = (int) click.x(), my = (int) click.y();
+            if (inRect(mx, my, editSaveRect)) { saveEditor(); return true; }
+            if (inRect(mx, my, editCancelRect)) { closeEditor(); return true; }
+            super.mouseClicked(click, doubled); // клики внутри поля
+            return true; // остальное поглощаем — модальное окно
+        }
         com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
         // NEW (5.3): оверлей плейлистов — обрабатываем его клики первым
         if (playlistOpen) {
@@ -3403,18 +3515,7 @@ public class PmScreen extends Screen {
                         copiedX = rx;
                         copiedY = ry;
                     } else if (action.equals("edit") && !global) {
-                        editTarget = msg;
-                        clearReply();
-                        closeModes();
-                        rebuild();
-                        if (inputField != null) {
-                            inputField.setText(msg.text != null ? msg.text : "");
-                            inputField.setCursorToEnd(false); // курсор в конец, снять выделение
-                            // Переводим фокус экрана на поле, иначе ввод не доходит,
-                            // пока пользователь сам не кликнет в него (баг правки).
-                            setFocused(inputField);
-                            inputField.setFocused(true);
-                        }
+                        openEditor(msg);
                     } else if (action.equals("warn")) {
                         PmChatClient.warnPlayer(senderOfMessage(msg));
                     } else if (action.equals("forward")) {
@@ -3936,12 +4037,17 @@ public class PmScreen extends Screen {
             pinListOpen = false;
             return true;
         }
-        // Esc отменяет режим правки, не выходя из чата
-        if (editTarget != null && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
-            editTarget = null;
-            if (inputField != null) inputField.setText("");
-            inputText = "";
-            return true;
+        // NEW (1.7.8): окно правки — Esc отменяет, Ctrl+Enter сохраняет,
+        // ввод (в т.ч. Enter → новая строка) идёт в многострочное поле.
+        if (editTarget != null && editBox != null) {
+            int kc = input.getKeycode();
+            if (kc == GLFW.GLFW_KEY_ESCAPE) { closeEditor(); return true; }
+            boolean ctrl = (input.modifiers() & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0;
+            if (ctrl && (kc == GLFW.GLFW_KEY_ENTER || kc == GLFW.GLFW_KEY_KP_ENTER)) {
+                saveEditor();
+                return true;
+            }
+            return super.keyPressed(input); // печать в поле правки
         }
         // Ctrl+V: если в буфере картинка — отправляем её как фото
         if (selected != null && !statsMode && !uploading
