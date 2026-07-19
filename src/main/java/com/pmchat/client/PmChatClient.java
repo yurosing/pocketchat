@@ -310,11 +310,28 @@ public class PmChatClient implements ClientModInitializer {
         String plain = raw.replaceAll("§.", "").trim();
         if (plain.isEmpty()) return false;
 
-        // Личные сообщения — ядро мода, их не фильтруем НИКОГДА (иначе входящие
-        // ЛС перестанут доходить до истории). Паттерн глобалки очень широкий и
-        // тоже ловит «» », поэтому проверяем ЛС до всего остального.
-        if (incoming != null && incoming.matcher(plain).find()) return false;
+        // Свои исходящие ЛС не фильтруем НИКОГДА.
         if (outgoing != null && outgoing.matcher(plain).find()) return false;
+        // Входящие ЛС (фича 5, «ник » текст», где ник — отправитель):
+        // применяем список заблокированных игроков и текстовые правила с
+        // областью «везде» (SCOPE_BOTH). Глобальный/Discord-тумблеры к личкам
+        // НЕ относятся — иначе «отключить глобальный чат» съел бы все ЛС.
+        if (incoming != null) {
+            Matcher pm = incoming.matcher(plain);
+            if (pm.find()) {
+                String pmAuthor = pm.groupCount() >= 1 ? pm.group(1) : null;
+                String self0 = selfName();
+                if (!self0.isBlank() && self0.equalsIgnoreCase(pmAuthor)) return false;
+                if (config.isFilteredPlayer(pmAuthor)) return true;      // заблок. игрок
+                String lowerPm = plain.toLowerCase(Locale.ROOT);
+                for (PmConfig.FilterRule rule : config.filterRules) {
+                    if (rule == null || rule.text == null || rule.text.isBlank()) continue;
+                    if (rule.scope == PmConfig.SCOPE_BOTH
+                            && lowerPm.contains(rule.text.toLowerCase(Locale.ROOT))) return true;
+                }
+                return false; // прочие ЛС проходят
+            }
+        }
 
         // Discord-строка?
         boolean isDiscord = false;
