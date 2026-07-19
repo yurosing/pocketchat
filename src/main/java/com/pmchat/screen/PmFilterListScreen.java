@@ -217,10 +217,11 @@ public class PmFilterListScreen extends Screen {
         maxScroll = Math.max(0, total - (listBottom - listTop));
         if (scroll > maxScroll) scroll = maxScroll;
 
-        // Подсказка про Tab для ников
+        // Подсказка про Tab для ников — справа от кнопки «Назад», чтобы не
+        // перекрывалась ею (кнопка занимает px+10..px+80 внизу).
         if (!isText()) {
             ctx.drawText(textRenderer, Text.translatable("pmchat.filters.tabhint"),
-                    px + 12, py + panelH - 25, SECTION, false);
+                    px + 90, py + panelH - 20, SECTION, false);
         }
 
         super.render(ctx, mouseX, mouseY, delta);
