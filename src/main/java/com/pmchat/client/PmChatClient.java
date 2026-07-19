@@ -166,6 +166,12 @@ public class PmChatClient implements ClientModInitializer {
             }
             while (mediaPlayKey.wasPressed()) PmMedia.get().togglePause();
             while (mediaNextKey.wasPressed()) PmMedia.get().next();
+            // NEW (1.7.9, #6): вне мира (главное меню / после выхода с сервера)
+            // музыка и видео должны молчать. DISCONNECT ловит не все случаи —
+            // это надёжный запасной вариант каждый тик.
+            if (client.world == null && PmMedia.get().hasActive()) {
+                PmMedia.get().stop();
+            }
             // Авто-переход к следующему треку, когда текущий доиграл
             PmMedia.get().tick();
             // Закрыть меню при получении урона (если включено в настройках)

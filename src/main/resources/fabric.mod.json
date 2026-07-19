@@ -12,7 +12,9 @@
     "client": ["com.pmchat.client.PmChatClient"],
     "modmenu": ["com.pmchat.client.PmModMenu"]
   },
-  "mixins": [],
+  "mixins": [
+    "pmchat.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.15.0",
     "fabric-api": "*",

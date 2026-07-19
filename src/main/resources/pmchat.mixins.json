@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "com.pmchat.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ChatScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

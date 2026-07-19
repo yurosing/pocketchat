@@ -329,6 +329,7 @@ public class PmScreen extends Screen {
     private int[] playlistUpRect, playlistPlayAllRect;
     // NEW (1.7.8, #6/#8/#11): компактная панель управления музыкой в оверлее.
     private int[] plPrevRect, plPlayRect, plNextRect, plSeekRect;
+    private boolean plSeeking = false; // #4: перетаскивание полоски перемотки
     // NEW (1.7.8, #13): кнопки ↑/↓ переноса треков в очереди (x,y,w,h,dir,idx).
     private final List<int[]> playlistMoveRects = new ArrayList<>();
 
@@ -3452,6 +3453,16 @@ public class PmScreen extends Screen {
         // NEW (5.3): оверлей плейлистов — обрабатываем его клики первым
         if (playlistOpen) {
             int mx = (int) click.x(), my = (int) click.y();
+            // NEW (1.7.9, #2): оверлей занимает только правую панель. Клик по
+            // левой части (список диалогов и т.п.) закрывает музыкальный браузер
+            // и уходит в обычную обработку — мод снова кликабелен.
+            boolean insideOverlay = mx >= px + LEFT_W && mx < px + PANEL_W
+                    && my >= py && my < py + PANEL_H;
+            if (!insideOverlay) {
+                playlistOpen = false;
+                rebuild();
+                // не return — пусть клик обработается штатно ниже
+            } else {
             if (inRect(mx, my, playlistCloseRect)) {
                 playlistOpen = false;
                 rebuild();
@@ -3472,6 +3483,7 @@ public class PmScreen extends Screen {
             if (inRect(mx, my, plSeekRect) && media.session() != null) {
                 float frac = (mx - plSeekRect[0]) / (float) plSeekRect[2];
                 media.session().seekFraction(Math.max(0f, Math.min(1f, frac)));
+                plSeeking = true; // #4: продолжаем перематывать при перетаскивании
                 return true;
             }
             // Кнопки переноса треков ↑/↓ (#13)
@@ -3525,6 +3537,7 @@ public class PmScreen extends Screen {
                 }
             }
             return true; // клик по оверлею — поглощаем
+            } // конец insideOverlay
         }
         // NEW (5.3): свёрнутое окошко медиа — ловим ТОЛЬКО клики по нему.
         // Раньше здесь был безусловный return, из-за чего активный плеер
@@ -4142,6 +4155,26 @@ public class PmScreen extends Screen {
         cb.setTimeInMillis(b);
         return ca.get(java.util.Calendar.YEAR) == cb.get(java.util.Calendar.YEAR)
                 && ca.get(java.util.Calendar.DAY_OF_YEAR) == cb.get(java.util.Calendar.DAY_OF_YEAR);
+    }
+
+    @Override
+    public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+        // #4: тянем полоску перемотки музыки зажатой кнопкой
+        if (plSeeking && playlistOpen && plSeekRect != null) {
+            com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
+            if (media.session() != null) {
+                float frac = ((int) click.x() - plSeekRect[0]) / (float) plSeekRect[2];
+                media.session().seekFraction(Math.max(0f, Math.min(1f, frac)));
+            }
+            return true;
+        }
+        return super.mouseDragged(click, offsetX, offsetY);
+    }
+
+    @Override
+    public boolean mouseReleased(Click click) {
+        plSeeking = false;
+        return super.mouseReleased(click);
     }
 
     @Override
