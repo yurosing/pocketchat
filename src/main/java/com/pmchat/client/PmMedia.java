@@ -543,9 +543,16 @@ public final class PmMedia {
             restart();
             return true;
         }
-        // Полоску музыки сверху НЕ поглощаем целиком (иначе блокируем UI под ней) —
-        // реагируем только на её кнопки. Тело видео-окошка поглощаем как раньше.
-        if (music) return false;
+        // Полоску музыки сверху НЕ поглощаем целиком (иначе блокируем UI под ней),
+        // но клик по её телу = перемотка (#11): листаем запись как в видеоплеере.
+        if (music) {
+            if (session != null && inRect(mx, my, winRect) && winRect[2] > 0) {
+                float frac = (mx - winRect[0]) / (float) winRect[2];
+                session.seekFraction(Math.max(0f, Math.min(1f, frac)));
+                return true;
+            }
+            return false;
+        }
         return inRect(mx, my, winRect); // клик по телу окна — поглощаем, но ничего
     }
 

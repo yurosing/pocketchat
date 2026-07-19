@@ -180,6 +180,11 @@ public class PmSettingsScreen extends Screen {
                 () -> config.coreProtectEnabled ? 0xFF8FD8A8 : VALUE,
                 () -> config.coreProtectEnabled = !config.coreProtectEnabled);
 
+        y = addOption(y, "pmchat.set.mediabar",
+                () -> Text.translatable(config.mediaBarWhileTyping ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> config.mediaBarWhileTyping ? 0xFF8FD8A8 : VALUE,
+                () -> config.mediaBarWhileTyping = !config.mediaBarWhileTyping);
+
         y = addOption(y, "pmchat.set.badge",
                 () -> Text.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),
                 () -> PmPalettes.BADGE[Math.floorMod(config.badgeColor, PmPalettes.BADGE.length)],

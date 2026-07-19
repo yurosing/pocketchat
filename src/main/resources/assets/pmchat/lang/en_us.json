@@ -59,6 +59,7 @@
   "pmchat.set.msgtextcolor": "Message text color",
   "pmchat.set.staff": "Staff features (/warn)",
   "pmchat.set.coreprotect": "CoreProtect feed",
+  "pmchat.set.mediabar": "Player bar while typing",
   "pmchat.menu.readat": "Read",
   "pmchat.menu.unread": "Not read",
   "pmchat.menu.editedat": "Edited",

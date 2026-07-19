@@ -134,6 +134,9 @@ public class PmConfig {
      * показываются как есть, без перевода. Паттерн ловит вывод плагина.
      */
     public boolean coreProtectEnabled = false;
+    /** NEW (1.7.8, #10): держать полоску аудиоплеера видимой и когда открыт
+     *  ванильный чат (при вводе сообщения), а не только на «голом» HUD. */
+    public boolean mediaBarWhileTyping = false;
     public String coreProtectPattern = "(?i)(coreprotect|/co\\b|\\bco\\s+(lookup|inspect|rollback|restore)|\\d+(?:\\.\\d+)?\\s*/\\s*[hчd]\\s+(ago|назад))";
 
     // ---------- Фильтры чата («No Global Chat») ----------

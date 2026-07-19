@@ -59,6 +59,7 @@
   "pmchat.set.msgtextcolor": "Цвет текста сообщений",
   "pmchat.set.staff": "Staff-функции (/warn)",
   "pmchat.set.coreprotect": "Лента CoreProtect",
+  "pmchat.set.mediabar": "Полоска плеера при вводе",
   "pmchat.menu.readat": "Прочитано",
   "pmchat.menu.unread": "Не прочитано",
   "pmchat.menu.editedat": "Изменено",

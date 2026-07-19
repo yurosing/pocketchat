@@ -134,7 +134,12 @@ public class PmChatClient implements ClientModInitializer {
         // так музыка/видео продолжают показываться в углу и когда чат закрыт.
         net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((ctx, tick) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.currentScreen != null) return; // экраны рисуют окошко сами
+            // Экраны обычно рисуют окошко сами. Исключение (#10): если включена
+            // опция «полоска при вводе», продолжаем рисовать её поверх ванильного
+            // чата, чтобы плеер не исчезал, пока пишешь сообщение.
+            boolean overChat = config.mediaBarWhileTyping
+                    && mc.currentScreen instanceof net.minecraft.client.gui.screen.ChatScreen;
+            if (mc.currentScreen != null && !overChat) return;
             if (PmMedia.get().hasActive()) {
                 PmMedia.get().renderMini(ctx, -1, -1, false);
             }
