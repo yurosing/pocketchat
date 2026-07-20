@@ -1880,8 +1880,14 @@ public class PmScreen extends Screen {
                     videoStatusText = null;
                     videoOpenedAt = System.currentTimeMillis();
                     if (media != null) {
-                        String audioPath = media.audio() != null ? media.audio().getAbsolutePath() : null;
-                        startVideoSession(media.video().getAbsolutePath(), audioPath,
+                        // VLC ждёт от :input-slave= нормальный MRL, а не сырой ФС-путь —
+                        // с пробелами/бэкслэшами (Windows) или юникодом в пути он не
+                        // парсится, и звуковая дорожка YouTube-видео (качается отдельным
+                        // файлом от видео) молча не подключается: картинка есть, звука нет.
+                        String videoUriStr = com.pmchat.client.PmMedia.fileUri(media.video());
+                        String audioUriStr = media.audio() != null
+                                ? com.pmchat.client.PmMedia.fileUri(media.audio()) : null;
+                        startVideoSession(videoUriStr, audioUriStr,
                                 media.video(), media.audio(), url);
                     } else {
                         // yt-dlp не смог (бот-проверка/нет бинарника) — состояние
