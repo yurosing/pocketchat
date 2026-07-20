@@ -36,9 +36,20 @@ jobs:
           name: mod-jar
           path: ${{ steps.jar.outputs.path }}
 
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            version=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+            echo "name=v$version" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          target_commitish: ${{ github.sha }}
           files: ${{ steps.jar.outputs.path }}
           generate_release_notes: true
