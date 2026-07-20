@@ -11,6 +11,10 @@ base {
 }
 
 repositories {
+    // Optional local override for dependencies pre-fetched by CI to dodge a
+    // flaky upstream CDN (see .github/workflows/release.yml) — empty/absent
+    // for normal local builds, so it never affects a dev's own resolution.
+    flatDir { dirs rootProject.file('libs') }
     maven { url = 'https://maven.fabricmc.net/' }
     maven { url = 'https://maven.terraformersmc.com/releases' }
     mavenCentral()

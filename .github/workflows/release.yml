@@ -22,6 +22,13 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Pre-fetch flaky dependencies
+        run: |
+          mkdir -p libs
+          curl -fL --retry 10 --retry-all-errors --retry-delay 3 \
+            -o libs/modmenu-17.0.0-beta.2.jar \
+            https://maven.terraformersmc.com/releases/com/terraformersmc/modmenu/17.0.0-beta.2/modmenu-17.0.0-beta.2.jar
+
       - name: Build
         run: ./gradlew build --stacktrace
 
