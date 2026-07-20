@@ -36,13 +36,13 @@ another one — just wait a bit.
 
 Most settings apply **after restarting the game** — just quit and reopen it.
 
-## A secret chat disappeared after restarting the game <Badge type="tip" text="NEW" />
+## A secret chat disappeared after restarting the game
 
 That's by design. Secret chats aren't saved anywhere — you'll need to start a
 new one the next time you launch the game. See
 [Secret chats](/en/guide/secret-chats) for details.
 
-## Video won't open in the built-in player <Badge type="tip" text="NEW" />
+## Video won't open in the built-in player
 
 This needs **VLC media player** installed on your computer. If you don't
 have it, grab it from [videolan.org](https://www.videolan.org/vlc/), or the
@@ -51,7 +51,7 @@ links specifically, VLC sometimes can't parse a given link — after 8 seconds
 an "Open in browser" button appears instead. More in
 [Video and YouTube](/en/guide/video).
 
-## The "Call" button doesn't do anything <Badge type="tip" text="NEW" />
+## The "Call" button doesn't do anything
 
 Calls run through the **Simple Voice Chat** mod, which needs to be installed
 **on the server** (not just on your computer). If the server doesn't have

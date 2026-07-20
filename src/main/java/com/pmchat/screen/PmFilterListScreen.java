@@ -29,16 +29,17 @@ public class PmFilterListScreen extends Screen {
 
     private static final int PANEL_W = 320;
 
-    private static final int BG = 0xFF1C3644;
-    private static final int BORDER = 0xFF10222C;
-    private static final int TITLE = 0xFFF2F6F8;
     private static final int SECTION = 0xFF8FD8A8;
-    private static final int BTN_BG = 0xFF15303D;
-    private static final int BTN_HOVER = 0xFF0F2833;
-    private static final int BTN_BORDER = 0xFF2A4A5C;
-    private static final int VALUE = 0xFFEDF3F0;
-    private static final int ROW_BG = 0xFF16241E;
-    private static final int ROW_BG2 = 0xFF12201B;
+
+    // Тема применяется в init() до построения строк
+    private int BG, BORDER, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, ROW_BG, ROW_BG2;
+
+    private void applyTheme() {
+        PmTheme t = PmTheme.dialog(config.theme);
+        BG = t.bg; BORDER = t.border; TITLE = t.title;
+        BTN_BG = t.btnBg; BTN_HOVER = t.btnHover; BTN_BORDER = t.btnBorder; VALUE = t.value;
+        ROW_BG = t.btnBg; ROW_BG2 = t.bg;
+    }
 
     private final Screen parent;
     private final int category;
@@ -73,6 +74,7 @@ public class PmFilterListScreen extends Screen {
 
     @Override
     protected void init() {
+        applyTheme();
         if (field != null) input = field.getText();
         clearChildren();
 

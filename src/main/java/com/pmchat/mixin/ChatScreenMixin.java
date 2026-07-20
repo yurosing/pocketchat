@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * NEW (1.7.9): делает полоску аудиоплеера кликабельной поверх ванильного чата
+ * делает полоску аудиоплеера кликабельной поверх ванильного чата
  * (опция «Полоска плеера при вводе»). Без этого HUD-полоса рисовалась над
  * ChatScreen, но клики по её кнопкам/перемотке не доходили до плеера.
  */

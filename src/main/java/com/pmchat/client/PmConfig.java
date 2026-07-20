@@ -134,7 +134,7 @@ public class PmConfig {
      * показываются как есть, без перевода. Паттерн ловит вывод плагина.
      */
     public boolean coreProtectEnabled = false;
-    /** NEW (1.7.8, #10): держать полоску аудиоплеера видимой и когда открыт
+    /** держать полоску аудиоплеера видимой и когда открыт
      *  ванильный чат (при вводе сообщения), а не только на «голом» HUD. */
     public boolean mediaBarWhileTyping = false;
     public String coreProtectPattern = "(?i)(coreprotect|/co\\b|\\bco\\s+(lookup|inspect|rollback|restore)|\\d+(?:\\.\\d+)?\\s*/\\s*[hчd]\\s+(ago|назад))";
@@ -335,6 +335,15 @@ public class PmConfig {
 
     /** Закрывать меню при получении урона. */
     public boolean closeOnDamage = false;
+
+    /**
+     * Тип голосовой группы при звонке через Simple Voice Chat:
+     * 0 — обычная (NORMAL), 1 — открытая (OPEN), 2 — изолированная (ISOLATED).
+     */
+    public int voiceGroupType = 0;
+
+    /** Защищать войс-группу случайным паролем (звонящий делится им сам). */
+    public boolean voiceGroupPassword = true;
 
     /** При копировании текста добавлять «ник: » в начало. */
     public boolean mentionOnCopy = false;

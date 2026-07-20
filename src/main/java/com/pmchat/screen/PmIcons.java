@@ -12,20 +12,32 @@ public final class PmIcons {
     private PmIcons() {
     }
 
-    /** Рисует иконку по центру прямоугольника x0,y0,w,h цветом color (ARGB). */
+    /**
+     * Рисует иконку по центру прямоугольника x0,y0,w,h цветом color (ARGB).
+     * '#' — полный пиксель, '+' — 55% (сглаживание углов), '.' — 28%.
+     */
     public static void draw(DrawContext ctx, String[] bmp, int x0, int y0, int w, int h, int color) {
         int gw = bmp[0].length();
         int gh = bmp.length;
         int ox = x0 + (w - gw) / 2;
         int oy = y0 + (h - gh) / 2;
+        int soft = withAlpha(color, 0.55f);
+        int faint = withAlpha(color, 0.28f);
         for (int ry = 0; ry < gh; ry++) {
             String row = bmp[ry];
             for (int rx = 0; rx < row.length(); rx++) {
-                if (row.charAt(rx) == '#') {
-                    ctx.fill(ox + rx, oy + ry, ox + rx + 1, oy + ry + 1, color);
+                char c = row.charAt(rx);
+                int col = c == '#' ? color : c == '+' ? soft : c == '.' ? faint : 0;
+                if (col != 0) {
+                    ctx.fill(ox + rx, oy + ry, ox + rx + 1, oy + ry + 1, col);
                 }
             }
         }
+    }
+
+    private static int withAlpha(int argb, float k) {
+        int a = (int) (((argb >>> 24) & 0xFF) * k);
+        return (a << 24) | (argb & 0x00FFFFFF);
     }
 
     // ----- Матрицы иконок (9×9) -----
@@ -33,27 +45,27 @@ public final class PmIcons {
     /** Фотоаппарат с кольцом-объективом — «Отправить фото». */
     public static final String[] PHOTO = {
             "         ",
-            "  ###    ",
-            " ####### ",
-            " #     # ",
-            " # ### # ",
-            " # # # # ",
-            " # ### # ",
-            " ####### ",
+            "   ##    ",
+            "+#######+",
+            "#+     +#",
+            "#+ +#+ +#",
+            "#+ # # +#",
+            "#+ +#+ +#",
+            "+#######+",
             "         ",
     };
 
     /** Микрофон — «Голосовое сообщение». */
     public static final String[] VOICE = {
             "   ###   ",
-            "   # #   ",
-            "   # #   ",
-            "   # #   ",
-            "  #   #  ",
-            "   ###   ",
-            "    #    ",
-            "  #####  ",
-            "         ",
+            "  +#+#+  ",
+            "  #+++#  ",
+            "  #+++#  ",
+            "  #+++#  ",
+            " +#   #+ ",
+            "  +# #+  ",
+            "   +#+   ",
+            "  +###+  ",
     };
 
     /** Монета со знаком $ — «Перевести деньги». */
@@ -110,14 +122,14 @@ public final class PmIcons {
 
     /** Улыбка — «Эмодзи». */
     public static final String[] EMOJI = {
-            "  #####  ",
-            " #     # ",
-            "# #   # #",
-            "#       #",
-            "# #   # #",
-            "#  ###  #",
-            " #     # ",
-            "  #####  ",
+            "  +###+  ",
+            " #+++++# ",
+            "#++#+#++#",
+            "#+++++++#",
+            "#+#+++#+#",
+            "#++###++#",
+            " #+++++# ",
+            "  +###+  ",
             "         ",
     };
 
@@ -125,11 +137,11 @@ public final class PmIcons {
     public static final String[] SETTINGS = {
             "         ",
             "   ##    ",
-            " ####### ",
+            " +#####+ ",
             "   ##    ",
             "         ",
             "     ##  ",
-            " ####### ",
+            " +#####+ ",
             "     ##  ",
             "         ",
     };
@@ -173,7 +185,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (6.10): замочек — «Секретный чат» (шрифт игры не умеет 🔒, рисуем сами). */
+    /** замочек — «Секретный чат» (шрифт игры не умеет 🔒, рисуем сами). */
     public static final String[] LOCK = {
             "  ###    ",
             " #   #   ",
@@ -186,7 +198,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW: открытая книга — «Документация» (кнопка-ссылка на сайт). */
+    /** открытая книга — «Документация» (кнопка-ссылка на сайт). */
     public static final String[] BOOK = {
             "         ",
             " ##   ## ",
@@ -199,7 +211,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (1.7.8, #15): страница документа с текстовыми строками и загнутым
+    /** страница документа с текстовыми строками и загнутым
      *  уголком — «Документация мода». */
     public static final String[] DOCS = {
             " #####   ",
@@ -213,33 +225,33 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW: телефонная трубка — «Позвонить» (Simple Voice Chat). */
+    /** телефонная трубка — «Позвонить» (Simple Voice Chat). */
     public static final String[] CALL = {
             "         ",
-            "   ###   ",
-            "  #   #  ",
-            "  #    # ",
-            "  #  ##  ",
-            "  ##  #  ",
-            " #    #  ",
-            " #   #   ",
-            "  ###    ",
+            " +##+    ",
+            " ####    ",
+            " ###+    ",
+            " +##+    ",
+            "   +##+  ",
+            "    +###+",
+            "    +####",
+            "     +##+",
     };
 
-    /** NEW: три точки — «Ещё» (свёрнутое меню редких действий). */
+    /** три точки — «Ещё» (свёрнутое меню редких действий). */
     public static final String[] MORE = {
             "         ",
-            "   ###   ",
-            "   ###   ",
+            "   ##    ",
+            "   ##    ",
             "         ",
-            "   ###   ",
-            "   ###   ",
+            "   ##    ",
+            "   ##    ",
             "         ",
-            "   ###   ",
-            "   ###   ",
+            "   ##    ",
+            "   ##    ",
     };
 
-    /** NEW (5.0): треугольник — «Воспроизвести» (видеоплеер). */
+    /** треугольник — «Воспроизвести» (видеоплеер). */
     public static final String[] PLAY = {
             "         ",
             "  #      ",
@@ -252,7 +264,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (5.0): две палки — «Пауза» (видеоплеер). */
+    /** две палки — «Пауза» (видеоплеер). */
     public static final String[] PAUSE = {
             "         ",
             "  ##  ## ",
@@ -265,7 +277,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (5.0): динамик с волной — «Громкость» (видеоплеер). */
+    /** динамик с волной — «Громкость» (видеоплеер). */
     public static final String[] VOLUME = {
             "         ",
             "    #    ",
@@ -278,7 +290,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (5.0): стрелка из рамки — «Открыть в браузере» (видеоплеер). */
+    /** стрелка из рамки — «Открыть в браузере» (видеоплеер). */
     public static final String[] LINKOUT = {
             "         ",
             "    #####",
@@ -291,7 +303,7 @@ public final class PmIcons {
             " ####    ",
     };
 
-    /** NEW (5.2): нижняя черта — «Свернуть» плеер в окошко. */
+    /** нижняя черта — «Свернуть» плеер в окошко. */
     public static final String[] MINIMIZE = {
             "         ",
             "         ",
@@ -304,7 +316,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (5.2): рамка со стрелками — «Развернуть» плеер обратно на весь экран. */
+    /** рамка со стрелками — «Развернуть» плеер обратно на весь экран. */
     public static final String[] EXPAND = {
             "         ",
             " ##   ## ",
@@ -317,7 +329,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (5.3): нота — «Музыка/плейлист». */
+    /** нота — «Музыка/плейлист». */
     public static final String[] NOTE = {
             "     ##  ",
             "    ###  ",
@@ -330,7 +342,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (5.3): предыдущий трек. */
+    /** предыдущий трек. */
     public static final String[] PREV = {
             "         ",
             " #    #  ",
@@ -343,7 +355,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (5.3): следующий трек. */
+    /** следующий трек. */
     public static final String[] NEXT = {
             "         ",
             "  #    # ",
@@ -356,7 +368,7 @@ public final class PmIcons {
             "         ",
     };
 
-    /** NEW (4.9): пиксельная мозаика — «Спойлер» (скрыть фото/видео до клика). */
+    /** пиксельная мозаика — «Спойлер» (скрыть фото/видео до клика). */
     public static final String[] SPOILER = {
             "         ",
             " ## ##   ",

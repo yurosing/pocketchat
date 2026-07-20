@@ -65,49 +65,71 @@ public class PmScreen extends Screen {
         BADGE_BG = 0xFF4C8A66;
 
         if (config.theme == 1) {
-            // Светлая
-            PANEL_BG = 0xFFF3F6F8;
-            PANEL_BORDER = 0xFFB9C6CE;
-            LEFT_BG = 0xFFE7EDF1;
-            DIVIDER = 0xFFC8D4DC;
-            TITLE = 0xFF1B2B35;
-            SUBTLE = 0xFF93A6B2;
-            NAME_TEXT = 0xFF23333D;
-            PREVIEW_TEXT = 0xFF7E929E;
-            ROW_HOVER = 0xFFDAE4EA;
-            ROW_SELECTED = 0xFFC2D6E4;
-            IN_BG = 0xFFFFFFFF;
-            IN_TEXT = 0xFF25313A;
-            WBTN_BG = 0xFFE0E8ED;
-            WBTN_BG_HOVER = 0xFFD2DEE5;
-            WBTN_BORDER = 0xFFB9C8D1;
-            WBTN_TEXT = 0xFF3A5A70;
+            // Cool Light (редизайн 1A) — прохладная светлая, синий подтон
+            PANEL_BG = 0xFFF2F6F9;
+            PANEL_BORDER = 0xFFCDD5DB;
+            LEFT_BG = 0xFFE7ECF0;
+            DIVIDER = 0xFFCDD5DB;
+            TITLE = 0xFF19232A;
+            SUBTLE = 0xFF6A737A;
+            NAME_TEXT = 0xFF19232A;
+            PREVIEW_TEXT = 0xFF6A737A;
+            ROW_HOVER = 0xFFDDE4E9;
+            ROW_SELECTED = 0xFFD8DFE4;
+            IN_BG = 0xFFF9FCFE;
+            IN_TEXT = 0xFF19232A;
+            WBTN_BG = 0xFFE7ECF0;
+            WBTN_BG_HOVER = 0xFFDDE4E9;
+            WBTN_BORDER = 0xFFCDD5DB;
+            WBTN_TEXT = 0xFF3F5A6E;
             SEP_LINE = 0x33587488;
-            EMOJI_BG = 0xF2FFFFFF;
-            CHIP_BG = 0xFFE7EDF1;
-            ROW_ALT = 0xFFE0E8ED;
+            EMOJI_BG = 0xF2F9FCFE;
+            CHIP_BG = 0xFFE7ECF0;
+            ROW_ALT = 0xFFE7ECF0;
+        } else if (config.theme == 2) {
+            // Cool Slate (редизайн 1C) — приглушённый серо-синий
+            PANEL_BG = 0xFFB9C6D0;
+            PANEL_BORDER = 0xFFA0ADB6;
+            LEFT_BG = 0xFFC2CCD3;
+            DIVIDER = 0xFFA0ADB6;
+            TITLE = 0xFF0E171E;
+            SUBTLE = 0xFF444F57;
+            NAME_TEXT = 0xFF0E171E;
+            PREVIEW_TEXT = 0xFF444F57;
+            ROW_HOVER = 0xFFCFD8DE;
+            ROW_SELECTED = 0xFFE2E9EE;
+            IN_BG = 0xFFE7ECF0;
+            IN_TEXT = 0xFF0E171E;
+            WBTN_BG = 0xFFC2CCD3;
+            WBTN_BG_HOVER = 0xFFCFD8DE;
+            WBTN_BORDER = 0xFFA7B3BC;
+            WBTN_TEXT = 0xFF32424E;
+            SEP_LINE = 0x33445560;
+            EMOJI_BG = 0xF2E2E9EE;
+            CHIP_BG = 0xFFC2CCD3;
+            ROW_ALT = 0xFFC2CCD3;
         } else {
-            // Тёмная
-            PANEL_BG = 0xFF1C3644;
-            PANEL_BORDER = 0xFF10222C;
-            LEFT_BG = 0xFF15303D;
-            DIVIDER = 0xFF2A4A5C;
-            TITLE = 0xFFF2F6F8;
-            SUBTLE = 0xFF54748A;
-            NAME_TEXT = 0xFFEDF3F0;
-            PREVIEW_TEXT = 0xFF7E9AAB;
-            ROW_HOVER = 0xFF1E3E4E;
-            ROW_SELECTED = 0xFF25506A;
-            IN_BG = 0xFFF2F2F2;
-            IN_TEXT = 0xFF222222;
-            WBTN_BG = 0xFF15303D;
-            WBTN_BG_HOVER = 0xFF0F2833;
-            WBTN_BORDER = 0xFF2A4A5C;
-            WBTN_TEXT = 0xFF9CC4DC;
+            // Cool Dark (редизайн 1B) — глубокая прохладная тёмная
+            PANEL_BG = 0xFF141C21;
+            PANEL_BORDER = 0xFF0B1116;
+            LEFT_BG = 0xFF0E151A;
+            DIVIDER = 0xFF2C343A;
+            TITLE = 0xFFDFE6EB;
+            SUBTLE = 0xFF788288;
+            NAME_TEXT = 0xFFDFE6EB;
+            PREVIEW_TEXT = 0xFF788288;
+            ROW_HOVER = 0xFF1A2227;
+            ROW_SELECTED = 0xFF20282D;
+            IN_BG = 0xFF2C343A;
+            IN_TEXT = 0xFFDFE6EB;
+            WBTN_BG = 0xFF20282D;
+            WBTN_BG_HOVER = 0xFF1A2227;
+            WBTN_BORDER = 0xFF343C42;
+            WBTN_TEXT = 0xFF9FB6C4;
             SEP_LINE = 0x33587488;
-            EMOJI_BG = 0xF21C3644; // непрозрачная тёмная панель (было 0 — прозрачная)
-            CHIP_BG = 0xFF15303D;
-            ROW_ALT = 0xFF1A3A4A;
+            EMOJI_BG = 0xF2141C21;
+            CHIP_BG = 0xFF20282D;
+            ROW_ALT = 0xFF181F24;
         }
 
         // Настраиваемые цвета поверх темы
@@ -159,13 +181,37 @@ public class PmScreen extends Screen {
         return a | (r << 16) | (g << 8) | b;
     }
 
-    /** NEW (6.10): смешивает цвет с целевым в заданной пропорции (0 — как есть, 1 — целевой). */
+    /** смешивает цвет с целевым в заданной пропорции (0 — как есть, 1 — целевой). */
     private static int tintTowards(int argb, int target, float mix) {
         int a = argb & 0xFF000000;
         int r = (int) (((argb >> 16) & 0xFF) * (1 - mix) + ((target >> 16) & 0xFF) * mix);
         int g = (int) (((argb >> 8) & 0xFF) * (1 - mix) + ((target >> 8) & 0xFF) * mix);
         int b = (int) ((argb & 0xFF) * (1 - mix) + (target & 0xFF) * mix);
         return a | (r << 16) | (g << 8) | b;
+    }
+
+    /** Горизонтальный отступ квартерокружности угла на строке i (0 — крайняя). */
+    private static int cornerSkip(int r, int i) {
+        if (r <= 0 || i >= r) return 0;
+        return r - (int) Math.floor(Math.sqrt((double) r * r - (double) (i - r) * (i - r)));
+    }
+
+    /** Заливка прямоугольника со скруглёнными углами (радиусы по углам независимы). */
+    public static void fillRound(DrawContext c, int x, int y, int w, int h,
+                                  int tl, int tr, int br, int bl, int color) {
+        for (int row = 0; row < h; row++) {
+            int li = 0, ri = 0;
+            if (row < tl) { li = Math.max(li, cornerSkip(tl, row)); }
+            if (row < tr) { ri = Math.max(ri, cornerSkip(tr, row)); }
+            if (row >= h - bl) { li = Math.max(li, cornerSkip(bl, h - 1 - row)); }
+            if (row >= h - br) { ri = Math.max(ri, cornerSkip(br, h - 1 - row)); }
+            c.fill(x + li, y + row, x + w - ri, y + row + 1, color);
+        }
+    }
+
+    /** Скруглённый прямоугольник с одинаковым радиусом по всем углам. */
+    public static void fillRound(DrawContext c, int x, int y, int w, int h, int r, int color) {
+        fillRound(c, x, y, w, h, r, r, r, r, color);
     }
 
     // Геометрия: три размера окна (⤢), выбор хранится в конфиге
@@ -187,8 +233,32 @@ public class PmScreen extends Screen {
     private String selected = null;
     private boolean statsMode = false;
     private boolean moneyMode = false;
-    /** NEW: меню «⋮» — редкие действия (видео/аудио, опрос, деньги, статистика). */
+    /** меню «⋮» — редкие действия (видео/аудио, опрос, деньги, статистика). */
     private boolean moreMenuOpen = false;
+    /** меню звонка — длительность, участники, тип группы, завершение. */
+    private boolean callMenuOpen = false;
+
+    // Анимации: покадровый шаг времени и плавный индикатор выбранного чата
+    private long animLastMs = 0L;
+    private float animDt = 0f;
+    private float selIndicatorY = -1f;   // текущая позиция акцентной полоски
+    private int selIndicatorTarget = -1; // целевой Y (верх выбранной строки)
+    private int selIndicatorH = 0;       // высота выбранной строки
+
+    /** Плавно подводит value к target со скоростью speed (в единицах/сек). */
+    private float ease(float value, float target, float speed) {
+        return value + (target - value) * Math.min(1f, animDt * speed);
+    }
+
+    /** Пульсирующая скруглённая «пилюля» бейджа непрочитанных у правого края строки. */
+    private void drawBadge(DrawContext context, int rightX, int y, String text) {
+        int bw = textRenderer.getWidth(text) + 6;
+        int x = rightX - bw;
+        float pulse = 0.5f + 0.5f * (float) Math.sin(System.currentTimeMillis() / 320.0);
+        int bg = tintTowards(BADGE_BG, 0xFFFFFFFF, 0.12f * pulse);
+        fillRound(context, x, y + 3, bw, 10, 5, bg);
+        context.drawText(textRenderer, text, x + 3, y + 4, 0xFFFFFFFF, false);
+    }
 
     // Групповой чат (6.9): режим создания + поля
     private boolean groupCreateMode = false;
@@ -220,7 +290,7 @@ public class PmScreen extends Screen {
     private boolean uploadFailed = false;
     private List<Path> screenshots = List.of();
     private List<Path> stickers = List.of();
-    /** NEW (4.9): следующее отправленное фото/видео уйдёт со спойлером (размытие до клика). */
+    /** следующее отправленное фото/видео уйдёт со спойлером (размытие до клика). */
     private boolean spoilerMode = false;
     private int[] spoilerToggleRect;
 
@@ -233,7 +303,7 @@ public class PmScreen extends Screen {
     // Редактирование своего сообщения (5.7): цель правки + плашка-отмена
     private PmMessage editTarget = null;
     private int editCancelX = -1, editCancelY = -1;
-    // NEW (1.7.8): отдельное многострочное окно правки — весь текст виден целиком,
+    // отдельное многострочное окно правки — весь текст виден целиком,
     // а не «прокручивается» в однострочном поле ввода.
     private EditBoxWidget editBox = null;
     private int[] editSaveRect, editCancelRect;
@@ -271,7 +341,7 @@ public class PmScreen extends Screen {
     private final List<Object[]> rowRects = new ArrayList<>(); // x,y,w,h,name
     private final List<Object[]> shotRects = new ArrayList<>(); // x,y,w,h,path,isSticker
     private final List<Object[]> bubbleRects = new ArrayList<>(); // x,y,w,h,msg
-    private final List<Object[]> spoilerRects = new ArrayList<>(); // NEW (4.9): x,y,w,h,msg — клик открывает спойлер
+    private final List<Object[]> spoilerRects = new ArrayList<>(); // x,y,w,h,msg — клик открывает спойлер
     private final List<Object[]> warnBtnRects = new ArrayList<>(); // x,y,w,h,nick (6.8 кнопка преда)
     private final List<Object[]> pollOptRects = new ArrayList<>(); // x,y,w,h,msg,optIndex
     private final List<Object[]> emojiRects = new ArrayList<>(); // x,y,w,h,emoji
@@ -286,15 +356,15 @@ public class PmScreen extends Screen {
     // Просмотр фото на весь экран
     private PmImages.Entry fullscreenImg = null;
 
-    // NEW (4.3): встроенный видеоплеер (VLC). Сама сессия и её жизненный цикл
+    // встроенный видеоплеер (VLC). Сама сессия и её жизненный цикл
     // теперь живут в персистентном com.pmchat.client.PmMedia (играет и когда чат
     // закрыт). Здесь остаётся лишь состояние ПОДГОТОВКИ (скачивание через yt-dlp).
     private String videoUrl;            // ссылка готовящегося/текущего видео
     private long videoOpenedAt;
-    private boolean videoResolving = false; // NEW (5.0): фоновая подготовка YouTube (yt-dlp)
+    private boolean videoResolving = false; // фоновая подготовка YouTube (yt-dlp)
     private boolean videoOpenFailed = false; // резолв/запуск не удался — сразу показываем fallback
-    private volatile String videoStatusText = null; // NEW (5.1): «yt-dlp» / «42%» при подготовке
-    private boolean videoNeedsCookies = false;      // NEW (5.1): провал из-за требования входа YouTube
+    private volatile String videoStatusText = null; // «yt-dlp» / «42%» при подготовке
+    private boolean videoNeedsCookies = false;      // провал из-за требования входа YouTube
     private int videoSeq = 0;           // защита от «просроченных» фоновых резолвов
     private int[] videoFallbackRect; // «Открыть в браузере», если VLC не смог показать
     private boolean videoDragSeek = false;
@@ -305,9 +375,9 @@ public class PmScreen extends Screen {
     private int[] videoPlayRect;  // x,y,w,h кнопки play/pause
     private int[] videoRateRect;  // x,y,w,h кнопки скорости
     private int[] videoCloseRect; // x,y,w,h кнопки закрытия
-    private int[] videoBrowserRect; // NEW (5.0): кнопка «в браузере» в панели
+    private int[] videoBrowserRect; // кнопка «в браузере» в панели
     private int[] videoImgRect;   // x,y,w,h самого видеокадра (клик — пауза/плей)
-    private int[] videoMinRect;   // NEW (5.2): кнопка «свернуть» в полноэкранном плеере
+    private int[] videoMinRect;   // кнопка «свернуть» в полноэкранном плеере
 
     // Пересылка: выбранное сообщение ждёт, пока кликнут диалог-получатель
     private PmMessage forwardBuffer = null;
@@ -319,18 +389,18 @@ public class PmScreen extends Screen {
     private boolean pinListOpen = false; // оверлей списка закреплённых
 
     // Глобальный поиск по всем чатам (6.7)
-    // NEW (5.3): оверлей плейлистов прямо в мессенджере
+    // оверлей плейлистов прямо в мессенджере
     private boolean playlistOpen = false;
     private int playlistScroll = 0;
     private final List<Object[]> playlistRowRects = new ArrayList<>(); // x,y,w,h,File,type,queueIdx
     private int[] playlistCloseRect, playlistFolderBtnRect;
-    // NEW (1.7.8, #12): навигация по папкам внутри оверлея плейлистов.
+    // навигация по папкам внутри оверлея плейлистов.
     private java.io.File playlistDir = null; // null → корень config/pmchat-music
     private int[] playlistUpRect, playlistPlayAllRect;
-    // NEW (1.7.8, #6/#8/#11): компактная панель управления музыкой в оверлее.
+    // компактная панель управления музыкой в оверлее.
     private int[] plPrevRect, plPlayRect, plNextRect, plSeekRect;
     private boolean plSeeking = false; // #4: перетаскивание полоски перемотки
-    // NEW (1.7.8, #13): кнопки ↑/↓ переноса треков в очереди (x,y,w,h,dir,idx).
+    // кнопки ↑/↓ переноса треков в очереди (x,y,w,h,dir,idx).
     private final List<int[]> playlistMoveRects = new ArrayList<>();
 
     private boolean searchOpen = false;
@@ -345,7 +415,7 @@ public class PmScreen extends Screen {
     private String pendingJumpHash = null; // отложенный переход к сообщению (после смены диалога)
     private int pendingJumpOffset = -1;
 
-    /** NEW: выпадающее меню «⋮» — видео/аудио, опрос, деньги, статистика. */
+    /** выпадающее меню «⋮» — видео/аудио, опрос, деньги, статистика. */
     private void buildMoreMenu() {
         int w = 130;
         int x = px + PANEL_W - 10 - w;
@@ -385,6 +455,243 @@ public class PmScreen extends Screen {
                     clearConfirm = false;
                     rebuild();
                 }));
+    }
+
+    // ---------- Меню звонка (карточка внутри окна мода) ----------
+
+    // Вертикальные смещения от верха карточки (общие для build/render)
+    private static final int CALL_AV_CY = 30;        // центр аватара
+    private static final int CALL_NAME_Y = 48;
+    private static final int CALL_STATUS_Y = 64;
+    private static final int CALL_TIMER_Y = 76;
+    // idle (настройка звонка)
+    private static final int CALL_TYPE_Y = 100;      // кнопки типа группы
+    private static final int CALL_PASS_Y = 124;      // тумблер пароля
+    // active (идёт звонок)
+    private static final int CALL_PASSVAL_Y = 96;    // строка пароля
+    private static final int CALL_PARTIC_Y = 110;    // ряд аватарок участников
+    // общая кнопка позвонить/завершить
+    private static final int CALL_ACT_Y = 150;
+    private static final int CALL_CARD_H = 180;
+
+    /** Карточка меню звонка внутри окна мода (в области чата): {x, y, w, h}. */
+    private int[] callCardRect() {
+        int w = Math.min(260, PANEL_W - LEFT_W - 20);
+        int h = Math.min(CALL_CARD_H, PANEL_H - 16);
+        int x = px + LEFT_W + (PANEL_W - LEFT_W - w) / 2;
+        int y = py + (PANEL_H - h) / 2;
+        return new int[]{x, y, w, h};
+    }
+
+    private boolean callActiveHere() {
+        return PmChatClient.isCallActive()
+                && selected != null && selected.equalsIgnoreCase(PmChatClient.callTarget());
+    }
+
+    private void buildCallMenu() {
+        int[] r = callCardRect();
+        int x = r[0], y = r[1], w = r[2];
+        int pad = 12;
+        int innerW = w - pad * 2;
+
+        // Крестик закрытия
+        addDrawableChild(FlatButton.centered(textRenderer, x + w - 22, y + 8, 16, 14,
+                Text.literal("✕"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
+                    callMenuOpen = false;
+                    rebuild();
+                }));
+
+        if (callActiveHere()) {
+            // В звонке: только кнопка «Завершить» (тип/пароль — настройки до звонка)
+            addDrawableChild(FlatButton.centered(textRenderer, x + pad, y + CALL_ACT_Y, innerW, 22,
+                    Text.translatable("pmchat.call.hangup"),
+                    0xFF7A2E2E, 0xFF8A3636, 0xFFB05050, 0xFFF6DADA, btn -> {
+                        PmChatClient.endCall();
+                        rebuild();
+                    }));
+            return;
+        }
+
+        // Настройка звонка: селектор типа группы (три кнопки в ряд)
+        int tw = (innerW - 8) / 3;
+        String[] typeKeys = {"pmchat.call.type.normal", "pmchat.call.type.open", "pmchat.call.type.isolated"};
+        for (int i = 0; i < 3; i++) {
+            final int idx = i;
+            boolean sel = config.voiceGroupType == i;
+            addDrawableChild(FlatButton.centered(textRenderer, x + pad + i * (tw + 4), y + CALL_TYPE_Y, tw, 16,
+                    Text.translatable(typeKeys[i]),
+                    sel ? ACCENT_BG : WBTN_BG, sel ? ACCENT_HOVER : WBTN_BG_HOVER,
+                    sel ? ACCENT_BORDER : WBTN_BORDER, sel ? ACCENT_TEXT : WBTN_TEXT, btn -> {
+                        config.voiceGroupType = idx;
+                        config.save();
+                        rebuild();
+                    }));
+        }
+
+        // Тумблер пароля
+        addDrawableChild(FlatButton.centered(textRenderer, x + pad, y + CALL_PASS_Y, innerW, 15,
+                Text.translatable(config.voiceGroupPassword
+                        ? "pmchat.call.pass.on" : "pmchat.call.pass.off"),
+                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
+                config.voiceGroupPassword ? 0xFF8FD8A8 : WBTN_TEXT, btn -> {
+                    config.voiceGroupPassword = !config.voiceGroupPassword;
+                    config.save();
+                    rebuild();
+                }));
+
+        addDrawableChild(FlatButton.centered(textRenderer, x + pad, y + CALL_ACT_Y, innerW, 22,
+                Text.translatable("pmchat.call.start"),
+                ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> {
+                    PmChatClient.startCall(selected);
+                    rebuild();
+                }));
+    }
+
+    /** Затемнение окна мода + карточка звонка (рисуется под кнопками). */
+    private void renderCallMenu(DrawContext context) {
+        // Затемняем только область окна мода, не весь экран
+        context.fill(px, py, px + PANEL_W, py + PANEL_H, 0x99000000);
+
+        int[] r = callCardRect();
+        int x = r[0], y = r[1], w = r[2], h = r[3];
+        int cx = x + w / 2;
+
+        // Приподнятая карточка с заметной рамкой (иначе сливается с затемнением)
+        int cardBg = tintTowards(PANEL_BG, config.theme == 0 ? 0xFFFFFFFF : 0xFF000000, 0.10f);
+        fillRound(context, x - 1, y - 1, w + 2, h + 2, 9, ACCENT_BG);
+        fillRound(context, x, y, w, h, 8, cardBg);
+
+        boolean activeHere = callActiveHere();
+
+        // Аватар собеседника + подсветка, если он говорит
+        int av = 16;
+        int avCy = y + CALL_AV_CY;
+        java.util.UUID targetId = playerId(selected);
+        boolean targetSpeaks = activeHere && targetId != null && PmChatClient.isSpeaking(targetId);
+        if (targetSpeaks) fillCircle(context, cx, avCy, av + 3, 0xFF6FBF8B);
+        drawAvatarCircle(context, selected, targetId, cx - av, avCy - av, av * 2);
+
+        // Имя собеседника
+        drawScaledCentered(context, selected != null ? selected : "", cx, y + CALL_NAME_Y, 1.2f, TITLE);
+
+        // Статус + пульсирующая точка
+        boolean on = ((System.currentTimeMillis() / 500) % 2) == 0;
+        int dotCol = activeHere ? (on ? 0xFF6FBF8B : 0xFF2E5F46) : 0xFF54748A;
+        String status = Text.translatable(activeHere
+                ? "pmchat.call.status.active" : "pmchat.call.status.idle").getString();
+        int sw = textRenderer.getWidth(status);
+        int sx = cx - (sw + 10) / 2;
+        context.fill(sx, y + CALL_STATUS_Y + 1, sx + 6, y + CALL_STATUS_Y + 7, dotCol);
+        context.drawText(textRenderer, Text.literal(status), sx + 10, y + CALL_STATUS_Y, SUBTLE, false);
+
+        // Крупный таймер
+        String dur = activeHere ? fmtDuration(PmChatClient.callDurationSeconds()) : "--:--";
+        drawScaledCentered(context, dur, cx, y + CALL_TIMER_Y, 1.8f, 0xFFEAF2F6);
+
+        if (activeHere) {
+            // Пароль текущего звонка
+            String pass = PmChatClient.callPassword();
+            String passLine = pass.isEmpty()
+                    ? Text.translatable("pmchat.call.pass.none").getString()
+                    : Text.translatable("pmchat.call.pass.label").getString() + " " + pass;
+            drawCentered(context, passLine, cx, y + CALL_PASSVAL_Y, 0xFFB9E0C8);
+
+            // Ряд аватарок участников (кто в группе + подсветка говорящих)
+            java.util.List<java.util.UUID> ids = PmChatClient.callMemberIds();
+            int size = 16, gap = 4;
+            int shown = Math.max(1, Math.min(ids.size(), (w - 16) / (size + gap)));
+            int rowW = shown * size + (shown - 1) * gap;
+            int rx = cx - rowW / 2;
+            int ry = y + CALL_PARTIC_Y;
+            for (int i = 0; i < shown; i++) {
+                java.util.UUID id = ids.get(i);
+                if (PmChatClient.isSpeaking(id)) {
+                    fillCircle(context, rx + size / 2, ry + size / 2, size / 2 + 2, 0xFF6FBF8B);
+                }
+                drawAvatarById(context, id, rx, ry, size);
+                rx += size + gap;
+            }
+            if (ids.size() > shown) {
+                context.drawText(textRenderer, "+" + (ids.size() - shown), rx + 2, ry + 4, SUBTLE, false);
+            }
+        } else {
+            // Метка «тип войс-группы» над кнопками выбора
+            drawCentered(context, Text.translatable("pmchat.call.type").getString(),
+                    cx, y + CALL_TYPE_Y - 11, SUBTLE);
+        }
+    }
+
+    /** UUID игрока по нику через список игроков сети (или null). */
+    private java.util.UUID playerId(String name) {
+        if (name == null || name.isEmpty()) return null;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.getNetworkHandler() == null) return null;
+        net.minecraft.client.network.PlayerListEntry e = mc.getNetworkHandler().getPlayerListEntry(name);
+        return e != null ? e.getProfile().id() : null;
+    }
+
+    /** Круглый аватар: скин игрока (если есть) обрезанный кругом-заглушкой, иначе цветной круг с буквой. */
+    private void drawAvatarCircle(DrawContext context, String name, java.util.UUID id, int x, int y, int size) {
+        // Голову рисуем поверх круглой заглушки — на маленьком размере читается как аватар
+        int bg = 0xFF000000 | (name != null ? nameColor(name) : 0x4A6B7E);
+        fillCircle(context, x + size / 2, y + size / 2, size / 2, bg);
+        if (name != null && !name.isEmpty()) {
+            String ini = name.substring(0, 1).toUpperCase(java.util.Locale.ROOT);
+            context.drawText(textRenderer, ini,
+                    x + size / 2 - textRenderer.getWidth(ini) / 2, y + size / 2 - 4, 0xFFFFFFFF, false);
+        }
+    }
+
+    /** Аватар участника по UUID: имя из списка игроков → голова/заглушка. */
+    private void drawAvatarById(DrawContext context, java.util.UUID id, int x, int y, int size) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        String name = null;
+        if (mc.getNetworkHandler() != null && id != null) {
+            net.minecraft.client.network.PlayerListEntry e = mc.getNetworkHandler().getPlayerListEntry(id);
+            if (e != null) name = e.getProfile().name();
+        }
+        if (name != null) drawAvatar(context, name, x, y, size);
+        else {
+            int bg = 0xFF000000 | (id != null ? (id.hashCode() & 0xFFFFFF) : 0x4A6B7E);
+            fillCircle(context, x + size / 2, y + size / 2, size / 2, bg);
+        }
+    }
+
+    private void drawCentered(DrawContext ctx, String s, int centerX, int y, int color) {
+        ctx.drawText(textRenderer, Text.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
+    }
+
+    /** Текст с масштабом вокруг точки (centerX, y — верх строки). */
+    private void drawScaledCentered(DrawContext ctx, String s, int centerX, int y, float scale, int color) {
+        var m = ctx.getMatrices();
+        m.pushMatrix();
+        m.translate(centerX, y);
+        m.scale(scale, scale);
+        ctx.drawText(textRenderer, Text.literal(s), -textRenderer.getWidth(s) / 2, 0, color, false);
+        m.popMatrix();
+    }
+
+    /** Залитый круг (радиус r) в центре (cx, cy). */
+    private static void fillCircle(DrawContext ctx, int cx, int cy, int r, int color) {
+        for (int dy = -r; dy <= r; dy++) {
+            int dx = (int) Math.sqrt((double) r * r - dy * dy);
+            ctx.fill(cx - dx, cy + dy, cx + dx, cy + dy + 1, color);
+        }
+    }
+
+    /** Затемнить цвет ARGB на коэффициент. */
+    private static int dim(int argb, float k) {
+        int a = argb >>> 24;
+        int rr = (int) (((argb >> 16) & 0xFF) * k);
+        int gg = (int) (((argb >> 8) & 0xFF) * k);
+        int bb = (int) ((argb & 0xFF) * k);
+        return (a << 24) | (rr << 16) | (gg << 8) | bb;
+    }
+
+    /** Секунды → мм:сс. */
+    private static String fmtDuration(int seconds) {
+        int m = seconds / 60, s = seconds % 60;
+        return String.format("%02d:%02d", m, s);
     }
 
     // Композер опроса (только личный чат)
@@ -575,7 +882,7 @@ public class PmScreen extends Screen {
                     config.save();
                     rebuild();
                 }));
-        // NEW (5.3): музыка/плейлисты прямо в мессенджере
+        // музыка/плейлисты прямо в мессенджере
         addDrawableChild(icon(px + 46, py + PANEL_H - 19, 16, 13, PmIcons.NOTE,
                 com.pmchat.client.PmMedia.get().hasActive() ? 0xFF6FBF8B : 0xFF8FD8A8,
                 "pmchat.tip.media", btn -> {
@@ -633,11 +940,17 @@ public class PmScreen extends Screen {
                 }
                 rebuild();
             }));
-            // NEW: звонок через Simple Voice Chat — прямо в строке, как и просили
+            // звонок через Simple Voice Chat — прямо в строке, как и просили
             if (config.isModUser(selected) && !PmChatClient.isLocalChat(selected)) {
-                addDrawableChild(icon(px + PANEL_W - 64, py + 6, 18, 14, PmIcons.CALL, 0xFF8FD8A8, "pmchat.tip.call", btn -> {
-                    PmChatClient.startCall(selected);
-                }));
+                boolean callingHere = PmChatClient.isCallActive()
+                        && selected.equalsIgnoreCase(PmChatClient.callTarget());
+                addDrawableChild(icon(px + PANEL_W - 64, py + 6, 18, 14, PmIcons.CALL,
+                        callingHere ? 0xFFE07A6A : 0xFF8FD8A8, "pmchat.tip.call", btn -> {
+                            boolean was = callMenuOpen;
+                            closeModes();
+                            callMenuOpen = !was;
+                            rebuild();
+                        }));
             }
             // «⋮» — остальное реже нужное: видео/аудио, опрос, деньги, статистика
             addDrawableChild(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.MORE, WBTN_TEXT, "pmchat.tip.more", btn -> {
@@ -647,6 +960,9 @@ public class PmScreen extends Screen {
 
             if (moreMenuOpen) {
                 buildMoreMenu();
+            }
+            if (callMenuOpen) {
+                buildCallMenu();
             }
 
             int inputY = py + PANEL_H - 24;
@@ -668,7 +984,7 @@ public class PmScreen extends Screen {
                 boolean secretActive = PmChatClient.isSecretActive(selected);
                 inputField = new TextFieldWidget(textRenderer, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
                         Text.translatable("pmchat.input.hint"));
-                // NEW (6.10): в секретном чате сообщения короче — шифротекст должен влезть в /m
+                // в секретном чате сообщения короче — шифротекст должен влезть в /m
                 inputField.setMaxLength(secretActive ? com.pmchat.client.PmWire.SECRET_MAX_CHARS : 200);
                 inputField.setText(inputText);
                 String inputHint = Text.translatable(
@@ -682,8 +998,8 @@ public class PmScreen extends Screen {
                     }
                 });
                 addDrawableChild(inputField);
-                addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 32, inputY, 24, 16,
-                        Text.literal("➤"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> doSend()));
+                addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 28, inputY - 1, 18, 18,
+                        Text.literal("➤"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> doSend()).circular());
             }
 
             if (pollMode) {
@@ -705,8 +1021,8 @@ public class PmScreen extends Screen {
             inputField.setSuggestion(inputText.isEmpty() ? inputHint : "");
             inputField.setChangedListener(s -> inputField.setSuggestion(s.isEmpty() ? inputHint : ""));
             addDrawableChild(inputField);
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 32, inputY, 24, 16,
-                    Text.literal("➤"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> doSend()));
+            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 28, inputY - 1, 18, 18,
+                    Text.literal("➤"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> doSend()).circular());
         }
 
         if (statsMode) {
@@ -717,7 +1033,7 @@ public class PmScreen extends Screen {
                         rebuild();
                     }));
 
-            // NEW (6.10 / звонки): секретный чат и звонок — только для личного диалога
+            // секретный чат и звонок — только для личного диалога
             // с игроком, у кого стоит мод. Кнопки встают НАД рядами «в контакты»/«очистить»
             // (те остаются на месте, -44/-24), стек растёт вверх по мере надобности.
             boolean secretEligible = selected != null && !isFeedTab()
@@ -815,7 +1131,7 @@ public class PmScreen extends Screen {
                     }));
         }
 
-        // NEW (1.7.8): многострочное окно правки поверх чата
+        // многострочное окно правки поверх чата
         if (editTarget != null && selected != null) {
             int ew = Math.min(360, PANEL_W - LEFT_W - 40);
             int eh = 96;
@@ -840,7 +1156,7 @@ public class PmScreen extends Screen {
         }
     }
 
-    /** NEW (1.7.8): открыть отдельное окно правки сообщения. */
+    /** открыть отдельное окно правки сообщения. */
     private void openEditor(PmMessage msg) {
         editTarget = msg;
         editBox = null; // пересоздастся в rebuild() с текстом сообщения
@@ -849,14 +1165,14 @@ public class PmScreen extends Screen {
         rebuild();
     }
 
-    /** NEW (1.7.8): закрыть окно правки без сохранения. */
+    /** закрыть окно правки без сохранения. */
     private void closeEditor() {
         editTarget = null;
         editBox = null;
         rebuild();
     }
 
-    /** NEW (1.7.8): сохранить правку из окна редактора. */
+    /** сохранить правку из окна редактора. */
     private void saveEditor() {
         if (editTarget == null || editBox == null || selected == null) return;
         String text = editBox.getText().replace('\n', ' ').trim();
@@ -880,9 +1196,10 @@ public class PmScreen extends Screen {
         groupCreateMode = false;
         spoilerMode = false;
         moreMenuOpen = false;
+        callMenuOpen = false;
     }
 
-    /** NEW (6.10): человекочитаемая метка таймера самоуничтожения. */
+    /** человекочитаемая метка таймера самоуничтожения. */
     private static String ttlLabel(int seconds) {
         if (seconds <= 0) return Text.translatable("pmchat.secret.ttl.off").getString();
         if (seconds < 60) return seconds + Text.translatable("pmchat.secret.ttl.s").getString();
@@ -971,7 +1288,7 @@ public class PmScreen extends Screen {
             rebuild();
             return;
         }
-        // NEW (6.10): в активном секретном чате сообщение шифруется вместо обычной отправки
+        // в активном секретном чате сообщение шифруется вместо обычной отправки
         if (PmChatClient.isSecretActive(selected)) {
             PmChatClient.sendSecretMessage(selected, text);
             inputField.setText("");
@@ -1275,7 +1592,7 @@ public class PmScreen extends Screen {
         context.fill(px + LEFT_W + 1, areaTop, px + PANEL_W - 1, py + PANEL_H - 2, PANEL_BG);
         context.drawText(textRenderer, Text.translatable("pmchat.media.pick"), x, areaTop + 2, 0xFF9CC4DC, false);
 
-        // NEW (4.9): переключатель «Спойлер» — применяется к следующему отправленному видео
+        // переключатель «Спойлер» — применяется к следующему отправленному видео
         Text spoilerLbl = Text.translatable("pmchat.spoiler.toggle");
         int spoilerW = textRenderer.getWidth(spoilerLbl) + 18;
         drawSpoilerToggle(context, mouseX, mouseY, px + PANEL_W - 10 - spoilerW, areaTop + 1);
@@ -1337,7 +1654,7 @@ public class PmScreen extends Screen {
         uploading = true;
         uploadFailed = false;
         String target = selected;
-        boolean spoiler = spoilerMode; // NEW (4.9): снимок настройки на момент отправки
+        boolean spoiler = spoilerMode; // снимок настройки на момент отправки
         PmImages.upload(file).whenComplete((res, err) ->
                 MinecraftClient.getInstance().execute(() -> {
                     uploading = false;
@@ -1388,7 +1705,7 @@ public class PmScreen extends Screen {
         uploading = true;
         uploadFailed = false;
         String target = selected;
-        boolean spoiler = spoilerMode; // NEW (4.9): снимок настройки на момент отправки
+        boolean spoiler = spoilerMode; // снимок настройки на момент отправки
         PmImages.upload(file).whenComplete((res, err) ->
                 MinecraftClient.getInstance().execute(() -> {
                     uploading = false;
@@ -1429,6 +1746,11 @@ public class PmScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        // Покадровый шаг времени для анимаций (не зависит от FPS)
+        long nowMs = System.currentTimeMillis();
+        animDt = animLastMs == 0 ? 0f : Math.min(0.1f, (nowMs - animLastMs) / 1000f);
+        animLastMs = nowMs;
+
         // Кнопка распознавания меняет вид при смене состояния
         if (com.pmchat.client.PmStt.consumeDirty()) {
             rebuild();
@@ -1456,6 +1778,10 @@ public class PmScreen extends Screen {
             context.drawText(textRenderer, hint, hx, py + PANEL_H / 2 - 4, SUBTLE, false);
         } else {
             renderChat(context, mouseX, mouseY);
+        }
+
+        if (callMenuOpen) {
+            renderCallMenu(context);
         }
 
         renderEditorBackdrop(context);
@@ -1493,7 +1819,7 @@ public class PmScreen extends Screen {
             context.drawText(textRenderer, hint, hx + 6, py - 13, 0xFFFFFFFF, false);
         }
 
-        // NEW (5.3): оверлей плейлистов прямо в панели мессенджера
+        // оверлей плейлистов прямо в панели мессенджера
         if (playlistOpen) {
             renderPlaylistOverlay(context, mouseX, mouseY);
         }
@@ -1501,14 +1827,14 @@ public class PmScreen extends Screen {
         if (fullscreenImg != null) {
             renderFullscreenImage(context);
         }
-        // NEW (5.3): видео/медиа — поверх всего. Подготовка (yt-dlp) и
+        // видео/медиа — поверх всего. Подготовка (yt-dlp) и
         // полноэкранное видео рисуются здесь; активную сессию хранит PmMedia,
         // свёрнутое окошко (видео или музыка) рисует сам PmMedia.
         com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
         if (videoResolving || videoOpenFailed) {
             renderVideoPlayer(context, mouseX, mouseY);
         } else if (media.hasActive()) {
-            // NEW (1.7.8, #6/#8): музыкальную полоску во весь верх экрана НЕ рисуем
+            // музыкальную полоску во весь верх экрана НЕ рисуем
             // поверх панели мессенджера — она перекрывала заголовок/кнопки и
             // воровала клики. Управление музыкой доступно в оверлее плейлистов.
             // Видео-окошко (угол) рисуем как раньше.
@@ -1524,14 +1850,14 @@ public class PmScreen extends Screen {
         }
     }
 
-    /** NEW (4.3): открыть видео по ссылке во встроенном плеере (закрывает предыдущий сеанс, если был). */
+    /** открыть видео по ссылке во встроенном плеере (закрывает предыдущий сеанс, если был). */
     private void openVideoPlayer(String url) {
         closeVideoPlayer();
         videoUrl = url;
         videoOpenedAt = System.currentTimeMillis();
         final int seq = ++videoSeq;
         if (com.pmchat.client.PmYouTube.isYouTube(url)) {
-            // NEW (5.1): напрямую отдать VLC ссылку на YouTube к 2026 нельзя —
+            // напрямую отдать VLC ссылку на YouTube к 2026 нельзя —
             // потоки заперты proof-of-origin токеном. Скачиваем ролик через
             // yt-dlp во временный файл (в фоне, с прогрессом) и играем его.
             videoResolving = true;
@@ -1600,7 +1926,7 @@ public class PmScreen extends Screen {
     }
 
     /**
-     * NEW (5.0): переработанный оверлей плеера — заголовок с источником и
+     * переработанный оверлей плеера — заголовок с источником и
      * закрытием сверху, кадр с рамкой по центру, аккуратная плавающая панель
      * управления снизу (play/время/перемотка/громкость/скорость/браузер),
      * состояния «резолвим ссылку / буферизация / не получилось» и драг
@@ -1832,7 +2158,7 @@ public class PmScreen extends Screen {
     }
 
     /**
-     * NEW (5.3): плейлист-браузер прямо в мессенджере — оверлей над правой
+     * плейлист-браузер прямо в мессенджере — оверлей над правой
      * панелью. Папки в config/pmchat-music = плейлисты, отдельные треки играют
      * с выбранного. Управление воспроизведением — в свёрнутом окошке в углу.
      */
@@ -1951,7 +2277,7 @@ public class PmScreen extends Screen {
         if (playerH > 0) renderMusicPlayer(ctx, mouseX, mouseY, x0, x1, y1 - playerH - 4, w);
     }
 
-    /** NEW (1.7.8): компактная панель управления музыкой внизу оверлея. */
+    /** компактная панель управления музыкой внизу оверлея. */
     private void renderMusicPlayer(DrawContext ctx, int mouseX, int mouseY, int x0, int x1, int y, int w) {
         com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
         com.pmchat.client.PmVlc.Session s = media.session();
@@ -2026,7 +2352,7 @@ public class PmScreen extends Screen {
         return n;
     }
 
-    /** NEW (4.9): «замыленная» плашка вместо фото/видео — как в Telegram/Discord, до клика. */
+    /** «замыленная» плашка вместо фото/видео — как в Telegram/Discord, до клика. */
     private void drawSpoilerCover(DrawContext context, int x, int y, int w, int h, float alpha) {
         context.fill(x, y, x + w, y + h, applyAlpha(0xFF1C1C1C, alpha));
         // Мозаика из квадратов — намёк на «размытие» без реального блюра
@@ -2056,7 +2382,7 @@ public class PmScreen extends Screen {
         }
     }
 
-    /** NEW (4.9): маленький переключатель «Спойлер» — рисует и обновляет spoilerToggleRect для клика. */
+    /** маленький переключатель «Спойлер» — рисует и обновляет spoilerToggleRect для клика. */
     private void drawSpoilerToggle(DrawContext context, int mouseX, int mouseY, int x, int y) {
         Text label = Text.translatable("pmchat.spoiler.toggle");
         int w = textRenderer.getWidth(label) + 18;
@@ -2132,7 +2458,7 @@ public class PmScreen extends Screen {
         context.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy,
                 0f, 0f, w, h, e.width, e.height, e.width, e.height);
         // Затемнение под тему (светлая — светлее, тёмная — темнее)
-        context.fill(x0, y0, x1, y1, config.theme == 1 ? 0x99FFFFFF : 0xB0000000);
+        context.fill(x0, y0, x1, y1, config.theme != 0 ? 0x99FFFFFF : 0xB0000000);
         context.disableScissor();
     }
 
@@ -2151,20 +2477,28 @@ public class PmScreen extends Screen {
             } catch (Throwable ignored) {
             }
         }
-        // Фолбэк: цветной фон + буква
-        int bg = nameColor(name);
-        context.fill(x, y, x + size, y + size, (0xFF << 24) | (bg & 0x00FFFFFF));
+        // Фолбэк: цветной круг + буква (как в макете)
+        int bg = 0xFF000000 | (nameColor(name) & 0x00FFFFFF);
+        fillCircle(context, x + size / 2, y + size / 2, (size + 1) / 2, bg);
         String letter = name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT);
         context.drawText(textRenderer, letter,
-                x + size / 2 - textRenderer.getWidth(letter) / 2, y + size / 2 - 4, 0xFF1A1A1A, false);
+                x + size / 2 - textRenderer.getWidth(letter) / 2, y + size / 2 - 4, 0xFFFFFFFF, false);
     }
 
     private String query() {
         return (searchField != null ? searchField.getText() : searchText).trim().toLowerCase(Locale.ROOT);
     }
 
+    /** Подсветка выбранной строки + запоминание её позиции для плавного индикатора. */
+    private void drawSelectedRow(DrawContext context, int y) {
+        fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_SELECTED);
+        selIndicatorTarget = y;
+        selIndicatorH = ROW_H - 1;
+    }
+
     private void renderConversationList(DrawContext context, int mouseX, int mouseY) {
         rowRects.clear();
+        selIndicatorTarget = -1; // сбрасываем — заново установит выбранная строка
         String query = query();
 
         List<String> names = new ArrayList<>();
@@ -2199,9 +2533,9 @@ public class PmScreen extends Screen {
             boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + ROW_H;
             boolean isSel = PmChatClient.GLOBAL.equals(selected);
             if (isSel) {
-                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_SELECTED);
+                drawSelectedRow(context, y);
             } else if (hovered) {
-                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_HOVER);
+                fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             }
             context.drawText(textRenderer, "◎", px + 7, y + 4, 0xFF6FBF8B, false);
             context.drawText(textRenderer,
@@ -2221,8 +2555,8 @@ public class PmScreen extends Screen {
         {
             boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + ROW_H;
             boolean isSel = PmChatClient.SAVED.equals(selected);
-            if (isSel) context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_SELECTED);
-            else if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_HOVER);
+            if (isSel) drawSelectedRow(context, y);
+            else if (hovered) fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             context.drawText(textRenderer, "✦", px + 7, y + 4, 0xFFF0C34E, false);
             context.drawText(textRenderer, trim(Text.translatable("pmchat.saved").getString(), LEFT_W - 26),
                     px + 18, y + 4, NAME_TEXT, false);
@@ -2239,8 +2573,8 @@ public class PmScreen extends Screen {
         if (PmChatClient.coreProtectHasMessages() && y + ROW_H <= bottom + 2) {
             boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + ROW_H;
             boolean isSel = PmChatClient.COREPROTECT.equals(selected);
-            if (isSel) context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_SELECTED);
-            else if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_HOVER);
+            if (isSel) drawSelectedRow(context, y);
+            else if (hovered) fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             context.drawText(textRenderer, "▤", px + 7, y + 4, 0xFF9CC4DC, false);
             context.drawText(textRenderer, trim("CoreProtect", LEFT_W - 26), px + 18, y + 4, NAME_TEXT, false);
             List<PmMessage> cp = PmChatClient.getCoreProtectFeed();
@@ -2259,9 +2593,9 @@ public class PmScreen extends Screen {
             boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + ROW_H;
             boolean isSel = tabId.equals(selected);
             if (isSel) {
-                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_SELECTED);
+                drawSelectedRow(context, y);
             } else if (hovered) {
-                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_HOVER);
+                fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             }
             context.drawText(textRenderer, "#", px + 7, y + 4, 0xFFF0C34E, false);
 
@@ -2277,10 +2611,7 @@ public class PmScreen extends Screen {
                 context.drawText(textRenderer, trim(preview, LEFT_W - 14), px + 7, y + 14, PREVIEW_TEXT, false);
             }
             if (chUnread > 0) {
-                String badge = chUnread > 9 ? "9+" : String.valueOf(chUnread);
-                int bw2 = textRenderer.getWidth(badge) + 6;
-                context.fill(px + LEFT_W - 5 - bw2, y + 3, px + LEFT_W - 5, y + 13, BADGE_BG);
-                context.drawText(textRenderer, badge, px + LEFT_W - 5 - bw2 + 3, y + 4, 0xFFFFFFFF, false);
+                drawBadge(context, px + LEFT_W - 5, y, chUnread > 9 ? "9+" : String.valueOf(chUnread));
             }
             rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, tabId});
             y += ROW_H;
@@ -2294,9 +2625,9 @@ public class PmScreen extends Screen {
             boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + ROW_H;
             boolean isSel = tabId.equals(selected);
             if (isSel) {
-                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_SELECTED);
+                drawSelectedRow(context, y);
             } else if (hovered) {
-                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_HOVER);
+                fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             }
             context.drawText(textRenderer, "▣", px + 7, y + 4, 0xFF6FBF8B, false);
             int gUnread = PmChatClient.groupUnread(g.id);
@@ -2313,10 +2644,7 @@ public class PmScreen extends Screen {
                         px + 7, y + 14, PREVIEW_TEXT, false);
             }
             if (gUnread > 0) {
-                String badge = gUnread > 9 ? "9+" : String.valueOf(gUnread);
-                int bw2 = textRenderer.getWidth(badge) + 6;
-                context.fill(px + LEFT_W - 5 - bw2, y + 3, px + LEFT_W - 5, y + 13, BADGE_BG);
-                context.drawText(textRenderer, badge, px + LEFT_W - 5 - bw2 + 3, y + 4, 0xFFFFFFFF, false);
+                drawBadge(context, px + LEFT_W - 5, y, gUnread > 9 ? "9+" : String.valueOf(gUnread));
             }
             rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, tabId});
             y += ROW_H;
@@ -2344,9 +2672,9 @@ public class PmScreen extends Screen {
             boolean isSelected = name.equalsIgnoreCase(selected);
 
             if (isSelected) {
-                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_SELECTED);
+                drawSelectedRow(context, y);
             } else if (hovered) {
-                context.fill(px + 2, y, px + LEFT_W - 1, y + ROW_H - 1, ROW_HOVER);
+                fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             }
 
             int unread = history.unreadCount(name);
@@ -2374,10 +2702,7 @@ public class PmScreen extends Screen {
             }
 
             if (unread > 0) {
-                String badge = unread > 9 ? "9+" : String.valueOf(unread);
-                int bw = textRenderer.getWidth(badge) + 6;
-                context.fill(px + LEFT_W - 5 - bw, y + 3, px + LEFT_W - 5, y + 13, BADGE_BG);
-                context.drawText(textRenderer, badge, px + LEFT_W - 5 - bw + 3, y + 4, 0xFFFFFFFF, false);
+                drawBadge(context, px + LEFT_W - 5, y, unread > 9 ? "9+" : String.valueOf(unread));
             }
 
             rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, name});
@@ -2388,6 +2713,16 @@ public class PmScreen extends Screen {
             Text empty = Text.translatable(history.conversationNames().isEmpty()
                     ? "pmchat.empty.list" : "pmchat.notfound");
             context.drawText(textRenderer, empty, px + 8, top + 8, SUBTLE, false);
+        }
+
+        // Плавный акцентный индикатор у левого края выбранного чата
+        if (selIndicatorTarget >= 0) {
+            if (selIndicatorY < 0) selIndicatorY = selIndicatorTarget;
+            selIndicatorY = ease(selIndicatorY, selIndicatorTarget, 18f);
+            int iy = Math.round(selIndicatorY);
+            fillRound(context, px + 2, iy + 2, 3, Math.max(4, selIndicatorH - 4), 1, ACCENT_BG);
+        } else {
+            selIndicatorY = -1f;
         }
     }
 
@@ -2418,7 +2753,7 @@ public class PmScreen extends Screen {
             context.drawText(textRenderer, "●", headerX, py + 8, hasMod ? 0xFF6FBF8B : SUBTLE, false);
             headerX += 9;
         }
-        // NEW (6.10): замочек в шапке — секретный чат активен
+        // замочек в шапке — секретный чат активен
         if (!isGlobal && !localChat && PmChatClient.isSecretActive(selected)) {
             PmIcons.draw(context, PmIcons.LOCK, headerX, py + 3, 9, 9, 0xFF8FD8A8);
             headerX += 11;
@@ -2687,12 +3022,16 @@ public class PmScreen extends Screen {
             int quoteShift = (quoted != null ? 11 : 0) + (senderName != null ? 10 : 0)
                     + (fwdLabel != null ? 10 : 0);
             int bg = msg.money > 0 ? MONEY_BG : (msg.out ? OUT_BG : IN_BG);
-            // NEW (6.10): секретные сообщения — лёгкий зелёный оттенок, как в Telegram
+            // секретные сообщения — лёгкий зелёный оттенок, как в Telegram
             if (msg.secret) bg = tintTowards(bg, 0xFF1E4A32, 0.35f);
 
-            // Фон пузыря
-            context.fill(bx + dx + 1, y + dy, bx + dx + bw - 1, y + dy + bh, applyAlpha(bg, alpha));
-            context.fill(bx + dx, y + dy + 1, bx + dx + bw, y + dy + bh - 1, applyAlpha(bg, alpha));
+            // Фон пузыря со скруглением и «хвостом» (как в макете: 14 14 4 14)
+            int br = 5;
+            if (msg.out) {
+                fillRound(context, bx + dx, y + dy, bw, bh, br, br, 2, br, applyAlpha(bg, alpha));
+            } else {
+                fillRound(context, bx + dx, y + dy, bw, bh, br, br, br, 2, applyAlpha(bg, alpha));
+            }
 
             // Подсветка упоминания (жёлтая рамка) и вспышка перехода к закрепу
             boolean mentioned = !msg.out && PmChatClient.mentionsMe(msg.text, senderName);
@@ -2866,7 +3205,7 @@ public class PmScreen extends Screen {
 
             // Время сообщения — сбоку от пузыря (с меткой «ред.», если изменено)
             if (msg.time > 0) {
-                // NEW (6.10): у секретных сообщений с таймером — обратный отсчёт до самоуничтожения
+                // у секретных сообщений с таймером — обратный отсчёт до самоуничтожения
                 String destructPart = "";
                 if (msg.secret && msg.destructAt > 0) {
                     long left = Math.max(0, (msg.destructAt - now) / 1000);
@@ -2879,7 +3218,7 @@ public class PmScreen extends Screen {
                 int timeColor = msg.secret && msg.destructAt > 0 ? 0xFFCB8A8A : SUBTLE;
                 context.drawText(textRenderer, time, tx + dx, y + dy + bh - 10, timeColor, false);
             }
-            // NEW (6.10): замочек на секретном сообщении, у самого пузыря
+            // замочек на секретном сообщении, у самого пузыря
             if (msg.secret) {
                 int lx = msg.out ? bx + dx + bw - 10 : bx + dx + 1;
                 PmIcons.draw(context, PmIcons.LOCK, lx, y + dy + 1, 9, 9, applyAlpha(0xFF8FD8A8, alpha));
@@ -3084,7 +3423,7 @@ public class PmScreen extends Screen {
         replyCancelY = y;
     }
 
-    /** NEW (1.7.8): затемнение + рамка окна правки под многострочным полем. */
+    /** затемнение + рамка окна правки под многострочным полем. */
     private void renderEditorBackdrop(DrawContext context) {
         editSaveRect = null;
         editCancelRect = null;
@@ -3103,7 +3442,7 @@ public class PmScreen extends Screen {
         context.drawStrokedRectangle(ex - 2, ey - 2, ew + 4, editBox.getHeight() + 4, 0xFF2E5C48);
     }
 
-    /** NEW (1.7.8): кнопки Сохранить/Отмена окна правки (поверх поля). */
+    /** кнопки Сохранить/Отмена окна правки (поверх поля). */
     private void renderEditorButtons(DrawContext context, int mouseX, int mouseY) {
         if (editTarget == null || editBox == null) return;
         int ew = editBox.getWidth();
@@ -3189,7 +3528,7 @@ public class PmScreen extends Screen {
                 context.fill(ex, ey, ex + cell, ey + cell, ROW_SELECTED);
             }
             context.drawText(textRenderer, group[i], ex + 2, ey + 2,
-                    config.theme == 1 ? 0xFF23333D : 0xFFEDF3F0, false);
+                    config.theme != 0 ? 0xFF19232A : 0xFFDFE6EB, false);
             emojiRects.add(new Object[]{ex, ey, cell, cell, group[i]});
         }
     }
@@ -3245,7 +3584,7 @@ public class PmScreen extends Screen {
         context.drawText(textRenderer, clipHint,
                 px + PANEL_W - 10 - textRenderer.getWidth(clipHint), areaTop + 2, SUBTLE, false);
 
-        // NEW (4.9): переключатель «Спойлер» — следующее отправленное фото будет размыто до клика
+        // переключатель «Спойлер» — следующее отправленное фото будет размыто до клика
         drawSpoilerToggle(context, mouseX, mouseY, x, areaTop + 13);
 
         if (uploading) {
@@ -3441,7 +3780,7 @@ public class PmScreen extends Screen {
             fullscreenImg = null;
             return true;
         }
-        // NEW (1.7.8): окно правки перехватывает клики
+        // окно правки перехватывает клики
         if (editTarget != null && editBox != null) {
             int mx = (int) click.x(), my = (int) click.y();
             if (inRect(mx, my, editSaveRect)) { saveEditor(); return true; }
@@ -3450,10 +3789,10 @@ public class PmScreen extends Screen {
             return true; // остальное поглощаем — модальное окно
         }
         com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
-        // NEW (5.3): оверлей плейлистов — обрабатываем его клики первым
+        // оверлей плейлистов — обрабатываем его клики первым
         if (playlistOpen) {
             int mx = (int) click.x(), my = (int) click.y();
-            // NEW (1.7.9, #2): оверлей занимает только правую панель. Клик по
+            // оверлей занимает только правую панель. Клик по
             // левой части (список диалогов и т.п.) закрывает музыкальный браузер
             // и уходит в обычную обработку — мод снова кликабелен.
             boolean insideOverlay = mx >= px + LEFT_W && mx < px + PANEL_W
@@ -3514,7 +3853,7 @@ public class PmScreen extends Screen {
                     String type = (String) r[5];
                     int qidx = (int) r[6];
                     if ("dir".equals(type)) {
-                        // NEW (#12): вход в папку — показать её треки, не запуская сразу
+                        // вход в папку — показать её треки, не запуская сразу
                         playlistDir = f;
                         playlistScroll = 0;
                     } else if (qidx >= 0) {
@@ -3539,14 +3878,14 @@ public class PmScreen extends Screen {
             return true; // клик по оверлею — поглощаем
             } // конец insideOverlay
         }
-        // NEW (5.3): свёрнутое окошко медиа — ловим ТОЛЬКО клики по нему.
+        // свёрнутое окошко медиа — ловим ТОЛЬКО клики по нему.
         // Раньше здесь был безусловный return, из-за чего активный плеер
         // (музыка всегда свёрнута) съедал вообще все клики и экран «залипал».
         // Теперь мимо окошка клик проходит дальше в обычную обработку.
         if (!videoResolving && !videoOpenFailed && media.hasActive() && media.isMinimized()) {
             if (media.handleMiniClick((int) click.x(), (int) click.y())) return true;
         }
-        // NEW (4.3): встроенный видеоплеер (полноэкранный) — свои контролы.
+        // встроенный видеоплеер (полноэкранный) — свои контролы.
         // Только когда плеер РАЗВёрнут (или идёт подготовка/ошибка); свёрнутое
         // окошко уже обработано выше и клики мимо него должны идти на чат.
         if (videoResolving || videoOpenFailed || (media.hasActive() && !media.isMinimized())) {
@@ -3903,7 +4242,7 @@ public class PmScreen extends Screen {
                 }
             }
         }
-        // NEW (4.9): клик по «замыленному» спойлеру — первым кликом только открываем
+        // клик по «замыленному» спойлеру — первым кликом только открываем
         // (как в Telegram/Discord), второй клик по уже раскрытому фото/видео работает как обычно.
         if (!imageMode && !statsMode && click.button() == 0) {
             for (Object[] r : spoilerRects) {
@@ -3951,7 +4290,7 @@ public class PmScreen extends Screen {
                         com.pmchat.client.PmVoice.togglePlay(voice[0], voice[1]);
                         return true;
                     }
-                    // NEW (4.3): видео — свой плеер поверх окна (пауза/громкость/скорость),
+                    // видео — свой плеер поверх окна (пауза/громкость/скорость),
                     // если у игрока установлен VLC. Иначе — старое поведение (открыть внешне).
                     String[] vid = vidOf(msg);
                     if (vid != null) {
@@ -3971,7 +4310,7 @@ public class PmScreen extends Screen {
                         Matcher url = URL_PATTERN.matcher(msg.text);
                         if (url.find()) {
                             String link = url.group(1);
-                            // NEW (4.3): ссылка на YouTube — пробуем во встроенном плеере (через VLC)
+                            // ссылка на YouTube — пробуем во встроенном плеере (через VLC)
                             if (isYouTubeUrl(link) && com.pmchat.client.PmVlc.isAvailable()) {
                                 openVideoPlayer(link);
                                 return true;
@@ -4000,7 +4339,7 @@ public class PmScreen extends Screen {
         if (ctxMsg == null) return;
 
         boolean global = isFeedTab();
-        // NEW (6.10): у секретных сообщений отключаем всё, что уходит по сети в открытом виде
+        // у секретных сообщений отключаем всё, что уходит по сети в открытом виде
         // (ответ/цитата/пересылка/правка/закреп текстом) — остаются только локальные действия.
         boolean secretMsg = ctxMsg.secret;
         boolean canReact = !global && !secretMsg && selected != null && config.isModUser(selected)
@@ -4138,7 +4477,7 @@ public class PmScreen extends Screen {
 
     private static final Pattern URL_PATTERN = Pattern.compile("(https?://\\S+)");
 
-    /** NEW (4.3): ссылка на youtube.com/youtu.be — пробуем открыть во встроенном плеере. */
+    /** ссылка на youtube.com/youtu.be — пробуем открыть во встроенном плеере. */
     private static boolean isYouTubeUrl(String url) {
         if (url == null) return false;
         String u = url.toLowerCase(Locale.ROOT);
@@ -4216,7 +4555,7 @@ public class PmScreen extends Screen {
             fullscreenImg = null;
             return true;
         }
-        // NEW (5.3): Esc закрывает полноэкранный видеоплеер (и останавливает VLC).
+        // Esc закрывает полноэкранный видеоплеер (и останавливает VLC).
         // Свёрнутое окошко Esc не трогает — оно поверх рабочего чата, играет дальше.
         com.pmchat.client.PmMedia pmMedia = com.pmchat.client.PmMedia.get();
         boolean fullscreenVideo = videoResolving || videoOpenFailed
@@ -4235,7 +4574,7 @@ public class PmScreen extends Screen {
             pinListOpen = false;
             return true;
         }
-        // NEW (1.7.8): окно правки — Esc отменяет, Ctrl+Enter сохраняет,
+        // окно правки — Esc отменяет, Ctrl+Enter сохраняет,
         // ввод (в т.ч. Enter → новая строка) идёт в многострочное поле.
         if (editTarget != null && editBox != null) {
             int kc = input.getKeycode();
@@ -4284,7 +4623,7 @@ public class PmScreen extends Screen {
             searchOpen = false;
             return true;
         }
-        // NEW (5.3): Esc закрывает оверлей плейлистов (музыка играет дальше)
+        // Esc закрывает оверлей плейлистов (музыка играет дальше)
         if (playlistOpen && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
             playlistOpen = false;
             rebuild();
@@ -4526,7 +4865,7 @@ public class PmScreen extends Screen {
         return false;
     }
 
-    // NEW (5.3): закрытие окна мессенджера НЕ останавливает медиа — PmMedia
+    // закрытие окна мессенджера НЕ останавливает медиа — PmMedia
     // продолжает играть и рисует окошко поверх HUD. Но если идёт ПОДГОТОВКА
     // видео (yt-dlp), а сессии ещё нет и юзер закрыл экран — отменяем её,
     // чтобы не тратить трафик впустую (кроме уже свёрнутого сценария).

@@ -1,4 +1,4 @@
-# Music and playlists <Badge type="tip" text="NEW" />
+# Music and playlists
 
 The built-in player handles more than YouTube video — it plays your own music
 as playlists of local mp3s. It runs in a small corner window and **keeps

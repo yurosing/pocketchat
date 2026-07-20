@@ -22,14 +22,14 @@ public class PmSettingsScreen extends Screen {
     private static final int PANEL_W = 280;
     private static final int ROW_H = 17;
 
-    private static final int BG = 0xFF1C3644;
-    private static final int BORDER = 0xFF10222C;
-    private static final int LABEL = 0xFF9CC4DC;
-    private static final int TITLE = 0xFFF2F6F8;
-    private static final int BTN_BG = 0xFF15303D;
-    private static final int BTN_HOVER = 0xFF0F2833;
-    private static final int BTN_BORDER = 0xFF2A4A5C;
-    private static final int VALUE = 0xFFEDF3F0;
+    // Тема применяется в init() до построения строк (см. applyTheme)
+    private int BG, BORDER, LABEL, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
+
+    private void applyTheme() {
+        PmTheme t = PmTheme.dialog(config.theme);
+        BG = t.bg; BORDER = t.border; LABEL = t.label; TITLE = t.title;
+        BTN_BG = t.btnBg; BTN_HOVER = t.btnHover; BTN_BORDER = t.btnBorder; VALUE = t.value;
+    }
 
     private static final int[] SCALES = {80, 90, 100, 110, 125};
     private static final int[] VOLUMES = {25, 50, 75, 100};
@@ -46,6 +46,7 @@ public class PmSettingsScreen extends Screen {
 
     @Override
     protected void init() {
+        applyTheme();
         optionLabels.clear();
         clearChildren();
         int rows = 22;
@@ -55,8 +56,9 @@ public class PmSettingsScreen extends Screen {
 
         int y = py + 24;
         y = addOption(y, "pmchat.set.theme",
-                () -> Text.translatable(config.theme == 1 ? "pmchat.set.theme.light" : "pmchat.set.theme.dark"),
-                VALUE, () -> config.theme = config.theme == 1 ? 0 : 1);
+                () -> Text.translatable(config.theme == 1 ? "pmchat.set.theme.light"
+                        : config.theme == 2 ? "pmchat.set.theme.slate" : "pmchat.set.theme.dark"),
+                VALUE, () -> config.theme = (config.theme + 1) % 3);
 
         y = addOption(y, "pmchat.set.outcolor",
                 () -> Text.literal("■ " + (config.outColor % PmPalettes.OUT.length + 1)),
@@ -200,7 +202,7 @@ public class PmSettingsScreen extends Screen {
                 Text.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
 
-        // NEW: кнопка-ссылка на сайт документации (открывает RU/EN по языку клиента)
+        // кнопка-ссылка на сайт документации (открывает RU/EN по языку клиента)
         FlatButton docsBtn = FlatButton.centered(textRenderer, px + PANEL_W - 24, py + 3, 18, 14,
                 Text.translatable("pmchat.tip.docs"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
                 btn -> PmChatClient.openDocs()).withIcon(PmIcons.DOCS);

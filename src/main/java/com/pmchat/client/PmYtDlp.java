@@ -24,7 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * NEW (5.1): мост к yt-dlp для проигрывания YouTube во встроенном плеере.
+ * мост к yt-dlp для проигрывания YouTube во встроенном плеере.
  *
  * Почему через yt-dlp: к 2026 напрямую отдать VLC ссылку на YouTube нельзя —
  * потоки заперты «proof-of-origin» токеном (докачивается только первый ~1 МБ,

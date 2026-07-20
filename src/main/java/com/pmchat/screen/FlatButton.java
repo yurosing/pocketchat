@@ -27,6 +27,16 @@ public class FlatButton extends ClickableWidget {
     /** Если задан — вместо текста рисуется своя пиксельная иконка (см. PmIcons). */
     private String[] iconBitmap;
 
+    /** Круглая кнопка (радиус = высота/2) — для кнопки отправки. */
+    private boolean circular;
+    /** Радиус скругления прямоугольной кнопки. */
+    private int radius = 4;
+
+    // Анимация: плавное наведение (0..1) и вспышка нажатия (спадает к 0)
+    private float hoverAnim = 0f;
+    private float pressAnim = 0f;
+    private long lastRenderMs = 0L;
+
     public FlatButton(TextRenderer textRenderer, int x, int y, int width, int height, Text message,
                        int bg, int bgHover, int border, int textColor, boolean centered, PressAction action) {
         super(x, y, width, height, message);
@@ -50,24 +60,58 @@ public class FlatButton extends ClickableWidget {
         return this;
     }
 
+    /** Сделать кнопку круглой (для кнопки отправки ➤). */
+    public FlatButton circular() {
+        this.circular = true;
+        return this;
+    }
+
+    /** Задать радиус скругления прямоугольной кнопки. */
+    public FlatButton radius(int r) {
+        this.radius = r;
+        return this;
+    }
+
     @Override
     public void onClick(Click click, boolean doubled) {
+        pressAnim = 1f;
         action.onPress(this);
+    }
+
+    private static int lerpColor(int a, int b, float t) {
+        t = Math.max(0f, Math.min(1f, t));
+        int aa = (int) (((a >>> 24) & 0xFF) + (((b >>> 24) & 0xFF) - ((a >>> 24) & 0xFF)) * t);
+        int rr = (int) (((a >> 16) & 0xFF) + (((b >> 16) & 0xFF) - ((a >> 16) & 0xFF)) * t);
+        int gg = (int) (((a >> 8) & 0xFF) + (((b >> 8) & 0xFF) - ((a >> 8) & 0xFF)) * t);
+        int bb = (int) ((a & 0xFF) + ((b & 0xFF) - (a & 0xFF)) * t);
+        return (aa << 24) | (rr << 16) | (gg << 8) | bb;
     }
 
     @Override
     protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
         int x0 = getX();
         int y0 = getY();
-        int x1 = x0 + getWidth();
-        int y1 = y0 + getHeight();
+        int w = getWidth();
+        int h = getHeight();
 
-        int fill = isHovered() ? bgHover : bg;
-        context.fill(x0, y0, x1, y1, fill);
-        context.drawStrokedRectangle(x0, y0, getWidth(), getHeight(), border);
+        // Плавные анимации по времени (независимо от FPS)
+        long now = System.currentTimeMillis();
+        float dt = lastRenderMs == 0 ? 0f : Math.min(0.1f, (now - lastRenderMs) / 1000f);
+        lastRenderMs = now;
+        float target = isHovered() ? 1f : 0f;
+        hoverAnim += (target - hoverAnim) * Math.min(1f, dt * 12f);
+        pressAnim += (0f - pressAnim) * Math.min(1f, dt * 8f);
+
+        int fill = lerpColor(bg, bgHover, hoverAnim);
+        // Вспышка нажатия — подсветка поверх
+        if (pressAnim > 0.01f) fill = lerpColor(fill, 0xFFFFFFFF, pressAnim * 0.18f);
+        int r = circular ? h / 2 : radius;
+        // Тонкая скруглённая рамка для чёткости + заливка поверх с отступом 1px
+        PmScreen.fillRound(context, x0, y0, w, h, r, border);
+        PmScreen.fillRound(context, x0 + 1, y0 + 1, w - 2, h - 2, Math.max(0, r - 1), fill);
 
         if (iconBitmap != null) {
-            PmIcons.draw(context, iconBitmap, x0, y0, getWidth(), getHeight(), textColor);
+            PmIcons.draw(context, iconBitmap, x0, y0, w, h, textColor);
             return;
         }
 

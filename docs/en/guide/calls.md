@@ -1,4 +1,4 @@
-# Voice calls <Badge type="tip" text="NEW" />
+# Voice calls
 
 One button right in the chat sends your contact an invite to a voice
 channel — no typing commands by hand.

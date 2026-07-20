@@ -1,4 +1,4 @@
-# Secret chats <Badge type="tip" text="NEW" />
+# Secret chats
 
 A secret chat is a conversation nobody can read except you and the other
 person. Even if someone sees the raw text the mod sends to the server (say, an

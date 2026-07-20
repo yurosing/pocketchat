@@ -28,7 +28,7 @@ public class PmHistory {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("pmchat-history.json");
-    // NEW (1.7.8, #15): ключ шифрования истории — 32 случайных байта, лежат рядом
+    // ключ шифрования истории — 32 случайных байта, лежат рядом
     // с файлом. Даёт шифрование «на диске»: скопировав только историю, её не
     // прочитать. Магия в начале файла отличает зашифрованный формат от старого
     // открытого JSON (для миграции).
@@ -94,7 +94,7 @@ public class PmHistory {
     }
 
     /**
-     * NEW: секретные сообщения (6.10) на диск не пишутся — ни текст, ни сам
+     * секретные сообщения (6.10) на диск не пишутся — ни текст, ни сам
      * факт их существования. Перед сохранением строим копию без них.
      */
     public void save() {
@@ -123,7 +123,7 @@ public class PmHistory {
         }
     }
 
-    /** NEW: снести просроченные секретные сообщения (самоуничтожение). true, если что-то удалили. */
+    /** снести просроченные секретные сообщения (самоуничтожение). true, если что-то удалили. */
     public boolean sweepExpiredSecrets(long now) {
         boolean changed = false;
         for (List<PmMessage> list : conversations.values()) {
@@ -140,7 +140,7 @@ public class PmHistory {
     }
 
     /**
-     * NEW: добавить секретное сообщение (6.10) — помечено секретным ДО первого
+     * добавить секретное сообщение (6.10) — помечено секретным ДО первого
      * save(), чтобы текст ни на миг не попал в файл на диске.
      */
     public PmMessage addSecret(String player, boolean out, String text, int ttlSeconds) {

@@ -34,9 +34,9 @@ public class PmChatClient implements ClientModInitializer {
     private static PmConfig config;
     private static PmHistory history;
     private static KeyBinding openKey;
-    private static KeyBinding mediaKey;      // NEW (5.3): открыть меню медиа/плейлистов
-    private static KeyBinding mediaPlayKey;  // NEW (5.3): пауза/воспроизведение в игре
-    private static KeyBinding mediaNextKey;  // NEW (5.3): следующий трек в игре
+    private static KeyBinding mediaKey;      // открыть меню медиа/плейлистов
+    private static KeyBinding mediaPlayKey;  // пауза/воспроизведение в игре
+    private static KeyBinding mediaNextKey;  // следующий трек в игре
 
     private static Pattern incoming;
     private static Pattern outgoing;
@@ -100,7 +100,7 @@ public class PmChatClient implements ClientModInitializer {
     private static final java.util.Map<String, Long> lastTypingSent = new java.util.HashMap<>();
     private static final java.util.Map<String, Long> lastSeenSent = new java.util.HashMap<>();
 
-    /** NEW (6.10): секретные чаты — сессия на собеседника, только в памяти. */
+    /** секретные чаты — сессия на собеседника, только в памяти. */
     private static final java.util.Map<String, PmSecretSession> secretSessions =
             new java.util.concurrent.ConcurrentHashMap<>();
     private static long lastSecretSweep = 0;
@@ -122,7 +122,7 @@ public class PmChatClient implements ClientModInitializer {
         KeyBinding.Category category = KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
         openKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.pmchat.open", GLFW.GLFW_KEY_J, category));
-        // NEW (5.3): медиа/плейлисты
+        // медиа/плейлисты
         mediaKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.pmchat.media", GLFW.GLFW_KEY_K, category));
         mediaPlayKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
@@ -145,7 +145,7 @@ public class PmChatClient implements ClientModInitializer {
             }
         });
 
-        // NEW (1.7.8, #9): выход с сервера/в главное меню останавливает музыку и
+        // выход с сервера/в главное меню останавливает музыку и
         // видео — иначе плеер продолжал играть «в пустоте» после дисконнекта.
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> client.execute(() -> PmMedia.get().stop()));
@@ -158,7 +158,7 @@ public class PmChatClient implements ClientModInitializer {
                     client.setScreen(new PmScreen());
                 }
             }
-            // NEW (5.3): медиа-меню и управление плеером в игре
+            // медиа-меню и управление плеером в игре
             while (mediaKey.wasPressed()) {
                 if (client.currentScreen == null) {
                     client.setScreen(new com.pmchat.screen.PmMediaScreen());
@@ -166,7 +166,7 @@ public class PmChatClient implements ClientModInitializer {
             }
             while (mediaPlayKey.wasPressed()) PmMedia.get().togglePause();
             while (mediaNextKey.wasPressed()) PmMedia.get().next();
-            // NEW (1.7.9, #6): вне мира (главное меню / после выхода с сервера)
+            // вне мира (главное меню / после выхода с сервера)
             // музыка и видео должны молчать. DISCONNECT ловит не все случаи —
             // это надёжный запасной вариант каждый тик.
             if (client.world == null && PmMedia.get().hasActive()) {
@@ -185,7 +185,7 @@ public class PmChatClient implements ClientModInitializer {
                 lastHealth = client.player.getHealth();
             }
 
-            // NEW (6.10): самоуничтожение секретных сообщений — проверяем раз в секунду
+            // самоуничтожение секретных сообщений — проверяем раз в секунду
             long now = System.currentTimeMillis();
             if (now - lastSecretSweep >= 1000) {
                 lastSecretSweep = now;
@@ -809,7 +809,7 @@ public class PmChatClient implements ClientModInitializer {
             return 2;
         }
 
-        // NEW (6.10): секретные чаты — запрос/подтверждение/конец сессии, зашифрованное сообщение
+        // секретные чаты — запрос/подтверждение/конец сессии, зашифрованное сообщение
         String reqPub = PmWire.parseSecretRequest(text);
         if (reqPub != null) {
             config.addModUser(sender);
@@ -834,7 +834,7 @@ public class PmChatClient implements ClientModInitializer {
             return 1;
         }
 
-        // NEW: входящий звонок — просто уведомление; само приглашение в голосовой
+        // входящий звонок — просто уведомление; само приглашение в голосовой
         // канал уже пришло от сервера через команду /voicechat invite отправителя.
         if (PmWire.isCall(text)) {
             config.addModUser(sender);
@@ -1180,7 +1180,7 @@ public class PmChatClient implements ClientModInitializer {
         }
     }
 
-    // ---------- NEW: секретные чаты (6.10) ----------
+    // ---------- секретные чаты (6.10) ----------
 
     private static PmSecretSession session(String target) {
         return secretSessions.computeIfAbsent(target.toLowerCase(Locale.ROOT), k -> new PmSecretSession());
@@ -1314,7 +1314,7 @@ public class PmChatClient implements ClientModInitializer {
         }
     }
 
-    // ---------- NEW: звонки через Simple Voice Chat ----------
+    // ---------- звонки через Simple Voice Chat ----------
 
     /**
      * Позвонить через Simple Voice Chat. Важно: «/voicechat invite ник»
@@ -1325,19 +1325,101 @@ public class PmChatClient implements ClientModInitializer {
      * уведомление через /m, чтобы собеседник увидел тост в моде.
      * Если SVC не установлен — команды просто не выполнятся, ничего не ломается.
      */
+    // ---------- Состояние текущего звонка (для меню звонка в моде) ----------
+
+    private static volatile boolean callActive = false;
+    private static volatile String callTarget = null;
+    private static volatile long callStartedAt = 0L;
+    private static volatile String callPassword = null;
+    private static volatile int callTypeIndex = 0;
+
+    public static boolean isCallActive() {
+        return callActive;
+    }
+
+    public static String callTarget() {
+        return callTarget;
+    }
+
+    /** Длительность текущего звонка в секундах (0, если звонок не идёт). */
+    public static int callDurationSeconds() {
+        return callActive ? (int) ((System.currentTimeMillis() - callStartedAt) / 1000) : 0;
+    }
+
+    /** Пароль войс-группы текущего звонка (пусто — без пароля). */
+    public static String callPassword() {
+        return callPassword == null ? "" : callPassword;
+    }
+
+    public static int callTypeIndex() {
+        return callTypeIndex;
+    }
+
+    /** Число участников в войс-группе (по данным SVC; 0 — неизвестно). */
+    public static int callParticipants() {
+        return PmSvc.participantCount();
+    }
+
+    /** UUID участников войс-группы (мы первыми), для показа аватарок в меню. */
+    public static java.util.List<java.util.UUID> callMemberIds() {
+        java.util.List<java.util.UUID> ids = new java.util.ArrayList<>();
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player != null) ids.add(client.player.getUuid());
+        for (java.util.UUID id : PmSvc.groupMemberIds()) {
+            if (!ids.contains(id)) ids.add(id);
+        }
+        return ids;
+    }
+
+    /** Говорит ли участник сейчас (для подсветки аватарки). */
+    public static boolean isSpeaking(java.util.UUID id) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player != null && client.player.getUuid().equals(id)) {
+            // Себя нет в TalkCache — смотрим состояние микрофона
+            return PmSvc.isSelfSpeaking() || PmSvc.isSpeaking(id);
+        }
+        return PmSvc.isSpeaking(id);
+    }
+
+    /** Случайный пароль войс-группы (без похожих символов). */
+    private static String randomPassword() {
+        final String alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+        java.util.Random r = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder(6);
+        for (int i = 0; i < 6; i++) sb.append(alphabet.charAt(r.nextInt(alphabet.length())));
+        return sb.toString();
+    }
+
+    /** Завершить звонок: выйти из войс-группы SVC и сбросить состояние. */
+    public static void endCall() {
+        PmSvc.leaveGroup();
+        callActive = false;
+        callTarget = null;
+        callStartedAt = 0L;
+        callPassword = null;
+    }
+
     public static void startCall(String target) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target == null || target.isBlank()) return;
         client.player.networkHandler.sendChatCommand(
                 config.msgCommand + " " + target + " " + PmWire.call());
 
+        // Отмечаем звонок как активный для меню звонка в моде
+        callActive = true;
+        callTarget = target;
+        callStartedAt = System.currentTimeMillis();
+        callTypeIndex = config.voiceGroupType;
+
         if (PmSvc.isInGroup() == Boolean.TRUE) {
             client.player.networkHandler.sendChatCommand("voicechat invite " + target);
             return;
         }
-        if (!PmSvc.createGroup(selfName())) {
+        callPassword = config.voiceGroupPassword ? randomPassword() : null;
+        if (!PmSvc.createGroup(selfName(), callPassword, config.voiceGroupType)) {
             // API SVC недоступен (мода нет или версия незнакомая) — шлём
             // инвайт как раньше: вдруг игрок уже в группе, а API не читается.
+            callPassword = null;
             client.player.networkHandler.sendChatCommand("voicechat invite " + target);
             return;
         }
@@ -1553,7 +1635,7 @@ public class PmChatClient implements ClientModInitializer {
         return client.getLanguageManager().getLanguage().toLowerCase(Locale.ROOT).startsWith("ru");
     }
 
-    /** NEW: открыть сайт документации в браузере — на английском, если у игрока не русский язык клиента. */
+    /** открыть сайт документации в браузере — на английском, если у игрока не русский язык клиента. */
     public static void openDocs() {
         String url = isRussian()
                 ? "https://yurosing.github.io/pocketchat/"

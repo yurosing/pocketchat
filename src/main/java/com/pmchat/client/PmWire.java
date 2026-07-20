@@ -15,7 +15,7 @@ public final class PmWire {
     private static final Pattern VOICE_V3 = Pattern.compile("^pmc voice ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+) (\\d+)$");
     // Видео: pmc vid <host> <name> <ext>
     private static final Pattern VID = Pattern.compile("^pmc vid ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+)$");
-    // NEW (4.9): спойлер — то же самое + " s" в конце. pmc img/vid ... s
+    // спойлер — то же самое + " s" в конце. pmc img/vid ... s
     private static final Pattern IMG_SPOILER = Pattern.compile("^pmc img ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+) s$");
     private static final Pattern VID_SPOILER = Pattern.compile("^pmc vid ([a-z]) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+) s$");
     // v2 (без хоста — catbox)
@@ -47,7 +47,7 @@ public final class PmWire {
     // Групповое сообщение: pmc grp <hexИмя> <составЧерезДефис> <текст>
     private static final Pattern GRP = Pattern.compile("^pmc grp ([0-9a-f]*) ([A-Za-z0-9_-]+) (.+)$", Pattern.DOTALL);
 
-    // NEW (6.10): секретные чаты — сквозное шифрование.
+    // секретные чаты — сквозное шифрование.
     // pmc sec req <pubHex 64> — запрос сессии со своим публичным ключом X25519
     private static final Pattern SEC_REQ = Pattern.compile("^pmc sec req ([0-9a-f]{64})$");
     // pmc sec ack <pubHex 64> — подтверждение с ответным ключом
@@ -57,7 +57,7 @@ public final class PmWire {
     // pmc sec msg <ttlSeconds> <nonceHex 24> <cipherHex>
     private static final Pattern SEC_MSG = Pattern.compile("^pmc sec msg (\\d+) ([0-9a-f]{24}) ([0-9a-f]+)$");
 
-    // NEW (звонки): pmc call — просто уведомление «зову в войсчат» (сам звонок
+    // pmc call — просто уведомление «зову в войсчат» (сам звонок
     // делает команда сервера /voicechat invite, у неё нет параметров группы/пароля)
     private static final String CALL = "pmc call";
 
@@ -90,7 +90,7 @@ public final class PmWire {
         return img(hostCode, fileId, false);
     }
 
-    /** NEW (4.9): фото со спойлером — скрыто размытием, пока получатель не кликнет. */
+    /** фото со спойлером — скрыто размытием, пока получатель не кликнет. */
     public static String img(String hostCode, String fileId, boolean spoiler) {
         int dot = fileId.lastIndexOf('.');
         String name = dot > 0 ? fileId.substring(0, dot) : fileId;
@@ -110,7 +110,7 @@ public final class PmWire {
         return vid(hostCode, fileId, false);
     }
 
-    /** NEW (4.9): видео со спойлером — скрыто размытием, пока получатель не кликнет. */
+    /** видео со спойлером — скрыто размытием, пока получатель не кликнет. */
     public static String vid(String hostCode, String fileId, boolean spoiler) {
         int dot = fileId.lastIndexOf('.');
         String name = dot > 0 ? fileId.substring(0, dot) : fileId;
@@ -294,7 +294,7 @@ public final class PmWire {
         return parseGroup(text) != null;
     }
 
-    // ---------- NEW: секретные чаты (6.10) ----------
+    // ---------- секретные чаты (6.10) ----------
 
     public static String secretRequest(String pubHex) {
         return "pmc sec req " + pubHex;
@@ -343,7 +343,7 @@ public final class PmWire {
         return parseSecretRequest(t) != null || parseSecretAck(t) != null || isSecretEnd(t);
     }
 
-    // ---------- NEW: звонки через Simple Voice Chat (/voicechat invite) ----------
+    // ---------- звонки через Simple Voice Chat (/voicechat invite) ----------
 
     public static String call() {
         return CALL;

@@ -11,7 +11,7 @@ reachable from your connection. More in
 [Where files get uploaded](/en/config/hosts).
 :::
 
-## Spoiler photos and videos <Badge type="tip" text="NEW" />
+## Spoiler photos and videos
 
 Like Telegram or Discord: you can send a photo or video blurred out, so your
 contact decides for themselves whether to open it.

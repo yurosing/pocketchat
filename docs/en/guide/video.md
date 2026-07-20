@@ -1,4 +1,4 @@
-# Video and YouTube <Badge type="tip" text="NEW" />
+# Video and YouTube
 
 Watch video right inside the messenger — no downloading a file, no opening a
 browser. Works for your own videos and for YouTube links.

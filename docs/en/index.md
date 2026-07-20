@@ -21,19 +21,19 @@ hero:
 
 features:
   - icon: 🔒
-    title: 'Secret chats · NEW'
+    title: 'Secret chats'
     details: A conversation not even the server can read. Never touches the disk, and can self-destruct after a set time.
     link: /en/guide/secret-chats
   - icon: ▶️
-    title: 'Video and YouTube · NEW'
+    title: 'Video and YouTube'
     details: Watch your own videos and YouTube links right in the messenger — with pause, volume and seeking.
     link: /en/guide/video
   - icon: 📞
-    title: 'Voice calls · NEW'
+    title: 'Voice calls'
     details: One button puts you and your contact in the same voice channel, no manual setup.
     link: /en/guide/calls
   - icon: 🙈
-    title: 'Spoiler photos and videos · NEW'
+    title: 'Spoiler photos and videos'
     details: Send photos and videos blurred out — your contact reveals them with a click, whenever they want.
     link: /en/guide/media
   - icon: 🧵
