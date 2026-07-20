@@ -25,7 +25,8 @@ jobs:
       - name: Pre-fetch flaky dependencies
         run: |
           mkdir -p libs
-          curl -fL --retry 10 --retry-all-errors --retry-delay 3 \
+          rm -f libs/modmenu-17.0.0-beta.2.jar
+          curl -fL --http1.1 -C - --retry 15 --retry-all-errors --retry-delay 2 \
             -o libs/modmenu-17.0.0-beta.2.jar \
             https://maven.terraformersmc.com/releases/com/terraformersmc/modmenu/17.0.0-beta.2/modmenu-17.0.0-beta.2.jar
 
