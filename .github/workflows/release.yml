@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Release body (leave empty for auto-generated notes)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -60,4 +65,5 @@ jobs:
           tag_name: ${{ steps.tag.outputs.name }}
           target_commitish: ${{ github.sha }}
           files: ${{ steps.jar.outputs.path }}
-          generate_release_notes: true
+          body: ${{ github.event.inputs.release_notes }}
+          generate_release_notes: ${{ !github.event.inputs.release_notes }}
