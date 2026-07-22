@@ -26,23 +26,28 @@ jobs:
 
       - name: Pre-fetch Mod Menu into a local maven repo
         run: |
-          # maven.terraformersmc.com is flaky (truncated jars, 502s on the POM),
-          # so fetch the jar with retries and write a minimal POM ourselves — the
-          # build then resolves Mod Menu entirely from ci-maven, never hitting it.
+          # maven.terraformersmc.com is flaky (truncated jars, 502s/404s on the CDN),
+          # so best-effort pre-fetch the jar into a local repo. If it fails, we clear
+          # ci-maven and let Gradle resolve Mod Menu from the real terraformersmc repo
+          # at build time — the prefetch never fails the whole release.
           dir=ci-maven/com/terraformersmc/modmenu/17.0.0-beta.2
           mkdir -p "$dir"
-          curl -fL --http1.1 -C - --retry 15 --retry-all-errors --retry-delay 2 \
-            -o "$dir/modmenu-17.0.0-beta.2.jar" \
-            https://maven.terraformersmc.com/releases/com/terraformersmc/modmenu/17.0.0-beta.2/modmenu-17.0.0-beta.2.jar
-          printf '%s\n' \
-            '<?xml version="1.0" encoding="UTF-8"?>' \
-            '<project xmlns="http://maven.apache.org/POM/4.0.0">' \
-            '  <modelVersion>4.0.0</modelVersion>' \
-            '  <groupId>com.terraformersmc</groupId>' \
-            '  <artifactId>modmenu</artifactId>' \
-            '  <version>17.0.0-beta.2</version>' \
-            '  <packaging>jar</packaging>' \
-            '</project>' > "$dir/modmenu-17.0.0-beta.2.pom"
+          if curl -fL --http1.1 -C - --retry 15 --retry-all-errors --retry-delay 2 \
+              -o "$dir/modmenu-17.0.0-beta.2.jar" \
+              https://maven.terraformersmc.com/releases/com/terraformersmc/modmenu/17.0.0-beta.2/modmenu-17.0.0-beta.2.jar; then
+            printf '%s\n' \
+              '<?xml version="1.0" encoding="UTF-8"?>' \
+              '<project xmlns="http://maven.apache.org/POM/4.0.0">' \
+              '  <modelVersion>4.0.0</modelVersion>' \
+              '  <groupId>com.terraformersmc</groupId>' \
+              '  <artifactId>modmenu</artifactId>' \
+              '  <version>17.0.0-beta.2</version>' \
+              '  <packaging>jar</packaging>' \
+              '</project>' > "$dir/modmenu-17.0.0-beta.2.pom"
+          else
+            echo "Mod Menu prefetch failed — clearing ci-maven, Gradle will fetch it directly."
+            rm -rf ci-maven
+          fi
 
       - name: Build mod
         run: ./gradlew build --stacktrace
