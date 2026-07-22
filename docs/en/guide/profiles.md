@@ -1,6 +1,6 @@
 # Profiles, roles & gifts
 
-New in 1.8.0: every player has a profile — Telegram-style.
+New in 1.8.2: every player has a profile — Telegram-style.
 
 ## Opening a profile
 
