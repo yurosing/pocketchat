@@ -11,19 +11,14 @@ base {
 }
 
 repositories {
-    // Local maven repo that CI pre-populates with Mod Menu (jar + a minimal POM)
-    // so the build never touches maven.terraformersmc.com, which has been flaky
-    // (truncated jars, 502s on the POM). Restricted to just that one module and
-    // empty for normal local builds, so it never affects a dev's own resolution —
-    // locals fall through to the real terraformersmc repo below.
-    maven {
-        name = 'ci-modmenu'
-        url = rootProject.file('ci-maven')
-        metadataSources { mavenPom() }
-        content { includeModule('com.terraformersmc', 'modmenu') }
-    }
     maven { url = 'https://maven.fabricmc.net/' }
-    maven { url = 'https://maven.terraformersmc.com/releases' }
+    // Mod Menu from Modrinth's maven (reliable). maven.terraformersmc.com has been
+    // flaky and even 404'd the artifact outright, so we resolve it from Modrinth.
+    maven {
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
+    maven { url = 'https://maven.terraformersmc.com/releases' } // fallback
     mavenCentral()
 }
 
@@ -33,8 +28,8 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    // Mod Menu — только API на компиляции, для экрана настроек
-    modCompileOnly "com.terraformersmc:modmenu:17.0.0-beta.2"
+    // Mod Menu — только API на компиляции, для экрана настроек (с Modrinth-мавена)
+    modCompileOnly "maven.modrinth:modmenu:17.0.0-beta.2"
 
     // Vosk — оффлайн-распознавание речи (нативная библиотека внутри jar;
     // JNA не включаем — Minecraft уже поставляет её для Narrator)
