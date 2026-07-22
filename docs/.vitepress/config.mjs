@@ -16,6 +16,7 @@ const sidebarRu = [
     collapsed: false,
     items: [
       { text: 'Интерфейс', link: '/guide/interface' },
+      { text: 'Профиль, роли и подарки', link: '/guide/profiles' },
       { text: 'Голосовые сообщения', link: '/guide/voice' },
       { text: 'Фото и стикеры', link: '/guide/media' },
       { text: 'Видео и YouTube', link: '/guide/video' },
@@ -66,6 +67,7 @@ const sidebarEn = [
     collapsed: false,
     items: [
       { text: 'Interface', link: '/en/guide/interface' },
+      { text: 'Profiles, roles & gifts', link: '/en/guide/profiles' },
       { text: 'Voice messages', link: '/en/guide/voice' },
       { text: 'Photos & stickers', link: '/en/guide/media' },
       { text: 'Video & YouTube', link: '/en/guide/video' },
@@ -152,7 +154,7 @@ export default defineConfig({
         nav: [
           { text: 'Документация', link: '/guide/what-is' },
           { text: 'Настройка', link: '/config/' },
-          { text: 'v1.7.7', items: [
+          { text: 'v1.8.0', items: [
             { text: 'Minecraft 1.21.11', link: '/guide/install' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},
@@ -181,7 +183,7 @@ export default defineConfig({
         nav: [
           { text: 'Docs', link: '/en/guide/what-is' },
           { text: 'Config', link: '/en/config/' },
-          { text: 'v1.7.7', items: [
+          { text: 'v1.8.0', items: [
             { text: 'Minecraft 1.21.11', link: '/en/guide/install' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},

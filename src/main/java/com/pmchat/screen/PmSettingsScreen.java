@@ -56,9 +56,8 @@ public class PmSettingsScreen extends Screen {
 
         int y = py + 24;
         y = addOption(y, "pmchat.set.theme",
-                () -> Text.translatable(config.theme == 1 ? "pmchat.set.theme.light"
-                        : config.theme == 2 ? "pmchat.set.theme.slate" : "pmchat.set.theme.dark"),
-                VALUE, () -> config.theme = (config.theme + 1) % 3);
+                () -> Text.translatable(PmTheme.nameKey(config.theme)),
+                VALUE, () -> config.theme = (config.theme + 1) % PmTheme.COUNT);
 
         y = addOption(y, "pmchat.set.outcolor",
                 () -> Text.literal("■ " + (config.outColor % PmPalettes.OUT.length + 1)),

@@ -152,6 +152,46 @@ public final class PmVoice {
         return FAILED.getOrDefault(id, false);
     }
 
+    /**
+     * Достаёт сырые байты голосового — кэш → диск → сеть, в этом порядке
+     * (та же цепочка, что и перед воспроизведением). Блокирует на сетевом
+     * запросе — звать только с фонового потока. null — не удалось достать.
+     */
+    public static byte[] fetchBytes(String hostCode, String id) {
+        byte[] bytes = AUDIO_CACHE.get(id);
+        if (bytes != null) return bytes;
+        try {
+            java.nio.file.Path cached = PmImages.mediaFile(hostCode, id);
+            if (java.nio.file.Files.exists(cached)) {
+                bytes = java.nio.file.Files.readAllBytes(cached);
+                AUDIO_CACHE.put(id, bytes);
+                return bytes;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            // Голосовое с сервера (код хоста "s") тянем по каналу плагина, а не по HTTP.
+            if ("s".equals(hostCode)) {
+                bytes = PmServerMedia.get().download(id).get(60, java.util.concurrent.TimeUnit.SECONDS);
+            } else {
+                HttpResponse<byte[]> response = HTTP.send(HttpRequest.newBuilder()
+                                .uri(URI.create(PmHosts.baseUrl(hostCode) + id))
+                                .timeout(Duration.ofSeconds(15))
+                                .header("User-Agent", "pmchat-mod/1.0")
+                                .GET().build(),
+                        HttpResponse.BodyHandlers.ofByteArray());
+                if (response.statusCode() != 200) return null;
+                bytes = response.body();
+            }
+            AUDIO_CACHE.put(id, bytes);
+            PmImages.saveToDisk(hostCode, id, bytes);
+            return bytes;
+        } catch (Exception e) {
+            PmChatClient.LOGGER.warn("Voice fetch (for transcript) failed: {}", e.toString());
+            return null;
+        }
+    }
+
     public static void togglePlay(String hostCode, String id) {
         if (isPlaying(id)) {
             stopPlayback();
@@ -174,17 +214,22 @@ public final class PmVoice {
                     }
                 }
                 if (bytes == null) {
-                    HttpResponse<byte[]> response = HTTP.send(HttpRequest.newBuilder()
-                                    .uri(URI.create(PmHosts.baseUrl(hostCode) + id))
-                                    .timeout(Duration.ofSeconds(15))
-                                    .header("User-Agent", "pmchat-mod/1.0")
-                                    .GET().build(),
-                            HttpResponse.BodyHandlers.ofByteArray());
-                    if (response.statusCode() != 200) {
-                        FAILED.put(id, true);
-                        return;
+                    if ("s".equals(hostCode)) {
+                        // Голосовое с сервера — по каналу плагина, а не по HTTP.
+                        bytes = PmServerMedia.get().download(id).get(60, java.util.concurrent.TimeUnit.SECONDS);
+                    } else {
+                        HttpResponse<byte[]> response = HTTP.send(HttpRequest.newBuilder()
+                                        .uri(URI.create(PmHosts.baseUrl(hostCode) + id))
+                                        .timeout(Duration.ofSeconds(15))
+                                        .header("User-Agent", "pmchat-mod/1.0")
+                                        .GET().build(),
+                                HttpResponse.BodyHandlers.ofByteArray());
+                        if (response.statusCode() != 200) {
+                            FAILED.put(id, true);
+                            return;
+                        }
+                        bytes = response.body();
                     }
-                    bytes = response.body();
                     AUDIO_CACHE.put(id, bytes);
                     PmImages.saveToDisk(hostCode, id, bytes);
                     FAILED.remove(id);

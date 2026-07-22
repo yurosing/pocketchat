@@ -1,0 +1,68 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.pmchat'
+version = '2.0.0'
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+    maven { url = 'https://jitpack.io' } // VaultAPI (gift purchases)
+}
+
+dependencies {
+    // Only the stable Bukkit/Paper API is used (plugin messaging, scheduler,
+    // config) — no NMS/internals — so a single 1.21.x API artifact is enough
+    // and the plugin runs on any 1.21.x server via api-version 1.21.
+    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+    // Vault economy API — compile-only soft dependency for gift purchases.
+    // Resolved only against the Economy service at runtime when Vault is present.
+    // transitive=false: skip VaultAPI's old Bukkit dep (Paper API above covers it).
+    compileOnly('com.github.MilkBowl:VaultAPI:1.7') { transitive = false }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// One codebase, two editions differing only by the plugin name (which the plugin
+// reads at runtime to decide free vs Pro). config.yml is shared via main resources;
+// plugin.yml is generated per edition from src/main/plugin-template.
+// Public edition: free only. The Pro edition (PocketChatPro) is NOT built or
+// shipped from the public repo — it stays in the private "secret" build.
+def editions = [
+        [id: 'free', pluginName: 'PocketChat'],
+]
+
+def editionJars = []
+editions.each { ed ->
+    def metaDir = layout.buildDirectory.dir("plugin-meta/${ed.id}")
+    def genTask = tasks.register("generate_${ed.id}_pluginYml", Copy) {
+        from 'src/main/plugin-template'
+        into metaDir
+        expand(version: project.version.toString(), pluginName: ed.pluginName)
+    }
+    def jarTask = tasks.register("${ed.id}Jar", Jar) {
+        dependsOn genTask, tasks.named('classes')
+        archiveBaseName = ed.pluginName
+        archiveVersion = project.version.toString()
+        from sourceSets.main.output   // compiled classes + shared config.yml
+        from metaDir                  // generated plugin.yml
+    }
+    editionJars << jarTask
+}
+
+// The default jar has no plugin.yml (it's edition-specific), so disable it and
+// build the two editions instead.
+tasks.named('jar') {
+    enabled = false
+}
+
+tasks.named('assemble') {
+    dependsOn editionJars
+}

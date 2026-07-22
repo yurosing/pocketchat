@@ -1,0 +1,7 @@
+name: ${pluginName}
+version: '${version}'
+main: com.pmchat.plugin.PocketChatPlugin
+api-version: '1.21'
+author: PocketChat
+description: Routes PocketChat private messages and media (photos, voice, video) through the server.
+softdepend: [Vault]

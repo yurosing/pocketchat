@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Отправка фото без серверного плагина: файл грузится на анонимный
@@ -100,7 +101,22 @@ public final class PmImages {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 byte[] fileBytes = Files.readAllBytes(file);
-                return PmHosts.upload(fileBytes, file.getFileName().toString());
+                String filename = file.getFileName().toString();
+                // Если на сервере стоит плагин PocketChatMedia — грузим через сервер
+                // (код хоста "s"), а не на внешний хостинг. При любой заминке —
+                // прозрачный откат на обычные хосты.
+                if (PmServerMedia.get().isAvailable() && fileBytes.length <= PmServerMedia.get().maxFileBytes()) {
+                    try {
+                        int dot = filename.lastIndexOf('.');
+                        String ext = dot > 0 ? filename.substring(dot + 1) : "bin";
+                        String fileId = PmServerMedia.get().upload(fileBytes, ext).get(60, TimeUnit.SECONDS);
+                        PmChatClient.LOGGER.info("Uploaded via server relay: {}", fileId);
+                        return new String[]{"s", fileId};
+                    } catch (Exception e) {
+                        PmChatClient.LOGGER.warn("Server relay upload failed, falling back to hosts: {}", e.toString());
+                    }
+                }
+                return PmHosts.upload(fileBytes, filename);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -214,18 +230,25 @@ public final class PmImages {
 
     private static void download(String hostCode, String id, Entry entry) {
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(PmHosts.baseUrl(hostCode) + id))
-                    .timeout(Duration.ofSeconds(15))
-                    .header("User-Agent", "pmchat-mod/1.0")
-                    .GET()
-                    .build();
-            HttpResponse<byte[]> response = HTTP.send(request, HttpResponse.BodyHandlers.ofByteArray());
-            if (response.statusCode() != 200) {
-                throw new IllegalStateException("download failed: " + response.statusCode());
+            byte[] bytes;
+            // Медиа с сервера (код хоста "s") тянем по каналу плагина, а не по HTTP.
+            if ("s".equals(hostCode)) {
+                bytes = PmServerMedia.get().download(id).get(60, TimeUnit.SECONDS);
+            } else {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(PmHosts.baseUrl(hostCode) + id))
+                        .timeout(Duration.ofSeconds(15))
+                        .header("User-Agent", "pmchat-mod/1.0")
+                        .GET()
+                        .build();
+                HttpResponse<byte[]> response = HTTP.send(request, HttpResponse.BodyHandlers.ofByteArray());
+                if (response.statusCode() != 200) {
+                    throw new IllegalStateException("download failed: " + response.statusCode());
+                }
+                bytes = response.body();
             }
-            saveToDisk(hostCode, id, response.body());
-            register(id, response.body(), entry);
+            saveToDisk(hostCode, id, bytes);
+            register(id, bytes, entry);
         } catch (Exception e) {
             PmChatClient.LOGGER.warn("Failed to fetch image {}: {}", id, e.getMessage());
             entry.state = State.FAILED;

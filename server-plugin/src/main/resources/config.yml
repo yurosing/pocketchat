@@ -1,0 +1,60 @@
+# PocketChat — server-side companion for the PocketChat client mod.
+#
+# When this plugin is installed, PocketChat clients detect it automatically and
+# route private messages and media (photos / voice / video) THROUGH the server
+# instead of /m and external file hosts. Files are streamed to disk on the server
+# and back to the recipient over a plugin-messaging channel.
+#
+# Two editions share this config: "PocketChat" (free) and "PocketChatPro", which
+# additionally unlocks premium client features such as voice transcription.
+
+# How long a stored media file is kept before automatic deletion (hours).
+retention-hours: 168
+
+# Hard cap on total media storage (megabytes). When exceeded, the oldest files
+# are deleted first until the store is back under the limit.
+max-total-mb: 512
+
+# Largest single file the server will accept from a client (megabytes).
+# Bigger files make the client fall back to external hosts.
+max-file-mb: 25
+
+# When a PocketChat user messages someone who does NOT have the mod, the server
+# delivers it as a normal private message using this command (as the sender).
+# Set to your server's whisper command: msg / tell / w / m (EssentialsX), etc.
+tell-command: msg
+
+# ---------- Gifts (Telegram-style, bought with Vault coins) ----------
+# Players can send each other cosmetic gifts from the mod's profile screen.
+# Buying withdraws the price from the sender's Vault balance (requires Vault +
+# any economy plugin, e.g. EssentialsX). Received gifts show up on the profile.
+# Disable this to hide the gift shop entirely.
+gifts-enabled: true
+
+# Catalog: each entry has a display name, a single icon character, and a price
+# in coins. Add/remove freely — ids are the keys.
+gifts:
+  rose:
+    name: "Роза"
+    icon: "❀"
+    price: 100
+  heart:
+    name: "Сердечко"
+    icon: "❤"
+    price: 150
+  cake:
+    name: "Торт"
+    icon: "✿"
+    price: 250
+  star:
+    name: "Звезда"
+    icon: "★"
+    price: 500
+  crown:
+    name: "Корона"
+    icon: "♛"
+    price: 1000
+  diamond:
+    name: "Алмаз"
+    icon: "♦"
+    price: 2500

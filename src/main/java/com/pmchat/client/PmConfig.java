@@ -43,6 +43,11 @@ public class PmConfig {
     /** Прятать перехваченные строки ЛС из обычного чата. */
     public boolean hideChatLines = false;
 
+    /** Проверять новые версии мода по релизам GitHub при заходе на сервер. */
+    public boolean checkUpdates = true;
+    /** Репозиторий для проверки обновлений (owner/repo, публичный). */
+    public String updateRepo = "yurosing/pocketchat";
+
     /** Хостинг картинок: куда грузим и откуда качаем по id. */
     public String uploadUrl = "https://catbox.moe/user/api.php";
     public String imageHost = "https://files.catbox.moe/";
@@ -200,6 +205,62 @@ public class PmConfig {
         save();
     }
 
+    // ---------- Чёрный список (5.5) ----------
+
+    /**
+     * Заблокированные игроки. У них скрыта аватарка (даже онлайн), а в шапке
+     * диалога виден значок ЧС. Без серверного плагина блок дублируется в
+     * серверный игнор Essentials командой {@link #ignoreCommand}.
+     */
+    public List<String> blocked = new ArrayList<>();
+
+    /** Команда серверного игнора без плагина (Essentials переключает ей же). */
+    public String ignoreCommand = "ignore";
+
+    // ---------- Профиль (4.2 / 4.5) ----------
+
+    /** Свой профиль: день рождения (свободный текст, напр. «14.02»). */
+    public String profileBirthday = "";
+    /** Свой профиль: описание «о себе». */
+    public String profileDescription = "";
+    /**
+     * Код своей роли-должности. Пусто — без роли. Коды: C — контент-мейкер,
+     * H — хелпер, M — модератор, E — ивент-мейкер, D — разработчик.
+     */
+    public String profileRole = "";
+
+    /** Локально назначенные роли других игроков (ник → код роли). «Настраивать самому». */
+    public Map<String, String> playerRoles = new HashMap<>();
+
+    public String roleOf(String name) {
+        if (name == null) return "";
+        String r = playerRoles.get(name.trim());
+        return r == null ? "" : r;
+    }
+
+    public void setRole(String name, String code) {
+        if (name == null || name.isBlank()) return;
+        if (code == null || code.isEmpty()) playerRoles.remove(name.trim());
+        else playerRoles.put(name.trim(), code);
+        save();
+    }
+
+    public boolean isBlocked(String name) {
+        return listContainsIgnoreCase(blocked, name);
+    }
+
+    public void addBlocked(String name) {
+        if (name == null || name.isBlank()) return;
+        if (!isBlocked(name)) blocked.add(name.trim());
+        save();
+    }
+
+    public void removeBlocked(String name) {
+        if (name == null) return;
+        blocked.removeIf(n -> n.equalsIgnoreCase(name.trim()));
+        save();
+    }
+
     /** Канал серверного чата (клан/альянс/группа): вкладка в мессенджере. */
     public static class PmChannel {
         public String id;
@@ -234,6 +295,8 @@ public class PmConfig {
         public String id;
         public String name;
         public List<String> members = new ArrayList<>();
+        /** Имя файла аватарки группы из config/pmchat-avatars/ (3.1). Пусто — иконка по умолчанию. */
+        public String avatar = "";
 
         public PmGroup() {
         }
@@ -420,10 +483,17 @@ public class PmConfig {
                     if (cfg.groups == null) cfg.groups = new ArrayList<>();
                     for (PmGroup g : cfg.groups) {
                         if (g.members == null) g.members = new ArrayList<>();
+                        if (g.avatar == null) g.avatar = "";
                     }
                     if (cfg.warnReason == null) cfg.warnReason = "";
                     if (cfg.filterPlayers == null) cfg.filterPlayers = new ArrayList<>();
                     if (cfg.filterDiscordPlayers == null) cfg.filterDiscordPlayers = new ArrayList<>();
+                    if (cfg.blocked == null) cfg.blocked = new ArrayList<>();
+                    if (cfg.ignoreCommand == null || cfg.ignoreCommand.isBlank()) cfg.ignoreCommand = "ignore";
+                    if (cfg.playerRoles == null) cfg.playerRoles = new HashMap<>();
+                    if (cfg.profileBirthday == null) cfg.profileBirthday = "";
+                    if (cfg.profileDescription == null) cfg.profileDescription = "";
+                    if (cfg.profileRole == null) cfg.profileRole = "";
                     if (cfg.filterRules == null) cfg.filterRules = new ArrayList<>();
                     if (cfg.discordPattern == null || cfg.discordPattern.isBlank()) {
                         cfg.discordPattern = new PmConfig().discordPattern;

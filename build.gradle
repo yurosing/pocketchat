@@ -11,6 +11,17 @@ base {
 }
 
 repositories {
+    // Local maven repo that CI pre-populates with Mod Menu (jar + a minimal POM)
+    // so the build never touches maven.terraformersmc.com, which has been flaky
+    // (truncated jars, 502s on the POM). Restricted to just that one module and
+    // empty for normal local builds, so it never affects a dev's own resolution —
+    // locals fall through to the real terraformersmc repo below.
+    maven {
+        name = 'ci-modmenu'
+        url = rootProject.file('ci-maven')
+        metadataSources { mavenPom() }
+        content { includeModule('com.terraformersmc', 'modmenu') }
+    }
     maven { url = 'https://maven.fabricmc.net/' }
     maven { url = 'https://maven.terraformersmc.com/releases' }
     mavenCentral()

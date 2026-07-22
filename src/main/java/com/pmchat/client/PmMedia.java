@@ -121,7 +121,7 @@ public final class PmMedia {
      *  • нужен тройной слэш file:///C:/..., а Java даёт file:/C:/... (один) —
      *    VLC иначе принимает путь за относительный.
      */
-    private static String fileUri(File f) {
+    public static String fileUri(File f) {
         String u = f.toURI().toASCIIString();      // file:/C:/...%D0%94...
         return u.replaceFirst("^file:/(?!/)", "file:///");
     }

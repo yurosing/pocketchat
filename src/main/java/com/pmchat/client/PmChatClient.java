@@ -150,6 +150,28 @@ public class PmChatClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> client.execute(() -> PmMedia.get().stop()));
 
+        // Канал pmchat:media — релей фото/голосовых/видео через сервер, если на нём
+        // стоит плагин PocketChatMedia. Регистрируем типы пейлоада и приёмник,
+        // определяем наличие плагина по объявлению канала сервером и сбрасываем
+        // состояние при выходе.
+        net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.playS2C()
+                .register(MediaPayload.ID, MediaPayload.CODEC);
+        net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.playC2S()
+                .register(MediaPayload.ID, MediaPayload.CODEC);
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+                MediaPayload.ID, (payload, context) -> PmServerMedia.get().handle(payload.data()));
+        // Обнаружение плагина — опросом canSend в PmServerMedia.tick(): сервер
+        // объявляет канал, только если на нём стоит PocketChatMedia.
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) -> PmServerMedia.get().reset());
+
+        // Проверка новых версий мода по публичным релизам GitHub — один раз при
+        // заходе на сервер; уведомление с кликабельной ссылкой, ничего не качаем.
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register(
+                (handler, sender, client) -> PmUpdate.checkAsync());
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) -> PmUpdate.resetSession());
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             // Только ОТКРЫВАЕМ по клавише (закрытие — Esc/крестик), иначе на русской
             // раскладке клавиша J = «о» закрывала бы меню при вводе текста.
@@ -174,6 +196,8 @@ public class PmChatClient implements ClientModInitializer {
             }
             // Авто-переход к следующему треку, когда текущий доиграл
             PmMedia.get().tick();
+            // Отправка/докачка медиа через серверный плагин (пейсинг по тикам)
+            PmServerMedia.get().tick();
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
                 float hp = client.player.getHealth();
@@ -695,7 +719,7 @@ public class PmChatClient implements ClientModInitializer {
                 // Без мода: человекочитаемо, с пометкой группы
                 out = "[" + g.name + "] " + text;
             }
-            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + member + " " + out);
+            pmDeliver(member, out);
             synchronized (pendingEcho) {
                 pendingEcho.add(new String[]{member, out, String.valueOf(System.currentTimeMillis() + 5000)});
             }
@@ -989,7 +1013,7 @@ public class PmChatClient implements ClientModInitializer {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
         config.markHiSent(target);
-        client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + PmWire.HI);
+        pmDeliver(target, PmWire.HI);
     }
 
     /** Реакция на сообщение: локально + собеседнику с модом. */
@@ -1000,8 +1024,7 @@ public class PmChatClient implements ClientModInitializer {
         history.save();
         if (config.enableMeta && config.isModUser(target)) {
             String hash = PmHistory.msgHash(msg.text);
-            client.player.networkHandler.sendChatCommand(
-                    config.msgCommand + " " + target + " " + PmWire.reaction(hash, index));
+            pmDeliver(target, PmWire.reaction(hash, index));
         }
     }
 
@@ -1009,7 +1032,7 @@ public class PmChatClient implements ClientModInitializer {
         if (config.enableMeta && config.isModUser(target) && !isLocalChat(target)) {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player != null) {
-                client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+                pmDeliver(target, wire);
             }
         }
     }
@@ -1056,7 +1079,7 @@ public class PmChatClient implements ClientModInitializer {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player != null) {
                 String wire = PmWire.edit(oldHash, newText);
-                client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+                pmDeliver(target, wire);
                 synchronized (pendingEcho) {
                     pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
                 }
@@ -1084,7 +1107,7 @@ public class PmChatClient implements ClientModInitializer {
 
         if (config.isModUser(target)) {
             String wire = PmWire.forward(fromNick, inner);
-            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+            pmDeliver(target, wire);
             synchronized (pendingEcho) {
                 pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
             }
@@ -1095,7 +1118,7 @@ public class PmChatClient implements ClientModInitializer {
             // Без мода: медиа бесполезно, шлём человекочитаемо
             String body = previewOf(inner);
             String plain = fromNick + " » " + body;
-            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + plain);
+            pmDeliver(target, plain);
             synchronized (pendingEcho) {
                 pendingEcho.add(new String[]{target, plain, String.valueOf(System.currentTimeMillis() + 5000)});
             }
@@ -1149,7 +1172,7 @@ public class PmChatClient implements ClientModInitializer {
             history.save();
             return;
         }
-        client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+        pmDeliver(target, wire);
         synchronized (pendingEcho) {
             pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
         }
@@ -1174,8 +1197,7 @@ public class PmChatClient implements ClientModInitializer {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player != null) {
                 String hash = PmHistory.msgHash(poll.text);
-                client.player.networkHandler.sendChatCommand(
-                        config.msgCommand + " " + target + " " + PmWire.pvote(hash, poll.pollMyVotes));
+                pmDeliver(target, PmWire.pvote(hash, poll.pollMyVotes));
             }
         }
     }
@@ -1224,8 +1246,7 @@ public class PmChatClient implements ClientModInitializer {
         s.aesKey = null;
         s.state = PmSecretSession.State.PENDING;
         String pub = PmCrypto.hex(PmCrypto.rawPublicKey(s.myKeyPair));
-        client.player.networkHandler.sendChatCommand(
-                config.msgCommand + " " + target + " " + PmWire.secretRequest(pub));
+        pmDeliver(target, PmWire.secretRequest(pub));
     }
 
     /** Завершить секретный чат: собеседнику уходит метка, локально сессия стирается сразу. */
@@ -1233,8 +1254,7 @@ public class PmChatClient implements ClientModInitializer {
         MinecraftClient client = MinecraftClient.getInstance();
         secretSessions.remove(target.toLowerCase(Locale.ROOT));
         if (client.player == null || target == null || target.isBlank()) return;
-        client.player.networkHandler.sendChatCommand(
-                config.msgCommand + " " + target + " " + PmWire.secretEnd());
+        pmDeliver(target, PmWire.secretEnd());
     }
 
     /**
@@ -1252,8 +1272,7 @@ public class PmChatClient implements ClientModInitializer {
             s.aesKey = PmCrypto.deriveAesKey(shared);
             s.state = PmSecretSession.State.ACTIVE;
             String pub = PmCrypto.hex(PmCrypto.rawPublicKey(s.myKeyPair));
-            client.player.networkHandler.sendChatCommand(
-                    config.msgCommand + " " + sender + " " + PmWire.secretAck(pub));
+            pmDeliver(sender, PmWire.secretAck(pub));
         } catch (Exception e) {
             LOGGER.warn("Secret chat handshake failed (request from {}): {}", sender, e.toString());
         }
@@ -1303,7 +1322,7 @@ public class PmChatClient implements ClientModInitializer {
         try {
             String[] enc = PmCrypto.encrypt(s.aesKey, text);
             String wire = PmWire.secretMessage(s.ttlSeconds, enc[0], enc[1]);
-            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+            pmDeliver(target, wire);
             synchronized (pendingEcho) {
                 pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
             }
@@ -1402,8 +1421,7 @@ public class PmChatClient implements ClientModInitializer {
     public static void startCall(String target) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target == null || target.isBlank()) return;
-        client.player.networkHandler.sendChatCommand(
-                config.msgCommand + " " + target + " " + PmWire.call());
+        pmDeliver(target, PmWire.call());
 
         // Отмечаем звонок как активный для меню звонка в моде
         callActive = true;
@@ -1512,6 +1530,12 @@ public class PmChatClient implements ClientModInitializer {
                 }
             }
         }
+        // В режиме плагина все свои сообщения уже записаны локально при отправке,
+        // а любой ванильный эхо-луч (например, /tell-фолбэк не-моду) — это не
+        // новое сообщение: прячем строку, но НЕ добавляем повторно в историю.
+        if (PmServerMedia.get().isAvailable()) {
+            return 1;
+        }
         String replyTo = null;
         Object[] repF = PmWire.parseReplyFrag(text);
         if (repF != null) {
@@ -1530,6 +1554,61 @@ public class PmChatClient implements ClientModInitializer {
             history.save();
         }
         return 1;
+    }
+
+    // ---------- Транспорт лички: серверный плагин или /m ----------
+
+    /**
+     * Доставить wire-строку получателю. Если на сервере стоит плагин
+     * PocketChatMedia — напрямую по каналу (в игровом чате ничего не светится,
+     * в логи сервера не пишется), иначе — обычной командой /m, как раньше.
+     */
+    static void pmDeliver(String to, String line) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        if (PmServerMedia.get().isAvailable()) {
+            PmServerMedia.get().sendPm(to, line, readableFallback(line));
+        } else {
+            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + to + " " + line);
+        }
+    }
+
+    /** Мета-строки (печатает/прочитано/реакции/…) — их не /tell'им не-мод получателю. */
+    private static boolean isMetaWire(String wire) {
+        return PmWire.isTyping(wire) || PmWire.isSeen(wire) || PmWire.isHi(wire)
+                || PmWire.parseReaction(wire) != null || PmWire.isPinMeta(wire)
+                || PmWire.isVoteMeta(wire) || PmWire.isEditMeta(wire) || PmWire.isUnpinMeta(wire)
+                || PmWire.isSecretMeta(wire) || PmWire.isCallMeta(wire);
+    }
+
+    /** Читаемый текст для /tell не-мод получателю (пусто — не отправлять вовсе). */
+    private static String readableFallback(String wire) {
+        if (wire == null || isMetaWire(wire)) return "";
+        if (PmWire.parseImg(wire) != null) return "[фото]";
+        if (PmWire.parseVoice(wire) != null) return "[голосовое]";
+        if (PmWire.parseVid(wire) != null) return "[видео]";
+        String[] fwd = PmWire.parseForward(wire);
+        if (fwd != null) return fwd[0] + " » " + previewOf(fwd[1]);
+        Object[] rf = PmWire.parseReplyFrag(wire);
+        if (rf != null) return (String) rf[3];
+        String[] re = PmWire.parseReply(wire);
+        if (re != null) return re[1];
+        String[] poll = PmWire.parsePoll(wire);
+        if (poll != null) return "[опрос] " + poll[1];
+        if (PmWire.parseGroup(wire) != null) return ""; // группы — отдельная механика
+        if (PmWire.isStructured(wire)) return ""; // прочая мета/структура — не слать сырьём не-моду
+        return wire; // обычный текст
+    }
+
+    /** Входящая ЛС по каналу плагина — обрабатываем как /m от отправителя (на клиентском потоке). */
+    public static void deliverServerPm(String sender, String wire) {
+        MinecraftClient.getInstance().execute(() -> onIncoming(sender, wire));
+    }
+
+    /** Получатель оффлайн — сообщение по каналу не доставлено. */
+    public static void notifyPmOffline(String target) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.execute(() -> chatLine(client, "§c[pmchat] " + target + " оффлайн — сообщение не доставлено"));
     }
 
     /** Достаёт текст фрагмента [start, start+len) из оригинала (по хэшу) или null. */
@@ -1574,7 +1653,7 @@ public class PmChatClient implements ClientModInitializer {
         } else {
             wire = text;
         }
-        client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + wire);
+        pmDeliver(target, wire);
         synchronized (pendingEcho) {
             pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
         }
@@ -1602,7 +1681,7 @@ public class PmChatClient implements ClientModInitializer {
         Long last = lastTypingSent.get(target.toLowerCase(Locale.ROOT));
         if (last != null && now - last < 25000) return;
         lastTypingSent.put(target.toLowerCase(Locale.ROOT), now);
-        client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + PmWire.TYPING);
+        pmDeliver(target, PmWire.TYPING);
     }
 
     public static void sendSeen(String target) {
@@ -1613,7 +1692,7 @@ public class PmChatClient implements ClientModInitializer {
         Long last = lastSeenSent.get(target.toLowerCase(Locale.ROOT));
         if (last != null && now - last < 30000) return;
         lastSeenSent.put(target.toLowerCase(Locale.ROOT), now);
-        client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + PmWire.SEEN);
+        pmDeliver(target, PmWire.SEEN);
     }
 
     /** Перевод денег из мессенджера: /pay + денежное сообщение в историю. */
@@ -1623,6 +1702,58 @@ public class PmChatClient implements ClientModInitializer {
         if (isLocalChat(target)) return null; // в Избранное деньги не переводим
         client.player.networkHandler.sendChatCommand(config.payCommand + " " + target + " " + amount);
         return history.add(target, true, "", amount);
+    }
+
+    // ---------- Чёрный список (5.5) ----------
+
+    public static boolean isBlocked(String name) {
+        return name != null && config.isBlocked(name);
+    }
+
+    /**
+     * Блокирует/разблокирует игрока (профиль → ПКМ). Без серверного плагина
+     * дублируем в серверный игнор Essentials — команда {@code /ignore <ник>}
+     * переключает состояние на самом сервере (тем же вызовом снимается).
+     */
+    public static void setBlocked(String name, boolean blocked) {
+        if (name == null || name.isBlank()) return;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (blocked) {
+            config.addBlocked(name);
+        } else {
+            config.removeBlocked(name);
+        }
+        boolean pluginPresent = PmServerMedia.get().isAvailable();
+        if (!pluginPresent && client.player != null
+                && config.ignoreCommand != null && !config.ignoreCommand.isBlank()) {
+            client.player.networkHandler.sendChatCommand(config.ignoreCommand + " " + name);
+        }
+    }
+
+    public static void toggleBlocked(String name) {
+        setBlocked(name, !isBlocked(name));
+    }
+
+    /**
+     * Последний известный баланс игрока для показа в своём профиле (4.5).
+     * Достоверный источник — серверный плагин/Vault; без него значение
+     * неизвестно (null → в профиле показывается «—»).
+     */
+    private static volatile String knownBalance = null;
+
+    public static String knownBalance() {
+        return knownBalance;
+    }
+
+    public static void setKnownBalance(String value) {
+        knownBalance = value;
+    }
+
+    /** Всплывашка о полученном подарке (4.2). */
+    public static void giftToast(String from, String giftName, String icon) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.execute(() -> client.getToastManager().add(
+                new PmToast((icon == null ? "🎁" : icon) + " " + from, giftName)));
     }
 
     public static String selfName() {

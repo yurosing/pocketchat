@@ -10,9 +10,11 @@ import org.vosk.Model;
 import org.vosk.Recognizer;
 
 import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.TargetDataLine;
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
@@ -419,6 +421,70 @@ public final class PmStt {
 
     public static void stopListening() {
         listening = false;
+    }
+
+    /**
+     * Офлайн-расшифровка уже готового WAV-клипа (голосовое сообщение) — без
+     * микрофона, в фоновом потоке. Использует ту же модель Vosk, что и
+     * голосовой набор текста, поэтому ждёт её загрузки (или запускает сама),
+     * если она ещё не готова. Клип должен быть в том же формате, в котором
+     * этот мод сам пишет голосовые (16 кГц, моно, 16 бит) — так и есть,
+     * все голосовые в истории записаны именно этим модом.
+     *
+     * @param onDone  вызывается на клиентском потоке с распознанным текстом
+     *                (может быть пустой строкой, если Vosk ничего не разобрал)
+     * @param onError вызывается на клиентском потоке с описанием ошибки
+     */
+    public static void transcribeAsync(byte[] wavBytes, Consumer<String> onDone, Consumer<String> onError) {
+        if (state != State.READY) {
+            ensureModelAsync();
+            Thread waiter = new Thread(() -> {
+                long deadline = System.currentTimeMillis() + 60_000;
+                while (state != State.READY && state != State.ERROR && System.currentTimeMillis() < deadline) {
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                }
+                if (state == State.READY) {
+                    transcribeAsync(wavBytes, onDone, onError);
+                } else {
+                    MinecraftClient.getInstance().execute(() -> onError.accept("модель STT не готова"));
+                }
+            }, "pmchat-stt-transcribe-wait");
+            waiter.setDaemon(true);
+            waiter.start();
+            return;
+        }
+
+        Thread thread = new Thread(() -> {
+            Recognizer recognizer = null;
+            try (AudioInputStream in = AudioSystem.getAudioInputStream(new ByteArrayInputStream(wavBytes))) {
+                recognizer = new Recognizer(model, 16000f);
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) > 0) {
+                    recognizer.acceptWaveForm(buf, n);
+                }
+                String text = extract(recognizer.getFinalResult(), "text");
+                MinecraftClient.getInstance().execute(() -> onDone.accept(text));
+            } catch (Throwable t) {
+                PmChatClient.LOGGER.warn("Voice transcription failed: {}", t.toString());
+                String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+                MinecraftClient.getInstance().execute(() -> onError.accept(msg));
+            } finally {
+                if (recognizer != null) {
+                    try {
+                        recognizer.close();
+                    } catch (Exception ignored) {
+                    }
+                }
+                lastUseMs = System.currentTimeMillis();
+            }
+        }, "pmchat-stt-transcribe");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private static void deliver(String text) {

@@ -108,6 +108,94 @@ public class PmScreen extends Screen {
             EMOJI_BG = 0xF2E2E9EE;
             CHIP_BG = 0xFFC2CCD3;
             ROW_ALT = 0xFFC2CCD3;
+        } else if (config.theme == 3) {
+            // Midnight — глубокая тёмная индиго
+            PANEL_BG = 0xFF15131F;
+            PANEL_BORDER = 0xFF0A0813;
+            LEFT_BG = 0xFF100E1A;
+            DIVIDER = 0xFF2A2740;
+            TITLE = 0xFFE6E1F2;
+            SUBTLE = 0xFF807A9A;
+            NAME_TEXT = 0xFFE6E1F2;
+            PREVIEW_TEXT = 0xFF807A9A;
+            ROW_HOVER = 0xFF201D30;
+            ROW_SELECTED = 0xFF272338;
+            IN_BG = 0xFF272338;
+            IN_TEXT = 0xFFE6E1F2;
+            WBTN_BG = 0xFF221F33;
+            WBTN_BG_HOVER = 0xFF1B1828;
+            WBTN_BORDER = 0xFF373250;
+            WBTN_TEXT = 0xFFB0A8D0;
+            SEP_LINE = 0x336A5FBF;
+            EMOJI_BG = 0xF215131F;
+            CHIP_BG = 0xFF221F33;
+            ROW_ALT = 0xFF191627;
+        } else if (config.theme == 4) {
+            // Nord — тёмная сине-серая
+            PANEL_BG = 0xFF2E3440;
+            PANEL_BORDER = 0xFF21262E;
+            LEFT_BG = 0xFF272C36;
+            DIVIDER = 0xFF3B4252;
+            TITLE = 0xFFECEFF4;
+            SUBTLE = 0xFF8893A5;
+            NAME_TEXT = 0xFFECEFF4;
+            PREVIEW_TEXT = 0xFF8893A5;
+            ROW_HOVER = 0xFF3B4252;
+            ROW_SELECTED = 0xFF434C5E;
+            IN_BG = 0xFF3B4252;
+            IN_TEXT = 0xFFECEFF4;
+            WBTN_BG = 0xFF3B4252;
+            WBTN_BG_HOVER = 0xFF434C5E;
+            WBTN_BORDER = 0xFF4C566A;
+            WBTN_TEXT = 0xFF88C0D0;
+            SEP_LINE = 0x3381A1C1;
+            EMOJI_BG = 0xF22E3440;
+            CHIP_BG = 0xFF3B4252;
+            ROW_ALT = 0xFF313847;
+        } else if (config.theme == 5) {
+            // Rosé Light — тёплая светлая розовая
+            PANEL_BG = 0xFFFBF3F5;
+            PANEL_BORDER = 0xFFE6D2D8;
+            LEFT_BG = 0xFFF4E7EB;
+            DIVIDER = 0xFFE6D2D8;
+            TITLE = 0xFF2B1F24;
+            SUBTLE = 0xFF8A6B76;
+            NAME_TEXT = 0xFF2B1F24;
+            PREVIEW_TEXT = 0xFF8A6B76;
+            ROW_HOVER = 0xFFF0DDE3;
+            ROW_SELECTED = 0xFFEAD2DA;
+            IN_BG = 0xFFFFFAFB;
+            IN_TEXT = 0xFF2B1F24;
+            WBTN_BG = 0xFFF4E7EB;
+            WBTN_BG_HOVER = 0xFFF0DDE3;
+            WBTN_BORDER = 0xFFE6D2D8;
+            WBTN_TEXT = 0xFF9C5A6E;
+            SEP_LINE = 0x33B07A88;
+            EMOJI_BG = 0xF2FFFAFB;
+            CHIP_BG = 0xFFF4E7EB;
+            ROW_ALT = 0xFFF4E7EB;
+        } else if (config.theme == 6) {
+            // Sand Light — тёплая кремовая
+            PANEL_BG = 0xFFF7F3EA;
+            PANEL_BORDER = 0xFFDED6C4;
+            LEFT_BG = 0xFFEFE9DA;
+            DIVIDER = 0xFFDED6C4;
+            TITLE = 0xFF2A251B;
+            SUBTLE = 0xFF847B63;
+            NAME_TEXT = 0xFF2A251B;
+            PREVIEW_TEXT = 0xFF847B63;
+            ROW_HOVER = 0xFFEAE2D0;
+            ROW_SELECTED = 0xFFE4DAC4;
+            IN_BG = 0xFFFFFDF6;
+            IN_TEXT = 0xFF2A251B;
+            WBTN_BG = 0xFFEFE9DA;
+            WBTN_BG_HOVER = 0xFFEAE2D0;
+            WBTN_BORDER = 0xFFDED6C4;
+            WBTN_TEXT = 0xFF8A7A45;
+            SEP_LINE = 0x33A89A6A;
+            EMOJI_BG = 0xF2FFFDF6;
+            CHIP_BG = 0xFFEFE9DA;
+            ROW_ALT = 0xFFEFE9DA;
         } else {
             // Cool Dark (редизайн 1B) — глубокая прохладная тёмная
             PANEL_BG = 0xFF141C21;
@@ -157,6 +245,18 @@ public class PmScreen extends Screen {
 
     private boolean isGroupTab() {
         return PmChatClient.isGroup(selected);
+    }
+
+    /** Личный диалог с игроком (не глобал/канал/группа/локальная лента). */
+    private boolean isPlayerTab(String tab) {
+        return tab != null
+                && !tab.isBlank()
+                && !PmChatClient.GLOBAL.equals(tab)
+                && !PmChatClient.COREPROTECT.equals(tab)
+                && !PmChatClient.SAVED.equals(tab)
+                && !PmChatClient.isLocalChat(tab)
+                && !tab.startsWith(PmChatClient.CHANNEL_PREFIX)
+                && !PmChatClient.isGroup(tab);
     }
 
     private String groupId() {
@@ -273,6 +373,18 @@ public class PmScreen extends Screen {
     private TextFieldWidget searchField;
     private TextFieldWidget inputField;
     private TextFieldWidget amountField;
+
+    /** Плавность появления счётчика символов (5.2) — как в Telegram. */
+    private float counterAlpha = 0f;
+
+    /** Лимит обычного сообщения и допустимый перебор (для счётчика 5.2). */
+    private static final int MSG_LIMIT = 200;
+    private static final int COMPOSER_SLACK = 40;
+
+    /** Логический предел для текущего композера (секрет — жёсткий, обычный — MSG_LIMIT). */
+    private int composerLimit() {
+        return PmChatClient.isSecretActive(selected) ? com.pmchat.client.PmWire.SECRET_MAX_CHARS : MSG_LIMIT;
+    }
     private String searchText = "";
     private String inputText = "";
     private String amountText = "";
@@ -455,6 +567,16 @@ public class PmScreen extends Screen {
                     clearConfirm = false;
                     rebuild();
                 }));
+        // Профиль игрока (4.5 / 5.5) — только для личного диалога
+        if (isPlayerTab(selected)) {
+            y += rowH + 2;
+            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                    Text.literal("☺ " + Text.translatable("pmchat.profile.open").getString()),
+                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B, btn -> {
+                        moreMenuOpen = false;
+                        MinecraftClient.getInstance().setScreen(new PmProfileScreen(this, selected));
+                    }));
+        }
     }
 
     // ---------- Меню звонка (карточка внутри окна мода) ----------
@@ -557,7 +679,7 @@ public class PmScreen extends Screen {
         int cx = x + w / 2;
 
         // Приподнятая карточка с заметной рамкой (иначе сливается с затемнением)
-        int cardBg = tintTowards(PANEL_BG, config.theme == 0 ? 0xFFFFFFFF : 0xFF000000, 0.10f);
+        int cardBg = tintTowards(PANEL_BG, PmTheme.isLight(config.theme) ? 0xFF000000 : 0xFFFFFFFF, 0.10f);
         fillRound(context, x - 1, y - 1, w + 2, h + 2, 9, ACCENT_BG);
         fillRound(context, x, y, w, h, 8, cardBg);
 
@@ -915,6 +1037,17 @@ public class PmScreen extends Screen {
 
         boolean isGlobal = isFeedTab();
         if (selected != null && !statsMode && !isGlobal && !groupCreateMode) {
+            // Кнопка профиля собеседника в шапке личного диалога (4.5 / 5.5).
+            // Открывает профиль ИМЕННО этого игрока (selected), а не свой.
+            if (isPlayerTab(selected)) {
+                String peer = selected;
+                FlatButton profBtn = FlatButton.centered(textRenderer, px + PANEL_W - 152, py + 6, 18, 14,
+                        Text.literal("☺"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B,
+                        btn -> MinecraftClient.getInstance().setScreen(new PmProfileScreen(this, peer)));
+                profBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(
+                        Text.translatable("pmchat.tip.profile")));
+                addDrawableChild(profBtn);
+            }
             // Меньше кнопок в ряд (по многочисленным просьбам): в строке — только
             // самое частое (стикеры, голос, фото, звонок), редкое спрятано за «⋮».
             addDrawableChild(icon(px + PANEL_W - 130, py + 6, 18, 14, PmIcons.STICKERS, 0xFFE8A0C8, "pmchat.tip.stickers", btn -> {
@@ -985,7 +1118,10 @@ public class PmScreen extends Screen {
                 inputField = new TextFieldWidget(textRenderer, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
                         Text.translatable("pmchat.input.hint"));
                 // в секретном чате сообщения короче — шифротекст должен влезть в /m
-                inputField.setMaxLength(secretActive ? com.pmchat.client.PmWire.SECRET_MAX_CHARS : 200);
+                // (секрет — жёсткий предел; обычный чат допускает небольшой перебор,
+                // чтобы счётчик 5.2 показывал «на сколько превышает», отправку блокируем)
+                inputField.setMaxLength(secretActive
+                        ? com.pmchat.client.PmWire.SECRET_MAX_CHARS : MSG_LIMIT + COMPOSER_SLACK);
                 inputField.setText(inputText);
                 String inputHint = Text.translatable(
                         secretActive ? "pmchat.secret.input.hint" : "pmchat.input.hint").getString();
@@ -1007,6 +1143,15 @@ public class PmScreen extends Screen {
             }
         }
 
+        // Кнопка аватарки группы (3.1) — в шапке группового диалога
+        if (isGroupTab() && !groupCreateMode) {
+            addDrawableChild(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.PHOTO, 0xFF6FBF8B,
+                    "pmchat.tip.groupavatar", btn -> {
+                        cycleGroupAvatar();
+                        rebuild();
+                    }));
+        }
+
         if (isGlobal && !isReadOnlyFeed() && !groupCreateMode) {
             // Общий чат: только эмодзи + поле + отправка
             int inputY = py + PANEL_H - 24;
@@ -1015,7 +1160,7 @@ public class PmScreen extends Screen {
             addSttButton(inputY);
             inputField = new TextFieldWidget(textRenderer, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
                     Text.translatable("pmchat.input.hint"));
-            inputField.setMaxLength(200);
+            inputField.setMaxLength(MSG_LIMIT + COMPOSER_SLACK);
             inputField.setText(inputText);
             String inputHint = Text.translatable("pmchat.input.hint").getString();
             inputField.setSuggestion(inputText.isEmpty() ? inputHint : "");
@@ -1260,10 +1405,37 @@ public class PmScreen extends Screen {
                 }));
     }
 
+    /**
+     * Счётчик символов у поля ввода (5.2): показывает, сколько ещё влезет,
+     * и на сколько сообщение превышает лимит. Появляется с плавной анимацией
+     * (как подпись в Telegram) — только когда приближаемся к пределу.
+     */
+    private void renderCharCounter(DrawContext context) {
+        if (inputField == null) return;
+        int len = inputField.getText().length();
+        int limit = composerLimit();
+        int remaining = limit - len;
+        boolean show = remaining <= 25; // как в Telegram — ближе к концу
+        // Плавное появление/исчезновение, независимо от FPS
+        counterAlpha += ((show ? 1f : 0f) - counterAlpha) * Math.min(1f, animDt * 12f);
+        if (counterAlpha < 0.05f) return;
+
+        String label = Integer.toString(remaining);
+        int color = remaining < 0 ? 0xFFE0574C : remaining <= 10 ? 0xFFE0B040 : SUBTLE;
+        int fieldRight = inputField.getX() + inputField.getWidth();
+        int tw = textRenderer.getWidth(label);
+        int slide = Math.round((1f - counterAlpha) * 4f); // лёгкий подъём при появлении
+        int cx = fieldRight - tw;
+        int cy = inputField.getY() - 9 + slide;
+        context.drawText(textRenderer, label, cx, cy, applyAlpha(color, counterAlpha), false);
+    }
+
     private void doSend() {
         if (inputField == null || selected == null) return;
         String text = inputField.getText().trim();
         if (text.isEmpty()) return;
+        // Перебор лимита — не отправляем (счётчик 5.2 подсвечен красным)
+        if (text.length() > composerLimit()) return;
         if (isFeedTab()) {
             if (PmChatClient.GLOBAL.equals(selected)) {
                 PmChatClient.sendGlobal(text);
@@ -1787,6 +1959,7 @@ public class PmScreen extends Screen {
         renderEditorBackdrop(context);
         super.render(context, mouseX, mouseY, delta);
         renderEditorButtons(context, mouseX, mouseY);
+        renderCharCounter(context);
 
         renderPlane(context);
         renderCtxMenu(context, mouseX, mouseY);
@@ -1880,8 +2053,14 @@ public class PmScreen extends Screen {
                     videoStatusText = null;
                     videoOpenedAt = System.currentTimeMillis();
                     if (media != null) {
-                        String audioPath = media.audio() != null ? media.audio().getAbsolutePath() : null;
-                        startVideoSession(media.video().getAbsolutePath(), audioPath,
+                        // VLC ждёт от :input-slave= нормальный MRL, а не сырой ФС-путь —
+                        // с пробелами/бэкслэшами (Windows) или юникодом в пути он не
+                        // парсится, и звуковая дорожка YouTube-видео (качается отдельным
+                        // файлом от видео) молча не подключается: картинка есть, звука нет.
+                        String videoUriStr = com.pmchat.client.PmMedia.fileUri(media.video());
+                        String audioUriStr = media.audio() != null
+                                ? com.pmchat.client.PmMedia.fileUri(media.audio()) : null;
+                        startVideoSession(videoUriStr, audioUriStr,
                                 media.video(), media.audio(), url);
                     } else {
                         // yt-dlp не смог (бот-проверка/нет бинарника) — состояние
@@ -2458,8 +2637,63 @@ public class PmScreen extends Screen {
         context.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy,
                 0f, 0f, w, h, e.width, e.height, e.width, e.height);
         // Затемнение под тему (светлая — светлее, тёмная — темнее)
-        context.fill(x0, y0, x1, y1, config.theme != 0 ? 0x99FFFFFF : 0xB0000000);
+        context.fill(x0, y0, x1, y1, PmTheme.isLight(config.theme) ? 0x99FFFFFF : 0xB0000000);
         context.disableScissor();
+    }
+
+    /** Папка аватарок групп (3.1): config/pmchat-avatars/. */
+    static java.nio.file.Path avatarsDir() {
+        java.nio.file.Path dir = net.fabricmc.loader.api.FabricLoader.getInstance()
+                .getConfigDir().resolve("pmchat-avatars");
+        try {
+            java.nio.file.Files.createDirectories(dir);
+        } catch (Exception ignored) {
+        }
+        return dir;
+    }
+
+    /** Рисует аватарку группы из файла (cover в квадрат). true — если нарисована. */
+    private boolean drawGroupAvatar(DrawContext context, com.pmchat.client.PmConfig.PmGroup g,
+                                    int x, int y, int size) {
+        if (g == null || g.avatar == null || g.avatar.isBlank()) return false;
+        java.nio.file.Path file = avatarsDir().resolve(g.avatar);
+        if (!java.nio.file.Files.exists(file)) return false;
+        PmImages.Entry e = PmImages.loadLocal("group:" + g.id + ":" + g.avatar, file);
+        if (e.state != PmImages.State.READY || e.currentTexture() == null || e.width <= 0) return false;
+        float scale = Math.max((float) size / e.width, (float) size / e.height);
+        int w = Math.round(e.width * scale);
+        int h = Math.round(e.height * scale);
+        int ix = x + (size - w) / 2;
+        int iy = y + (size - h) / 2;
+        context.enableScissor(x, y, x + size, y + size);
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy,
+                0f, 0f, w, h, e.width, e.height, e.width, e.height);
+        context.disableScissor();
+        return true;
+    }
+
+    /** Перебирает аватарку текущей группы: нет → файлы из config/pmchat-avatars/. */
+    private void cycleGroupAvatar() {
+        com.pmchat.client.PmConfig.PmGroup g = config.findGroup(groupId());
+        if (g == null) return;
+        java.util.List<String> files = new java.util.ArrayList<>();
+        files.add(""); // «нет»
+        try (var stream = java.nio.file.Files.list(avatarsDir())) {
+            stream.filter(java.nio.file.Files::isRegularFile)
+                    .map(p -> p.getFileName().toString())
+                    .filter(n -> {
+                        String l = n.toLowerCase(Locale.ROOT);
+                        return l.endsWith(".png") || l.endsWith(".jpg") || l.endsWith(".jpeg") || l.endsWith(".gif");
+                    })
+                    .sorted()
+                    .forEach(files::add);
+        } catch (Exception ignored) {
+        }
+        String cur = g.avatar == null ? "" : g.avatar;
+        int idx = files.indexOf(cur);
+        g.avatar = files.get((idx + 1 + files.size()) % files.size());
+        if (!g.avatar.isBlank()) PmImages.forgetLocal("group:" + g.id + ":" + g.avatar);
+        config.save();
     }
 
     /**
@@ -2467,6 +2701,15 @@ public class PmScreen extends Screen {
      * иначе — цветной квадрат с первой буквой ника.
      */
     private void drawAvatar(DrawContext context, String name, int x, int y, int size) {
+        // ЧС (5.5): у заблокированного скрываем аватарку даже когда он онлайн —
+        // вместо скина глухой серый круг со знаком запрета.
+        if (name != null && config.isBlocked(name)) {
+            fillCircle(context, x + size / 2, y + size / 2, (size + 1) / 2, 0xFF3A3F44);
+            String mark = "⊘";
+            context.drawText(textRenderer, mark,
+                    x + size / 2 - textRenderer.getWidth(mark) / 2, y + size / 2 - 4, 0xFF8A9096, false);
+            return;
+        }
         MinecraftClient mc = MinecraftClient.getInstance();
         net.minecraft.client.network.PlayerListEntry entry =
                 mc.getNetworkHandler() != null ? mc.getNetworkHandler().getPlayerListEntry(name) : null;
@@ -2629,19 +2872,21 @@ public class PmScreen extends Screen {
             } else if (hovered) {
                 fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             }
-            context.drawText(textRenderer, "▣", px + 7, y + 4, 0xFF6FBF8B, false);
+            if (!drawGroupAvatar(context, g, px + 4, y + 3, 16)) {
+                context.drawText(textRenderer, "▣", px + 7, y + 4, 0xFF6FBF8B, false);
+            }
             int gUnread = PmChatClient.groupUnread(g.id);
-            int labelMax = LEFT_W - 26 - (gUnread > 0 ? 16 : 0);
-            context.drawText(textRenderer, trim(g.name, labelMax), px + 16, y + 4, NAME_TEXT, false);
+            int labelMax = LEFT_W - 32 - (gUnread > 0 ? 16 : 0);
+            context.drawText(textRenderer, trim(g.name, labelMax), px + 23, y + 4, NAME_TEXT, false);
             List<PmMessage> feed = PmChatClient.getGroupFeed(g.id);
             if (!feed.isEmpty()) {
                 PmMessage last = feed.get(feed.size() - 1);
                 String preview = (last.sender != null ? last.sender + ": " : "")
                         + PmChatClient.previewOf(last.text != null ? last.text : "");
-                context.drawText(textRenderer, trim(preview, LEFT_W - 14), px + 7, y + 14, PREVIEW_TEXT, false);
+                context.drawText(textRenderer, trim(preview, LEFT_W - 30), px + 23, y + 14, PREVIEW_TEXT, false);
             } else {
-                context.drawText(textRenderer, trim(String.join(", ", g.members), LEFT_W - 14),
-                        px + 7, y + 14, PREVIEW_TEXT, false);
+                context.drawText(textRenderer, trim(String.join(", ", g.members), LEFT_W - 30),
+                        px + 23, y + 14, PREVIEW_TEXT, false);
             }
             if (gUnread > 0) {
                 drawBadge(context, px + LEFT_W - 5, y, gUnread > 9 ? "9+" : String.valueOf(gUnread));
@@ -2743,7 +2988,7 @@ public class PmScreen extends Screen {
             com.pmchat.client.PmConfig.PmGroup g = config.findGroup(groupId());
             header = "▣ " + (g != null ? g.name : Text.translatable("pmchat.group").getString());
         } else {
-            header = trim(selected, PANEL_W - LEFT_W - 132);
+            header = trim(selected, PANEL_W - LEFT_W - 154);
         }
         boolean localChat = PmChatClient.isLocalChat(selected);
         int headerX = px + LEFT_W + 8;
@@ -2758,12 +3003,27 @@ public class PmScreen extends Screen {
             PmIcons.draw(context, PmIcons.LOCK, headerX, py + 3, 9, 9, 0xFF8FD8A8);
             headerX += 11;
         }
+        // Роль-префикс собеседника в шапке (4.5) — определяется из ника автоматически
+        if (isPlayerTab(selected)) {
+            String rCode = PmRoles.detect(PmNames.displayString(selected));
+            String rIcon = PmRoles.icon(rCode);
+            if (!rIcon.isEmpty()) {
+                context.drawText(textRenderer, rIcon, headerX, py + 8, PmRoles.color(rCode), false);
+                headerX += textRenderer.getWidth(rIcon) + 3;
+            }
+        }
         context.drawText(textRenderer, header, headerX, py + 8, TITLE, false);
+        int afterHeaderX = headerX + textRenderer.getWidth(header) + 4;
+        // Значок ЧС (5.5): блокировавший видит, что собеседник в чёрном списке
+        if (!isGlobal && !localChat && !isFeedTab() && config.isBlocked(selected)) {
+            String cs = Text.translatable("pmchat.block.badge").getString();
+            context.drawText(textRenderer, cs, afterHeaderX, py + 8, 0xFFE0574C, false);
+            afterHeaderX += textRenderer.getWidth(cs) + 4;
+        }
         if (!isGlobal && !localChat && PmChatClient.isTyping(selected)) {
             int dots = (int) ((System.currentTimeMillis() / 350) % 4);
             String typing = Text.translatable("pmchat.typing").getString() + ".".repeat(dots);
-            context.drawText(textRenderer, typing,
-                    headerX + 4 + textRenderer.getWidth(header), py + 8, 0xFF6FBF8B, false);
+            context.drawText(textRenderer, typing, afterHeaderX, py + 8, 0xFF6FBF8B, false);
         }
         // Состав группы с пометкой участников, у кого стоит мод (зелёная точка)
         if (isGroupTab()) {
@@ -2926,6 +3186,8 @@ public class PmScreen extends Screen {
             List<String> lines;
             int textW;
             int bh;
+            // СЕКРЕТНО: расшифровка голосового (ПКМ → «Расшифровать»), строки под пузырём
+            List<String> voiceTranscriptLines = List.of();
             if (msg.isPoll()) {
                 lines = List.of();
                 textW = BUBBLE_MAX_TEXT_W;
@@ -2939,6 +3201,21 @@ public class PmScreen extends Screen {
                 lines = List.of();
                 textW = 74;
                 bh = 18;
+                if (com.pmchat.client.PmVoiceTranscript.isShown(voice[1])) {
+                    String display;
+                    if (com.pmchat.client.PmVoiceTranscript.isLoading(voice[1])) {
+                        display = "…";
+                    } else if (com.pmchat.client.PmVoiceTranscript.hasError(voice[1])) {
+                        display = "⚠ не удалось распознать";
+                    } else {
+                        String t = com.pmchat.client.PmVoiceTranscript.textOf(voice[1]);
+                        display = t != null ? t : "…";
+                    }
+                    voiceTranscriptLines = wrapText(display, BUBBLE_MAX_TEXT_W);
+                    int tw = voiceTranscriptLines.stream().mapToInt(textRenderer::getWidth).max().orElse(10);
+                    textW = Math.max(textW, tw);
+                    bh += voiceTranscriptLines.size() * (textRenderer.fontHeight + 2) + 3;
+                }
             } else if (vid != null) {
                 lines = List.of();
                 if (vidReady) {
@@ -3131,6 +3408,15 @@ public class PmScreen extends Screen {
                 }
             } else if (voice != null) {
                 drawVoiceContent(context, bx + dx, y + dy + quoteShift, bw, msg, voice, alpha);
+                if (!voiceTranscriptLines.isEmpty()) {
+                    int tfg = msg.out ? OUT_TEXT : IN_TEXT;
+                    int ty = y + dy + quoteShift + 17;
+                    int th = textRenderer.fontHeight + 2;
+                    for (String tl : voiceTranscriptLines) {
+                        context.drawText(textRenderer, tl, bx + dx + 6, ty, applyAlpha(tfg, alpha), false);
+                        ty += th;
+                    }
+                }
             } else if (vid != null) {
                 boolean vidSpoiler = com.pmchat.client.PmWire.isSpoiler(vid) && !msg.spoilerRevealed;
                 if (vidReady) {
@@ -3528,7 +3814,7 @@ public class PmScreen extends Screen {
                 context.fill(ex, ey, ex + cell, ey + cell, ROW_SELECTED);
             }
             context.drawText(textRenderer, group[i], ex + 2, ey + 2,
-                    config.theme != 0 ? 0xFF19232A : 0xFFDFE6EB, false);
+                    PmTheme.isLight(config.theme) ? 0xFF19232A : 0xFFDFE6EB, false);
             emojiRects.add(new Object[]{ex, ey, cell, cell, group[i]});
         }
     }
@@ -4033,6 +4319,10 @@ public class PmScreen extends Screen {
                         copiedY = ry;
                     } else if (action.equals("edit") && !global) {
                         openEditor(msg);
+                    } else if (action.equals("transcript")) {
+                        // СЕКРЕТНО: расшифровка голосового (не в открытой версии мода)
+                        String[] v = voiceOf(msg);
+                        if (v != null) com.pmchat.client.PmVoiceTranscript.toggle(v[0], v[1]);
                     } else if (action.equals("warn")) {
                         PmChatClient.warnPlayer(senderOfMessage(msg));
                     } else if (action.equals("forward")) {
@@ -4077,6 +4367,11 @@ public class PmScreen extends Screen {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
             if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
                 String tab = (String) r[4];
+                // ПКМ по личному диалогу — открыть профиль игрока (4.5 / 5.5)
+                if (click.button() == 1 && isPlayerTab(tab)) {
+                    MinecraftClient.getInstance().setScreen(new PmProfileScreen(this, tab));
+                    return true;
+                }
                 // Пересылка: клик по диалогу-получателю
                 if (forwardBuffer != null && !PmChatClient.GLOBAL.equals(tab)
                         && !tab.startsWith(PmChatClient.CHANNEL_PREFIX)
@@ -4347,6 +4642,21 @@ public class PmScreen extends Screen {
 
         List<String[]> items = new ArrayList<>();
         if (!global && !secretMsg) items.add(new String[]{"reply", "↩ " + Text.translatable("pmchat.menu.reply").getString()});
+        // СЕКРЕТНО: расшифровка голосового в текст (не в открытой версии мода)
+        String[] ctxVoice = voiceOf(ctxMsg);
+        if (ctxVoice != null) {
+            com.pmchat.client.PmServerMedia sm = com.pmchat.client.PmServerMedia.get();
+            if (sm.isPro()) {
+                boolean shown = com.pmchat.client.PmVoiceTranscript.isShown(ctxVoice[1]);
+                items.add(new String[]{"transcript", (shown ? "🗣 Скрыть расшифровку" : "🗣 Расшифровать")});
+            } else if (sm.isAvailable()) {
+                // Плагин есть, но обычный — расшифровка это премиум-функция.
+                items.add(new String[]{"transcript_locked", "🗣 Расшифровать — только Pro-плагин"});
+            } else {
+                // Плагина на сервере нет вовсе.
+                items.add(new String[]{"transcript_locked", "🗣 Расшифровать — требуется плагин на сервере"});
+            }
+        }
         if (!global && !secretMsg && ctxMsg.text != null && !ctxMsg.text.isBlank()
                 && imageIdOf(ctxMsg) == null && voiceOf(ctxMsg) == null && !ctxMsg.isPoll()
                 && ctxMsg.text.trim().contains(" ")) {
@@ -4468,7 +4778,8 @@ public class PmScreen extends Screen {
             if (hovered) {
                 context.fill(mx + 1, y, mx + w - 1, y + itemH, ROW_SELECTED);
             }
-            int color = it[0].equals("delete") ? 0xFFE07A6A : NAME_TEXT;
+            int color = it[0].equals("delete") ? 0xFFE07A6A
+                    : (it[0].endsWith("_locked") ? SUBTLE : NAME_TEXT);
             context.drawText(textRenderer, it[1], mx + 7, y + 3, color, false);
             ctxRects.add(new Object[]{mx, y, w, itemH, it[0]});
             y += itemH;
