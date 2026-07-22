@@ -49,7 +49,7 @@ public class PmSettingsScreen extends Screen {
         applyTheme();
         optionLabels.clear();
         clearChildren();
-        int rows = 22;
+        int rows = 23;
         panelH = 26 + rows * ROW_H + 28;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
@@ -170,6 +170,12 @@ public class PmSettingsScreen extends Screen {
                 () -> Text.translatable(config.mentionOnCopy ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.mentionOnCopy ? 0xFF8FD8A8 : VALUE,
                 () -> config.mentionOnCopy = !config.mentionOnCopy);
+
+        // При заданном переименовании — слать /m на псевдоним, а не на реальный ник
+        y = addOption(y, "pmchat.set.aliastarget",
+                () -> Text.translatable(config.aliasAsTarget ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> config.aliasAsTarget ? 0xFF8FD8A8 : VALUE,
+                () -> config.aliasAsTarget = !config.aliasAsTarget);
 
         y = addOption(y, "pmchat.set.staff",
                 () -> Text.translatable(config.staffFeatures ? "pmchat.set.on" : "pmchat.set.off"),

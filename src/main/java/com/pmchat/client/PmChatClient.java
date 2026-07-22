@@ -1563,13 +1563,26 @@ public class PmChatClient implements ClientModInitializer {
      * PocketChatMedia — напрямую по каналу (в игровом чате ничего не светится,
      * в логи сервера не пишется), иначе — обычной командой /m, как раньше.
      */
+    /**
+     * Имя-цель для серверных команд (/m). Если включён {@code aliasAsTarget} и
+     * у собеседника задано переименование — команда уходит на псевдоним, иначе
+     * на реальный ник (диалог по-прежнему хранится под реальным ником).
+     */
+    public static String commandTarget(String conv) {
+        if (conv != null && config.aliasAsTarget && config.hasAlias(conv)) {
+            return config.aliasOf(conv);
+        }
+        return conv;
+    }
+
     static void pmDeliver(String to, String line) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
+        String target = commandTarget(to);
         if (PmServerMedia.get().isAvailable()) {
-            PmServerMedia.get().sendPm(to, line, readableFallback(line));
+            PmServerMedia.get().sendPm(target, line, readableFallback(line));
         } else {
-            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + to + " " + line);
+            client.player.networkHandler.sendChatCommand(config.msgCommand + " " + target + " " + line);
         }
     }
 

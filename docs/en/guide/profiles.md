@@ -1,6 +1,6 @@
 # Profiles, roles & gifts
 
-New in 1.8.3: every player has a profile — Telegram-style.
+New in 1.8.4: every player has a profile — Telegram-style.
 
 ## Opening a profile
 
@@ -40,8 +40,11 @@ Keywords are recognised too: `helper`, `moder(ator)`, `developer`, `event`,
 Any player's profile has a **“Name”** field. Type a name there and the player
 shows up under it in the chat list and the header (their real nick stays in the
 profile title). Renaming also adds them to your **contacts**. It doesn't affect
-messaging — `/m` still goes to the real nick. Clear the field to remove the
-rename.
+contacts. Clear the field to remove the rename.
+
+By default the rename is display-only — `/m` still goes to the real nick. If
+your server addresses players by their display name, enable **“/m uses rename”**
+in settings and `/m` will target the name you set.
 
 ## Blacklist
 

@@ -133,6 +133,7 @@
   "pmchat.poll.cancel": "Отмена",
   "pmchat.set.closedmg": "Закрывать при уроне",
   "pmchat.set.copynick": "Копировать с ником",
+  "pmchat.set.aliastarget": "/m по переименованию",
   "pmchat.set.on": "Вкл",
   "pmchat.set.off": "Выкл",
   "pmchat.video.again": "Просмотреть ещё",

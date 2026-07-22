@@ -398,6 +398,13 @@ public class PmConfig {
      */
     public Map<String, String> aliases = new HashMap<>();
 
+    /**
+     * Если включено — при заданном переименовании (алиасе) команда /m игроку
+     * отправляется на ЭТО имя, а не на реальный ник. Для серверов, где к игроку
+     * обращаются по отображаемому имени. По умолчанию выключено.
+     */
+    public boolean aliasAsTarget = false;
+
     /** Отображаемое имя игрока: локальный псевдоним, если задан, иначе сам ник. */
     public String aliasOf(String name) {
         if (name == null) return "";

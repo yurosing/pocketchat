@@ -133,6 +133,7 @@
   "pmchat.poll.cancel": "Cancel",
   "pmchat.set.closedmg": "Close on damage",
   "pmchat.set.copynick": "Copy with nick",
+  "pmchat.set.aliastarget": "/m uses rename",
   "pmchat.set.on": "On",
   "pmchat.set.off": "Off",
   "pmchat.video.again": "Watch again",

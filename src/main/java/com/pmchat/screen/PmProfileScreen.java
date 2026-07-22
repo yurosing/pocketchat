@@ -170,7 +170,9 @@ public class PmProfileScreen extends Screen {
                 : PmNames.displayText(player);
         int nameX = tx;
         String icon = PmRoles.icon(role);
-        if (!icon.isEmpty()) {
+        // Значок роли рисуем ОТДЕЛЬНО только когда показываем псевдоним (у него нет
+        // префикса). У серверного ника роль уже есть в самом префиксе — иначе дубль.
+        if (config.hasAlias(player) && !icon.isEmpty()) {
             context.drawText(textRenderer, icon, nameX, py + 30, PmRoles.color(role), false);
             nameX += textRenderer.getWidth(icon) + 4;
         }
