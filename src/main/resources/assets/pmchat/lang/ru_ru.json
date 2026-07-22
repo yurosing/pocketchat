@@ -247,6 +247,8 @@
   "pmchat.profile.birthday.hint": "дд.мм",
   "pmchat.profile.desc": "О себе",
   "pmchat.profile.desc.hint": "Пара слов о себе…",
+  "pmchat.profile.rename": "Имя",
+  "pmchat.profile.rename.hint": "Переименовать",
   "pmchat.profile.balance": "Баланс",
   "pmchat.profile.balance.unknown": "—",
   "pmchat.profile.block": "В чёрный список",

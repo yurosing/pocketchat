@@ -391,6 +391,42 @@ public class PmConfig {
     /** Контакты (избранные собеседники) — закрепляются вверху списка. */
     public List<String> contacts = new ArrayList<>();
 
+    /**
+     * Локальное переименование игроков: реальный ник (в нижнем регистре) →
+     * отображаемое имя. Задаётся через профиль (добавление в контакты). На
+     * отправку /m не влияет — маршрутизация всегда по реальному нику.
+     */
+    public Map<String, String> aliases = new HashMap<>();
+
+    /** Отображаемое имя игрока: локальный псевдоним, если задан, иначе сам ник. */
+    public String aliasOf(String name) {
+        if (name == null) return "";
+        String a = aliases.get(name.toLowerCase(Locale.ROOT));
+        return (a == null || a.isBlank()) ? name : a;
+    }
+
+    public boolean hasAlias(String name) {
+        if (name == null) return false;
+        String a = aliases.get(name.toLowerCase(Locale.ROOT));
+        return a != null && !a.isBlank();
+    }
+
+    /**
+     * Переименовать игрока локально. Пустое имя — снять переименование.
+     * Ненулевое переименование добавляет игрока в контакты (как и задумано).
+     */
+    public void setAlias(String name, String alias) {
+        if (name == null || name.isBlank()) return;
+        String key = name.toLowerCase(Locale.ROOT);
+        if (alias == null || alias.isBlank()) {
+            aliases.remove(key);
+        } else {
+            aliases.put(key, alias.trim());
+            if (!isContact(name)) contacts.add(name.trim());
+        }
+        save();
+    }
+
     /** Упоминания: подсветка+пинг, когда в чате звучит твой ник. */
     public boolean mentionEnabled = true;
     /** Доп. слова-триггеры через запятую (помимо своего ника). */
@@ -472,6 +508,7 @@ public class PmConfig {
                         cfg.coreProtectPattern = new PmConfig().coreProtectPattern;
                     }
                     if (cfg.contacts == null) cfg.contacts = new ArrayList<>();
+                    if (cfg.aliases == null) cfg.aliases = new HashMap<>();
                     if (cfg.recentStickers == null) cfg.recentStickers = new ArrayList<>();
                     if (cfg.hostOverrides == null) cfg.hostOverrides = new HashMap<>();
                     if (cfg.uploadOrder == null || cfg.uploadOrder.isBlank()

@@ -35,6 +35,7 @@ public class PmProfileScreen extends Screen {
     private int px, py, panelH;
     private TextFieldWidget birthdayField;
     private TextFieldWidget descField;
+    private TextFieldWidget aliasField;
 
     public PmProfileScreen(Screen parent, String player) {
         super(Text.translatable("pmchat.profile.title"));
@@ -59,7 +60,7 @@ public class PmProfileScreen extends Screen {
     protected void init() {
         applyTheme();
         clearChildren();
-        panelH = self ? 214 : 236;
+        panelH = self ? 214 : 258;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
@@ -100,7 +101,18 @@ public class PmProfileScreen extends Screen {
             addDrawableChild(descField);
             contentY += 33;
         } else {
-            // Чужой профиль — кнопка ЧС (5.5)
+            // Переименование игрока (алиас) — задаётся здесь, добавляет в контакты
+            aliasField = new TextFieldWidget(textRenderer, px + PANEL_W - 108, contentY, 100, 15,
+                    Text.translatable("pmchat.profile.rename"));
+            aliasField.setMaxLength(24);
+            aliasField.setText(config.hasAlias(player) ? config.aliasOf(player) : "");
+            String rh = Text.translatable("pmchat.profile.rename.hint").getString();
+            aliasField.setSuggestion(aliasField.getText().isEmpty() ? rh : "");
+            aliasField.setChangedListener(s -> aliasField.setSuggestion(s.isEmpty() ? rh : ""));
+            addDrawableChild(aliasField);
+            contentY += 21;
+
+            // Кнопка ЧС (5.5)
             boolean blocked = config.isBlocked(player);
             addDrawableChild(FlatButton.centered(textRenderer, px + 12, contentY, PANEL_W - 24, 16,
                     Text.translatable(blocked ? "pmchat.profile.unblock" : "pmchat.profile.block"),
@@ -127,6 +139,7 @@ public class PmProfileScreen extends Screen {
     private void persistFields() {
         if (birthdayField != null) config.profileBirthday = birthdayField.getText().trim();
         if (descField != null) config.profileDescription = descField.getText().trim();
+        if (aliasField != null) config.setAlias(player, aliasField.getText());
         config.save();
     }
 
@@ -149,9 +162,12 @@ public class PmProfileScreen extends Screen {
         drawAvatar(context, avX, avY, avS);
 
         int tx = avX + avS + 12;
-        // Полный ник с префиксом/суффиксом и автоопределённая по нему роль
-        net.minecraft.text.Text fullName = PmNames.displayText(player);
-        String role = PmRoles.detect(fullName.getString());
+        // Роль определяется по серверному нику; отображаем локальный псевдоним, если задан
+        String serverDisplay = PmNames.displayString(player);
+        String role = PmRoles.detect(serverDisplay);
+        net.minecraft.text.Text fullName = config.hasAlias(player)
+                ? Text.literal(config.aliasOf(player))
+                : PmNames.displayText(player);
         int nameX = tx;
         String icon = PmRoles.icon(role);
         if (!icon.isEmpty()) {
@@ -195,7 +211,11 @@ public class PmProfileScreen extends Screen {
                     px + 12, contentY, LABEL, false);
             contentY += 33;
         } else {
-            contentY += 22; // место под кнопку ЧС
+            // Подпись поля переименования + место под кнопку ЧС
+            context.drawText(textRenderer, Text.translatable("pmchat.profile.rename"),
+                    px + 12, contentY + 4, LABEL, false);
+            contentY += 21;
+            contentY += 22;
         }
 
         // ---- Раздел подарков (4.2) ----

@@ -247,6 +247,8 @@
   "pmchat.profile.birthday.hint": "dd.mm",
   "pmchat.profile.desc": "About",
   "pmchat.profile.desc.hint": "A few words about you…",
+  "pmchat.profile.rename": "Name",
+  "pmchat.profile.rename.hint": "Rename",
   "pmchat.profile.balance": "Balance",
   "pmchat.profile.balance.unknown": "—",
   "pmchat.profile.block": "Blacklist",

@@ -2935,7 +2935,7 @@ public class PmScreen extends Screen {
                 nameX += 8;
             }
             int nameMax = LEFT_W - (nameX - px) - 7 - (unread > 0 ? 16 : 0);
-            context.drawText(textRenderer, trim(name, nameMax), nameX, y + 3, NAME_TEXT, false);
+            context.drawText(textRenderer, trim(config.aliasOf(name), nameMax), nameX, y + 3, NAME_TEXT, false);
 
             PmMessage last = history.lastMessage(name);
             if (last != null) {
@@ -2988,7 +2988,7 @@ public class PmScreen extends Screen {
             com.pmchat.client.PmConfig.PmGroup g = config.findGroup(groupId());
             header = "▣ " + (g != null ? g.name : Text.translatable("pmchat.group").getString());
         } else {
-            header = trim(selected, PANEL_W - LEFT_W - 154);
+            header = trim(config.aliasOf(selected), PANEL_W - LEFT_W - 154);
         }
         boolean localChat = PmChatClient.isLocalChat(selected);
         int headerX = px + LEFT_W + 8;
