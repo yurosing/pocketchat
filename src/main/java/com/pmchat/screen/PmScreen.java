@@ -240,7 +240,8 @@ public class PmScreen extends Screen {
         return selected != null && (PmChatClient.GLOBAL.equals(selected)
                 || PmChatClient.COREPROTECT.equals(selected)
                 || selected.startsWith(PmChatClient.CHANNEL_PREFIX)
-                || PmChatClient.isGroup(selected));
+                || PmChatClient.isGroup(selected)
+                || PmChatClient.isBroadcast(selected));
     }
 
     private boolean isGroupTab() {
@@ -263,9 +264,25 @@ public class PmScreen extends Screen {
         return PmChatClient.groupId(selected);
     }
 
-    /** Ленты только для чтения (без ввода/реакций/закрепов). */
+    /** 3.2: вкладка публичного канала (аналог Telegram-каналов). */
+    private boolean isBroadcastTab() {
+        return PmChatClient.isBroadcast(selected);
+    }
+
+    private String broadcastId() {
+        return PmChatClient.broadcastId(selected);
+    }
+
+    private boolean isBroadcastOwner() {
+        com.pmchat.client.PmConfig.PmBroadcast b = config.findBroadcast(broadcastId());
+        return b != null && b.owner != null && b.owner.equalsIgnoreCase(PmChatClient.selfNamePublic());
+    }
+
+    /** Ленты только для чтения (без ввода/реакций/закрепов). Подписчик канала без
+     *  права постить тоже читает молча — как обычный Telegram-подписчик. */
     private boolean isReadOnlyFeed() {
-        return PmChatClient.COREPROTECT.equals(selected);
+        return PmChatClient.COREPROTECT.equals(selected)
+                || (isBroadcastTab() && !PmChatClient.canPostBroadcast(broadcastId()));
     }
 
     private String channelId() {
@@ -365,6 +382,15 @@ public class PmScreen extends Screen {
     private int[] groupNewRect = null;
     private TextFieldWidget groupNameField;
     private TextFieldWidget groupMembersField;
+
+    // Публичные каналы (3.2): создание, вход по коду, аватар, заглушение
+    private boolean broadcastCreateMode = false;
+    private boolean broadcastJoinMode = false;
+    private int[] broadcastNewRect = null;
+    private int[] broadcastJoinRect = null;
+    private TextFieldWidget broadcastNameField;
+    private TextFieldWidget broadcastDescField;
+    private TextFieldWidget broadcastCodeField;
 
     private int listScroll = 0;
     private int msgScroll = 0;      // 0 — низ переписки
@@ -928,6 +954,97 @@ public class PmScreen extends Screen {
                 cx, py + PANEL_H - 40, SUBTLE, false);
     }
 
+    // ---------- Публичные каналы (3.2): создание ----------
+
+    private void buildBroadcastComposer() {
+        int cx = px + LEFT_W + 10;
+        int cw = PANEL_W - LEFT_W - 20;
+        int y = py + 40;
+        String nameHint = Text.translatable("pmchat.broadcast.name").getString();
+        broadcastNameField = new TextFieldWidget(textRenderer, cx, y, cw, 16, Text.literal(nameHint));
+        broadcastNameField.setMaxLength(32);
+        broadcastNameField.setSuggestion(nameHint);
+        broadcastNameField.setChangedListener(s -> broadcastNameField.setSuggestion(s.isEmpty() ? nameHint : ""));
+        addDrawableChild(broadcastNameField);
+        y += 42;
+        String descHint = Text.translatable("pmchat.broadcast.desc.hint").getString();
+        broadcastDescField = new TextFieldWidget(textRenderer, cx, y, cw, 16, Text.literal(descHint));
+        broadcastDescField.setMaxLength(160);
+        broadcastDescField.setSuggestion(descHint);
+        broadcastDescField.setChangedListener(s -> broadcastDescField.setSuggestion(s.isEmpty() ? descHint : ""));
+        addDrawableChild(broadcastDescField);
+        y += 30;
+        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 100, 16,
+                Text.translatable("pmchat.broadcast.create"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT,
+                btn -> createBroadcastFromComposer()));
+        addDrawableChild(FlatButton.centered(textRenderer, cx + 106, y, 60, 16,
+                Text.translatable("pmchat.poll.cancel"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT,
+                btn -> { broadcastCreateMode = false; rebuild(); }));
+    }
+
+    private void createBroadcastFromComposer() {
+        if (broadcastNameField == null) return;
+        String name = broadcastNameField.getText().trim();
+        String desc = broadcastDescField != null ? broadcastDescField.getText().trim() : "";
+        String id = PmChatClient.createBroadcast(name, desc);
+        broadcastCreateMode = false;
+        if (id != null) {
+            selected = PmChatClient.BCAST_PREFIX + id;
+            msgScroll = 0;
+        }
+        rebuild();
+    }
+
+    private void renderBroadcastCreate(DrawContext context) {
+        int cx = px + LEFT_W + 10;
+        context.drawText(textRenderer, Text.translatable("pmchat.broadcast.title"), cx, py + 10, TITLE, false);
+        context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
+        context.drawText(textRenderer, Text.translatable("pmchat.broadcast.name"), cx, py + 30, SUBTLE, false);
+        context.drawText(textRenderer, Text.translatable("pmchat.broadcast.desc"), cx, py + 72, SUBTLE, false);
+        context.drawText(textRenderer, Text.translatable("pmchat.broadcast.hint"),
+                cx, py + PANEL_H - 40, SUBTLE, false);
+    }
+
+    // ---------- Публичные каналы (3.2): вход по коду приглашения ----------
+
+    private void buildBroadcastJoinComposer() {
+        int cx = px + LEFT_W + 10;
+        int cw = PANEL_W - LEFT_W - 20;
+        int y = py + 40;
+        String codeHint = Text.translatable("pmchat.broadcast.code.hint").getString();
+        broadcastCodeField = new TextFieldWidget(textRenderer, cx, y, cw, 16, Text.literal(codeHint));
+        broadcastCodeField.setMaxLength(48);
+        broadcastCodeField.setSuggestion(codeHint);
+        broadcastCodeField.setChangedListener(s -> broadcastCodeField.setSuggestion(s.isEmpty() ? codeHint : ""));
+        addDrawableChild(broadcastCodeField);
+        y += 30;
+        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 100, 16,
+                Text.translatable("pmchat.broadcast.join"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT,
+                btn -> joinBroadcastFromComposer()));
+        addDrawableChild(FlatButton.centered(textRenderer, cx + 106, y, 60, 16,
+                Text.translatable("pmchat.poll.cancel"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT,
+                btn -> { broadcastJoinMode = false; rebuild(); }));
+    }
+
+    private void joinBroadcastFromComposer() {
+        if (broadcastCodeField == null) return;
+        boolean sent = PmChatClient.requestJoinBroadcast(broadcastCodeField.getText());
+        broadcastJoinMode = false;
+        if (sent) {
+            MinecraftClient.getInstance().getToastManager().add(new com.pmchat.client.PmToast(
+                    "◈", Text.translatable("pmchat.broadcast.request_sent").getString()));
+        }
+        rebuild();
+    }
+
+    private void renderBroadcastJoinCreate(DrawContext context) {
+        int cx = px + LEFT_W + 10;
+        context.drawText(textRenderer, Text.translatable("pmchat.broadcast.join.title"), cx, py + 10, TITLE, false);
+        context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
+        context.drawText(textRenderer, Text.translatable("pmchat.broadcast.code.footer"),
+                cx, py + PANEL_H - 40, SUBTLE, false);
+    }
+
     /** Ник исходного автора сообщения (для пересылки). */
     private String senderOfMessage(PmMessage msg) {
         if (msg.forwardFrom != null) return msg.forwardFrom; // уже переслано — сохраняем первоисточник
@@ -1151,8 +1268,19 @@ public class PmScreen extends Screen {
                         rebuild();
                     }));
         }
+        // 3.2: кнопка аватарки канала — только у владельца, в шапке канала
+        if (isBroadcastTab() && !broadcastCreateMode && !broadcastJoinMode) {
+            com.pmchat.client.PmConfig.PmBroadcast b = config.findBroadcast(broadcastId());
+            if (b != null && b.owner != null && b.owner.equalsIgnoreCase(PmChatClient.selfNamePublic())) {
+                addDrawableChild(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.PHOTO, 0xFFF0C34E,
+                        "pmchat.tip.broadcastavatar", btn -> {
+                            cycleBroadcastAvatar(b);
+                            rebuild();
+                        }));
+            }
+        }
 
-        if (isGlobal && !isReadOnlyFeed() && !groupCreateMode) {
+        if (isGlobal && !isReadOnlyFeed() && !groupCreateMode && !broadcastCreateMode && !broadcastJoinMode) {
             // Общий чат: только эмодзи + поле + отправка
             int inputY = py + PANEL_H - 24;
             addDrawableChild(icon(px + LEFT_W + 8, inputY, 16, 16, PmIcons.EMOJI, 0xFFF0C34E, "pmchat.tip.emoji",
@@ -1256,10 +1384,17 @@ public class PmScreen extends Screen {
         if (groupCreateMode) {
             buildGroupComposer();
         }
+        if (broadcastCreateMode) {
+            buildBroadcastComposer();
+        }
+        if (broadcastJoinMode) {
+            buildBroadcastJoinComposer();
+        }
 
         // Очистка ленты общего чата (без подтверждения — это кэш сессии)
-        if (isGlobal && !statsMode && !groupCreateMode) {
-            addDrawableChild(icon(px + PANEL_W - 28, py + 6, 20, 14, PmIcons.CLEAR, 0xFFE07A6A, "pmchat.tip.clear", btn -> {
+        if (isGlobal && !statsMode && !groupCreateMode && !broadcastCreateMode && !broadcastJoinMode) {
+            addDrawableChild(icon(px + PANEL_W - 28, py + 6, 20, 14, PmIcons.CLEAR, 0xFFE07A6A,
+                    isBroadcastTab() && !isBroadcastOwner() ? "pmchat.tip.leave" : "pmchat.tip.clear", btn -> {
                         if (PmChatClient.GLOBAL.equals(selected)) {
                             PmChatClient.clearGlobalChat();
                         } else if (PmChatClient.COREPROTECT.equals(selected)) {
@@ -1267,6 +1402,10 @@ public class PmScreen extends Screen {
                         } else if (isGroupTab()) {
                             PmChatClient.deleteGroup(groupId());
                             selected = null; // «удалить группу»: вкладка исчезает
+                        } else if (isBroadcastTab()) {
+                            if (isBroadcastOwner()) PmChatClient.deleteBroadcast(broadcastId());
+                            else PmChatClient.leaveBroadcast(broadcastId());
+                            selected = null; // «удалить/покинуть канал»: вкладка исчезает
                         } else if (channelId() != null) {
                             PmChatClient.clearChannel(channelId());
                             selected = null; // «удалить чат»: вкладка исчезает
@@ -1274,6 +1413,21 @@ public class PmScreen extends Screen {
                         msgScroll = 0;
                         rebuild();
                     }));
+            // 3.2: заглушить уведомления канала/группы (как в Telegram)
+            if (isBroadcastTab() || isGroupTab()) {
+                boolean muted = config.isMutedThread(selected);
+                addDrawableChild(icon(px + PANEL_W - 50, py + 6, 16, 14, PmIcons.BELL,
+                        muted ? SUBTLE : 0xFF8FD8A8, "pmchat.tip.mute", btn -> {
+                            config.toggleMutedThread(selected);
+                            rebuild();
+                        }));
+            }
+            // 3.2: инфо/управление каналом
+            if (isBroadcastTab()) {
+                addDrawableChild(icon(px + PANEL_W - 70, py + 6, 16, 14, PmIcons.BOOK, 0xFF9CC4DC,
+                        "pmchat.tip.channelinfo", btn -> MinecraftClient.getInstance()
+                                .setScreen(new PmChannelInfoScreen(this, broadcastId()))));
+            }
         }
 
         // многострочное окно правки поверх чата
@@ -1339,6 +1493,8 @@ public class PmScreen extends Screen {
         mediaMode = false;
         uploadFailed = false;
         groupCreateMode = false;
+        broadcastCreateMode = false;
+        broadcastJoinMode = false;
         spoilerMode = false;
         moreMenuOpen = false;
         callMenuOpen = false;
@@ -1441,6 +1597,8 @@ public class PmScreen extends Screen {
                 PmChatClient.sendGlobal(text);
             } else if (isGroupTab()) {
                 PmChatClient.sendGroup(groupId(), text);
+            } else if (isBroadcastTab()) {
+                PmChatClient.sendBroadcastPost(broadcastId(), text);
             } else {
                 PmChatClient.sendChannel(channelId(), text);
             }
@@ -1942,6 +2100,10 @@ public class PmScreen extends Screen {
 
         if (groupCreateMode) {
             renderGroupCreate(context);
+        } else if (broadcastCreateMode) {
+            renderBroadcastCreate(context);
+        } else if (broadcastJoinMode) {
+            renderBroadcastJoinCreate(context);
         } else if (statsMode) {
             renderStats(context);
         } else if (selected == null) {
@@ -2728,6 +2890,53 @@ public class PmScreen extends Screen {
                 x + size / 2 - textRenderer.getWidth(letter) / 2, y + size / 2 - 4, 0xFFFFFFFF, false);
     }
 
+    /**
+     * 3.2: рисует аватар публичного канала — тот же принцип, что и у групп
+     * (картинка из config/pmchat-avatars/ или значок-плейсхолдер).
+     */
+    private boolean drawBroadcastAvatar(DrawContext context, com.pmchat.client.PmConfig.PmBroadcast b,
+                                        int x, int y, int size) {
+        if (b == null || b.avatar == null || b.avatar.isBlank()) return false;
+        java.nio.file.Path file = avatarsDir().resolve(b.avatar);
+        if (!java.nio.file.Files.exists(file)) return false;
+        PmImages.Entry e = PmImages.loadLocal("broadcast:" + b.id + ":" + b.avatar, file);
+        if (e.state != PmImages.State.READY || e.currentTexture() == null || e.width <= 0) return false;
+        float scale = Math.max((float) size / e.width, (float) size / e.height);
+        int w = Math.round(e.width * scale);
+        int h = Math.round(e.height * scale);
+        int ix = x + (size - w) / 2;
+        int iy = y + (size - h) / 2;
+        context.enableScissor(x, y, x + size, y + size);
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy,
+                0f, 0f, w, h, e.width, e.height, e.width, e.height);
+        context.disableScissor();
+        return true;
+    }
+
+    /** 3.2: перебирает аватар канала среди файлов config/pmchat-avatars (+ «нет»). Только владелец. */
+    private void cycleBroadcastAvatar(com.pmchat.client.PmConfig.PmBroadcast b) {
+        if (b == null) return;
+        java.util.List<String> files = new java.util.ArrayList<>();
+        files.add(""); // «нет»
+        try (var stream = java.nio.file.Files.list(avatarsDir())) {
+            stream.filter(java.nio.file.Files::isRegularFile)
+                    .map(p -> p.getFileName().toString())
+                    .filter(n -> {
+                        String l = n.toLowerCase(Locale.ROOT);
+                        return l.endsWith(".png") || l.endsWith(".jpg") || l.endsWith(".jpeg") || l.endsWith(".gif");
+                    })
+                    .sorted()
+                    .forEach(files::add);
+        } catch (Exception ignored) {
+        }
+        String cur = b.avatar == null ? "" : b.avatar;
+        int idx = files.indexOf(cur);
+        b.avatar = files.get((idx + 1 + files.size()) % files.size());
+        if (!b.avatar.isBlank()) PmImages.forgetLocal("broadcast:" + b.id + ":" + b.avatar);
+        config.save();
+    }
+
+
     private String query() {
         return (searchField != null ? searchField.getText() : searchText).trim().toLowerCase(Locale.ROOT);
     }
@@ -2904,6 +3113,62 @@ public class PmScreen extends Screen {
             y += 14;
         }
 
+        // Публичные каналы (3.2): аналог Telegram-каналов — свои + подписки
+        if (!config.broadcasts.isEmpty() && y + 10 <= bottom) {
+            context.drawText(textRenderer, Text.translatable("pmchat.section.broadcasts").getString().toUpperCase(Locale.ROOT),
+                    px + 7, y + 1, SUBTLE, false);
+            y += 10;
+        }
+        for (com.pmchat.client.PmConfig.PmBroadcast b : config.broadcasts) {
+            if (y + ROW_H > bottom + 2) break;
+            String tabId = PmChatClient.BCAST_PREFIX + b.id;
+            boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + ROW_H;
+            boolean isSel = tabId.equals(selected);
+            if (isSel) {
+                drawSelectedRow(context, y);
+            } else if (hovered) {
+                fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
+            }
+            drawBroadcastAvatar(context, b, px + 5, y + 3, 11);
+            int bUnread = PmChatClient.broadcastUnread(b.id);
+            int labelMax = LEFT_W - 26 - (bUnread > 0 ? 16 : 0);
+            context.drawText(textRenderer, trim(b.name, labelMax), px + 18, y + 4, NAME_TEXT, false);
+            List<PmMessage> feed = PmChatClient.getBroadcastFeed(b.id);
+            if (!feed.isEmpty()) {
+                PmMessage last = feed.get(feed.size() - 1);
+                context.drawText(textRenderer, trim(PmChatClient.previewOf(last.text != null ? last.text : ""), LEFT_W - 14),
+                        px + 7, y + 14, PREVIEW_TEXT, false);
+            } else {
+                int subs = (b.owner != null && b.owner.equalsIgnoreCase(PmChatClient.selfNamePublic()))
+                        ? b.subscribers.size() : b.knownSubscribers;
+                context.drawText(textRenderer, "◈ " + subs, px + 7, y + 14, PREVIEW_TEXT, false);
+            }
+            if (bUnread > 0) {
+                drawBadge(context, px + LEFT_W - 5, y, bUnread > 9 ? "9+" : String.valueOf(bUnread));
+            }
+            rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, tabId});
+            y += ROW_H;
+        }
+        // Строки «＋ Новый канал» / «Войти по коду» (только когда не идёт поиск)
+        broadcastNewRect = null;
+        broadcastJoinRect = null;
+        if (query.isEmpty() && y + 12 <= bottom) {
+            boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + 12;
+            if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + 11, ROW_HOVER);
+            context.drawText(textRenderer, "＋ " + Text.translatable("pmchat.broadcast.new").getString(),
+                    px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
+            broadcastNewRect = new int[]{px, y, LEFT_W, 12};
+            y += 14;
+        }
+        if (query.isEmpty() && y + 12 <= bottom) {
+            boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + 12;
+            if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + 11, ROW_HOVER);
+            context.drawText(textRenderer, Text.translatable("pmchat.broadcast.joinrow").getString(),
+                    px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
+            broadcastJoinRect = new int[]{px, y, LEFT_W, 12};
+            y += 14;
+        }
+
         // Заголовок секции «Личные» (переписки с игроками)
         if (!names.isEmpty() && y + 10 <= bottom) {
             context.drawText(textRenderer, Text.translatable("pmchat.section.chats").getString().toUpperCase(Locale.ROOT),
@@ -2987,6 +3252,9 @@ public class PmScreen extends Screen {
         } else if (isGroupTab()) {
             com.pmchat.client.PmConfig.PmGroup g = config.findGroup(groupId());
             header = "▣ " + (g != null ? g.name : Text.translatable("pmchat.group").getString());
+        } else if (isBroadcastTab()) {
+            com.pmchat.client.PmConfig.PmBroadcast b = config.findBroadcast(broadcastId());
+            header = "◈ " + (b != null ? b.name : Text.translatable("pmchat.broadcast").getString());
         } else {
             header = trim(config.aliasOf(selected), PANEL_W - LEFT_W - 154);
         }
@@ -3044,6 +3312,17 @@ public class PmScreen extends Screen {
                 }
             }
         }
+        // 3.2: число подписчиков канала (владельцу — точное, остальным — последнее известное)
+        if (isBroadcastTab()) {
+            com.pmchat.client.PmConfig.PmBroadcast b = config.findBroadcast(broadcastId());
+            if (b != null) {
+                boolean owner = b.owner != null && b.owner.equalsIgnoreCase(PmChatClient.selfNamePublic());
+                int subs = owner ? b.subscribers.size() : b.knownSubscribers;
+                String subLabel = "◈ " + subs;
+                context.drawText(textRenderer, subLabel,
+                        headerX + textRenderer.getWidth(header) + 10, py + 8, SUBTLE, false);
+            }
+        }
         context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
 
         int areaTop = py + 26;
@@ -3053,12 +3332,14 @@ public class PmScreen extends Screen {
         pinBarRect = null;
         pinListBtnRect = null;
         pinUnpinRect = null;
-        if (!isGlobal && selected != null) {
+        if ((!isGlobal || isBroadcastTab()) && selected != null) {
             List<String> pins = config.pinnedList(selected);
             if (!pins.isEmpty()) {
                 pinCursor = Math.floorMod(pinCursor, pins.size());
                 String pinHash = pins.get(pins.size() - 1 - pinCursor); // свежие сверху
-                PmMessage pinned = history.findByHash(selected, pinHash);
+                PmMessage pinned = isBroadcastTab()
+                        ? PmChatClient.findBroadcastMessage(broadcastId(), pinHash)
+                        : history.findByHash(selected, pinHash);
                 int by = areaTop;
                 context.fill(px + LEFT_W + 2, by, px + PANEL_W - 2, by + 12, 0x33F0C34E);
                 context.fill(px + LEFT_W + 2, by, px + LEFT_W + 3, by + 12, 0xFFF0C34E);
@@ -3144,6 +3425,8 @@ public class PmScreen extends Screen {
             all = new ArrayList<>(PmChatClient.getChannelFeed(channelId()));
         } else if (isGroupTab()) {
             all = new ArrayList<>(PmChatClient.getGroupFeed(groupId()));
+        } else if (isBroadcastTab()) {
+            all = new ArrayList<>(PmChatClient.getBroadcastFeed(broadcastId()));
         } else {
             all = history.messages(selected);
         }
@@ -3470,6 +3753,14 @@ public class PmScreen extends Screen {
                 context.drawText(textRenderer, ticks,
                         bx + dx + bw - 6 - textRenderer.getWidth(ticks), y + dy + bh - 10,
                         applyAlpha(tc, alpha), false);
+            }
+            // 3.2: счётчик просмотров поста канала — виден только владельцу, под своим постом
+            if (msg.out && isBroadcastTab() && isBroadcastOwner() && msg.text != null) {
+                int views = PmChatClient.broadcastViewCount(broadcastId(), PmHistory.msgHash(msg.text));
+                String vlabel = "◈ " + views;
+                context.drawText(textRenderer, vlabel,
+                        bx + dx + bw - 6 - textRenderer.getWidth(vlabel), y + dy + bh - 10,
+                        applyAlpha(0xFF9CC4DC, alpha), false);
             }
 
             // Чип реакций — внизу пузыря, как в Telegram (цветные символы)
@@ -4253,7 +4544,13 @@ public class PmScreen extends Screen {
         if (pinListOpen) {
             for (Object[] r : pinListUnpinRects) {
                 if (hit(click, new int[]{(int) r[0], (int) r[1], (int) r[2], (int) r[3]})) {
-                    PmChatClient.removePin(selected, (String) r[4], true);
+                    if (isBroadcastTab()) {
+                        if (PmChatClient.canPostBroadcast(broadcastId())) {
+                            PmChatClient.unpinBroadcastPost(broadcastId(), (String) r[4]);
+                        }
+                    } else {
+                        PmChatClient.removePin(selected, (String) r[4], true);
+                    }
                     if (config.pinnedList(selected).isEmpty()) pinListOpen = false;
                     return true;
                 }
@@ -4333,15 +4630,21 @@ public class PmScreen extends Screen {
                         copiedAt = System.currentTimeMillis();
                         copiedX = rx;
                         copiedY = ry;
-                    } else if (action.equals("pin") && !global && selected != null) {
-                        PmChatClient.addPin(selected, PmHistory.msgHash(msg.text), true);
-                    } else if (action.equals("unpin") && !global && selected != null) {
-                        PmChatClient.removePin(selected, PmHistory.msgHash(msg.text), true);
+                    } else if (action.equals("pin") && ((!global && selected != null)
+                            || (isBroadcastTab() && PmChatClient.canPostBroadcast(broadcastId())))) {
+                        if (isBroadcastTab()) PmChatClient.pinBroadcastPost(broadcastId(), PmHistory.msgHash(msg.text));
+                        else PmChatClient.addPin(selected, PmHistory.msgHash(msg.text), true);
+                    } else if (action.equals("unpin") && ((!global && selected != null)
+                            || (isBroadcastTab() && PmChatClient.canPostBroadcast(broadcastId())))) {
+                        if (isBroadcastTab()) PmChatClient.unpinBroadcastPost(broadcastId(), PmHistory.msgHash(msg.text));
+                        else PmChatClient.removePin(selected, PmHistory.msgHash(msg.text), true);
                     } else if (action.equals("delete")) {
                         if (PmChatClient.GLOBAL.equals(selected)) {
                             PmChatClient.getGlobalChat().remove(msg);
                         } else if (channelId() != null) {
                             PmChatClient.getChannelFeed(channelId()).remove(msg);
+                        } else if (isBroadcastTab()) {
+                            PmChatClient.getBroadcastFeed(broadcastId()).remove(msg);
                         } else if (selected != null) {
                             history.deleteMessage(selected, msg);
                         }
@@ -4363,6 +4666,21 @@ public class PmScreen extends Screen {
             rebuild();
             return true;
         }
+        // «＋ Новый канал» / «Войти по коду» (3.2)
+        if (broadcastNewRect != null && hit(click, broadcastNewRect)) {
+            closeModes();
+            statsMode = false;
+            broadcastCreateMode = true;
+            rebuild();
+            return true;
+        }
+        if (broadcastJoinRect != null && hit(click, broadcastJoinRect)) {
+            closeModes();
+            statsMode = false;
+            broadcastJoinMode = true;
+            rebuild();
+            return true;
+        }
         for (Object[] r : rowRects) {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
             if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
@@ -4375,7 +4693,8 @@ public class PmScreen extends Screen {
                 // Пересылка: клик по диалогу-получателю
                 if (forwardBuffer != null && !PmChatClient.GLOBAL.equals(tab)
                         && !tab.startsWith(PmChatClient.CHANNEL_PREFIX)
-                        && !PmChatClient.isGroup(tab)) {
+                        && !PmChatClient.isGroup(tab)
+                        && !PmChatClient.isBroadcast(tab)) {
                     PmChatClient.forwardMessage(tab, forwardFromNick, forwardBuffer);
                     forwardBuffer = null;
                     selected = tab;
@@ -4393,6 +4712,9 @@ public class PmScreen extends Screen {
                 }
                 if (PmChatClient.isGroup(selected)) {
                     PmChatClient.clearGroupUnread(PmChatClient.groupId(selected));
+                }
+                if (PmChatClient.isBroadcast(selected)) {
+                    PmChatClient.clearBroadcastUnread(PmChatClient.broadcastId(selected));
                 }
                 if (hadUnread) {
                     PmChatClient.sendSeen(selected);
@@ -4483,7 +4805,11 @@ public class PmScreen extends Screen {
             List<String> pins = config.pinnedList(selected);
             if (!pins.isEmpty()) {
                 String h = pins.get(pins.size() - 1 - Math.floorMod(pinCursor, pins.size()));
-                PmChatClient.removePin(selected, h, true);
+                if (isBroadcastTab()) {
+                    if (PmChatClient.canPostBroadcast(broadcastId())) PmChatClient.unpinBroadcastPost(broadcastId(), h);
+                } else {
+                    PmChatClient.removePin(selected, h, true);
+                }
             }
             return true;
         }
@@ -4634,6 +4960,8 @@ public class PmScreen extends Screen {
         if (ctxMsg == null) return;
 
         boolean global = isFeedTab();
+        // 3.2: в канале закреп доступен владельцу/админу — как модерация постов в Telegram
+        boolean canPinBroadcast = isBroadcastTab() && PmChatClient.canPostBroadcast(broadcastId());
         // у секретных сообщений отключаем всё, что уходит по сети в открытом виде
         // (ответ/цитата/пересылка/правка/закреп текстом) — остаются только локальные действия.
         boolean secretMsg = ctxMsg.secret;
@@ -4679,8 +5007,9 @@ public class PmScreen extends Screen {
         if (editable) {
             items.add(new String[]{"edit", "✎ " + Text.translatable("pmchat.menu.edit").getString()});
         }
-        // Закрепить/открепить — только в личных диалогах (секретные сообщения не закрепляются)
-        if (!global && !secretMsg && selected != null && ctxMsg.text != null && !ctxMsg.text.isBlank()) {
+        // Закрепить/открепить — личные диалоги, либо канал (владельцу/админу; секретные не закрепляются)
+        if (((!global && selected != null) || canPinBroadcast) && !secretMsg
+                && ctxMsg.text != null && !ctxMsg.text.isBlank()) {
             boolean isPinned = config.isPinned(selected, PmHistory.msgHash(ctxMsg.text));
             items.add(isPinned
                     ? new String[]{"unpin", "⚐ " + Text.translatable("pmchat.menu.unpin").getString()}
@@ -5134,7 +5463,7 @@ public class PmScreen extends Screen {
         int y = y0 + 20;
         for (int i = pins.size() - 1; i >= 0 && y + rowH <= y1 - 4; i--) { // свежие сверху
             String h = pins.get(i);
-            PmMessage m = history.findByHash(selected, h);
+            PmMessage m = isBroadcastTab() ? PmChatClient.findBroadcastMessage(broadcastId(), h) : history.findByHash(selected, h);
             String body = m != null ? PmChatClient.previewOf(m.text != null ? m.text : "") : "…";
             int rw = x1 - x0 - 12;
             boolean hov = mouseX >= x0 + 6 && mouseX < x0 + 6 + rw - 16 && mouseY >= y && mouseY < y + rowH - 2;

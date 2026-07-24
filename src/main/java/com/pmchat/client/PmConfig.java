@@ -318,6 +318,63 @@ public class PmConfig {
         return null;
     }
 
+    /**
+     * Публичный канал (3.2): аналог Telegram-каналов — постит только владелец
+     * и назначенные им админы, остальные — подписчики без права письма.
+     * У владельца {@link #subscribers} — реальный список; у подписчика/админа
+     * этот список пуст, а {@link #knownSubscribers} — последнее известное число
+     * (приходит с каждым постом/приветствием).
+     */
+    public static class PmBroadcast {
+        public String id;
+        public String name;
+        public String description = "";
+        /** Имя файла аватарки канала из config/pmchat-avatars/ (3.2). Пусто — иконка по умолчанию. */
+        public String avatar = "";
+        public String owner;
+        /** Ники с правом постить, помимо владельца (заполнено только у владельца). */
+        public List<String> admins = new ArrayList<>();
+        /** Полный состав подписчиков (заполнено только у владельца). */
+        public List<String> subscribers = new ArrayList<>();
+        /** Последнее известное число подписчиков — для тех, кто не владелец. */
+        public int knownSubscribers = 0;
+
+        public PmBroadcast() {
+        }
+    }
+
+    public List<PmBroadcast> broadcasts = new ArrayList<>();
+
+    public PmBroadcast findBroadcast(String id) {
+        if (id == null) return null;
+        for (PmBroadcast b : broadcasts) {
+            if (id.equals(b.id)) return b;
+        }
+        return null;
+    }
+
+    /** Заглушенные вкладки (личка/группа/канал) — id вкладки как в {@code selected}. */
+    public List<String> mutedThreads = new ArrayList<>();
+
+    public boolean isMutedThread(String threadId) {
+        return threadId != null && mutedThreads.stream().anyMatch(t -> t.equalsIgnoreCase(threadId));
+    }
+
+    /** Переключает заглушение вкладки; возвращает true, если теперь заглушена. */
+    public boolean toggleMutedThread(String threadId) {
+        if (threadId == null) return false;
+        for (int i = 0; i < mutedThreads.size(); i++) {
+            if (mutedThreads.get(i).equalsIgnoreCase(threadId)) {
+                mutedThreads.remove(i);
+                save();
+                return false;
+            }
+        }
+        mutedThreads.add(threadId);
+        save();
+        return true;
+    }
+
     private static List<PmChannel> defaultChannels() {
         List<PmChannel> list = new ArrayList<>();
         list.add(new PmChannel("clan", "Клан", ".",
@@ -529,6 +586,14 @@ public class PmConfig {
                         if (g.members == null) g.members = new ArrayList<>();
                         if (g.avatar == null) g.avatar = "";
                     }
+                    if (cfg.broadcasts == null) cfg.broadcasts = new ArrayList<>();
+                    for (PmBroadcast b : cfg.broadcasts) {
+                        if (b.admins == null) b.admins = new ArrayList<>();
+                        if (b.subscribers == null) b.subscribers = new ArrayList<>();
+                        if (b.description == null) b.description = "";
+                        if (b.avatar == null) b.avatar = "";
+                    }
+                    if (cfg.mutedThreads == null) cfg.mutedThreads = new ArrayList<>();
                     if (cfg.warnReason == null) cfg.warnReason = "";
                     if (cfg.filterPlayers == null) cfg.filterPlayers = new ArrayList<>();
                     if (cfg.filterDiscordPlayers == null) cfg.filterDiscordPlayers = new ArrayList<>();

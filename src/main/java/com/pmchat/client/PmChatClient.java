@@ -73,9 +73,9 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     /** Локальные диалоги (не отправляются на сервер): начинаются с §.
-     *  Группы (§grp:) исключаем — они рассылаются на сервер через /m. */
+     *  Группы (§grp:) и каналы (§bc:) исключаем — они рассылаются на сервер через /m. */
     public static boolean isLocalChat(String name) {
-        return name != null && name.startsWith("§") && !name.startsWith(GROUP_PREFIX);
+        return name != null && name.startsWith("§") && !name.startsWith(GROUP_PREFIX) && !name.startsWith(BCAST_PREFIX);
     }
 
     /** Сохранить сообщение в Избранное (копия локально). */
@@ -759,8 +759,340 @@ public class PmChatClient implements ClientModInitializer {
                 && screen.isViewing(GROUP_PREFIX + id);
         if (!viewing) {
             groupUnread.merge(id, 1, Integer::sum);
-            if (!config.dnd) {
+            if (!config.dnd && !config.isMutedThread(GROUP_PREFIX + id)) {
                 client.getToastManager().add(new PmToast(name + " · " + sender, previewOf(text)));
+                playNotifySound(client);
+            }
+        }
+    }
+
+    // ---------- Публичные каналы (3.2): аналог Telegram-каналов ----------
+
+    /** Сентинел-префикс «диалога» канала-трансляции. */
+    public static final String BCAST_PREFIX = "§bc:";
+
+    private static final java.util.Map<String, java.util.List<PmMessage>> broadcastFeeds =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<String, Integer> broadcastUnread =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    /** Кэш состава подписчиков у назначенных админов (не владельцев) — позволяет им рассылать посты напрямую. */
+    private static final java.util.Map<String, java.util.List<String>> broadcastAdminRosters =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    /** Просмотры постов (считает только владелец): id -> hash поста -> ники, кто отметился. */
+    private static final java.util.Map<String, java.util.Map<String, java.util.Set<String>>> broadcastViews =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    /** Троттлинг собственных отметок «просмотрено»: id + "|" + hash уже отправленных. */
+    private static final java.util.Set<String> broadcastViewedByMe = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public static boolean isBroadcast(String name) {
+        return name != null && name.startsWith(BCAST_PREFIX);
+    }
+
+    public static String broadcastId(String name) {
+        return isBroadcast(name) ? name.substring(BCAST_PREFIX.length()) : null;
+    }
+
+    public static java.util.List<PmMessage> getBroadcastFeed(String id) {
+        return broadcastFeeds.getOrDefault(id, java.util.List.of());
+    }
+
+    /** Найти пост канала по хэшу текста (для полоски закрепа — лента канала не в PmHistory). */
+    public static PmMessage findBroadcastMessage(String id, String hash) {
+        java.util.List<PmMessage> feed = getBroadcastFeed(id);
+        for (int i = feed.size() - 1; i >= 0; i--) {
+            if (PmHistory.msgHash(feed.get(i).text).equals(hash)) return feed.get(i);
+        }
+        return null;
+    }
+
+    public static int broadcastUnread(String id) {
+        return broadcastUnread.getOrDefault(id, 0);
+    }
+
+    public static void clearBroadcastUnread(String id) {
+        broadcastUnread.remove(id);
+    }
+
+    private static void addToBroadcastFeed(String id, PmMessage msg) {
+        java.util.List<PmMessage> feed = broadcastFeeds.computeIfAbsent(id,
+                k -> java.util.Collections.synchronizedList(new java.util.ArrayList<>()));
+        feed.add(msg);
+        while (feed.size() > GLOBAL_LIMIT) feed.remove(0);
+    }
+
+    /** Можем ли мы постить в канал (владелец или назначенный админ с кэшем состава). */
+    public static boolean canPostBroadcast(String id) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        if (b == null) return false;
+        String self = selfName();
+        if (b.owner != null && b.owner.equalsIgnoreCase(self)) return true;
+        return broadcastAdminRosters.containsKey(id);
+    }
+
+    /** Создать канал: создатель — владелец, подписчиков пока нет. */
+    public static String createBroadcast(String name, String description) {
+        String self = selfName();
+        String cleanName = (name == null || name.isBlank()) ? "Канал" : name.trim();
+        String id = PmHistory.msgHash(self.toLowerCase(Locale.ROOT) + "|" + cleanName + "|" + System.nanoTime());
+        PmConfig.PmBroadcast b = new PmConfig.PmBroadcast();
+        b.id = id;
+        b.name = cleanName;
+        b.description = description == null ? "" : description.trim();
+        b.owner = self;
+        config.broadcasts.add(b);
+        config.save();
+        return id;
+    }
+
+    /** «Удалить канал»: только владелец, локально (подписчики не уведомляются). */
+    public static void deleteBroadcast(String id) {
+        config.broadcasts.removeIf(b -> b.id.equals(id));
+        config.save();
+        broadcastFeeds.remove(id);
+        broadcastUnread.remove(id);
+        broadcastAdminRosters.remove(id);
+        broadcastViews.remove(id);
+    }
+
+    /** «Покинуть канал»: подписчик/админ, уведомляет владельца. */
+    public static void leaveBroadcast(String id) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        if (b != null && b.owner != null && !b.owner.equalsIgnoreCase(selfName())) {
+            pmDeliver(b.owner, PmWire.bcLeave(id));
+        }
+        config.broadcasts.removeIf(x -> x.id.equals(id));
+        config.save();
+        broadcastFeeds.remove(id);
+        broadcastUnread.remove(id);
+        broadcastAdminRosters.remove(id);
+    }
+
+    /** Код приглашения: владелец#id — вставляется в поле «Войти по коду». */
+    public static String broadcastInviteCode(PmConfig.PmBroadcast b) {
+        return b.owner + "#" + b.id;
+    }
+
+    /** Отправить заявку на подписку по коду приглашения. true — заявка ушла. */
+    public static boolean requestJoinBroadcast(String code) {
+        if (code == null) return false;
+        String c = code.trim();
+        int idx = c.indexOf('#');
+        if (idx <= 0 || idx >= c.length() - 1) return false;
+        String owner = c.substring(0, idx).trim();
+        String id = c.substring(idx + 1).trim();
+        if (owner.isEmpty() || id.isEmpty() || owner.equalsIgnoreCase(selfName())) return false;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return false;
+        pmDeliver(owner, PmWire.bcJoin(id));
+        return true;
+    }
+
+    /** Отправить пост в канал: рассылка /m владельцем (или админом — по кэшу состава). */
+    public static void sendBroadcastPost(String id, String text) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        if (b == null || text == null || text.isBlank()) return;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        String self = selfName();
+        boolean isOwner = b.owner != null && b.owner.equalsIgnoreCase(self);
+        java.util.List<String> roster;
+        int subCount;
+        if (isOwner) {
+            roster = b.subscribers;
+            subCount = b.subscribers.size();
+        } else if (broadcastAdminRosters.containsKey(id)) {
+            roster = broadcastAdminRosters.get(id);
+            subCount = roster.size();
+        } else {
+            return; // нет прав постить
+        }
+
+        PmMessage mine = new PmMessage(true, text, System.currentTimeMillis(), 0);
+        mine.sender = self;
+        addToBroadcastFeed(id, mine);
+
+        for (String member : roster) {
+            if (member.equalsIgnoreCase(self)) continue;
+            String out = PmWire.bcPost(id, b.owner, b.name, b.description, subCount, text);
+            pmDeliver(member, out);
+            synchronized (pendingEcho) {
+                pendingEcho.add(new String[]{member, out, String.valueOf(System.currentTimeMillis() + 5000)});
+            }
+        }
+    }
+
+    /** Выдать права админа: сохраняет в списке владельца + шлёт цели копию состава подписчиков. */
+    public static void grantBroadcastAdmin(String id, String target) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        if (b == null || target == null || target.isBlank()) return;
+        String t = target.trim();
+        if (b.admins.stream().noneMatch(a -> a.equalsIgnoreCase(t))) {
+            b.admins.add(t);
+            config.save();
+        }
+        pmDeliver(t, PmWire.bcGrant(id, new java.util.ArrayList<>(b.subscribers)));
+    }
+
+    /** Снять права админа: убирает из списка владельца + уведомляет цель. */
+    public static void revokeBroadcastAdmin(String id, String target) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        if (b == null || target == null) return;
+        b.admins.removeIf(a -> a.equalsIgnoreCase(target));
+        config.save();
+        pmDeliver(target, PmWire.bcRevoke(id));
+    }
+
+    /** Закрепить пост канала: локально + рассылка отметки всем, кому мы вещаем. */
+    public static void pinBroadcastPost(String id, String hash) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        if (b == null || !canPostBroadcast(id)) return;
+        config.addPin(BCAST_PREFIX + id, hash);
+        for (String member : broadcastRosterForSending(id)) {
+            pmDeliver(member, PmWire.bcPin(id, hash));
+        }
+    }
+
+    /** Открепить пост канала: локально + рассылка. */
+    public static void unpinBroadcastPost(String id, String hash) {
+        if (!canPostBroadcast(id)) return;
+        config.removePin(BCAST_PREFIX + id, hash);
+        for (String member : broadcastRosterForSending(id)) {
+            pmDeliver(member, PmWire.bcUnpin(id, hash));
+        }
+    }
+
+    private static java.util.List<String> broadcastRosterForSending(String id) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        if (b == null) return java.util.List.of();
+        String self = selfName();
+        if (b.owner != null && b.owner.equalsIgnoreCase(self)) return b.subscribers;
+        return broadcastAdminRosters.getOrDefault(id, java.util.List.of());
+    }
+
+    /** Отправить отметку «просмотрено» владельцу (не чаще раза на пост). */
+    private static void sendBroadcastView(String id, String hash) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        if (b == null || b.owner == null || b.owner.equalsIgnoreCase(selfName())) return;
+        String key = id + "|" + hash;
+        if (!broadcastViewedByMe.add(key)) return;
+        pmDeliver(b.owner, PmWire.bcView(id, hash));
+    }
+
+    /** Учесть чужой просмотр поста (мы — владелец). */
+    private static void recordBroadcastView(String id, String viewer, String hash) {
+        broadcastViews.computeIfAbsent(id, k -> new java.util.concurrent.ConcurrentHashMap<>())
+                .computeIfAbsent(hash, k -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                .add(viewer.toLowerCase(Locale.ROOT));
+    }
+
+    /** Число просмотров поста (для отображения владельцу под своим сообщением). */
+    public static int broadcastViewCount(String id, String hash) {
+        java.util.Map<String, java.util.Set<String>> perId = broadcastViews.get(id);
+        if (perId == null) return 0;
+        java.util.Set<String> viewers = perId.get(hash);
+        return viewers == null ? 0 : viewers.size();
+    }
+
+    /** Заявка на подписку — нам, как владельцу канала. */
+    private static void handleIncomingBroadcastJoin(String sender, String id) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        String self = selfName();
+        if (b == null || b.owner == null || !b.owner.equalsIgnoreCase(self)) return; // не наш канал
+        boolean added = false;
+        if (b.subscribers.stream().noneMatch(s -> s.equalsIgnoreCase(sender))) {
+            b.subscribers.add(sender);
+            added = true;
+        }
+        config.save();
+        pmDeliver(sender, PmWire.bcWelcome(id, b.name, b.description, b.subscribers.size()));
+        if (added) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (!config.dnd) {
+                client.getToastManager().add(new PmToast("◈ " + b.name,
+                        sender + " — " + Text.translatable("pmchat.broadcast.newsub").getString()));
+            }
+        }
+    }
+
+    /** Отписка подписчика/админа — нам, как владельцу канала. */
+    private static void handleIncomingBroadcastLeave(String sender, String id) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        String self = selfName();
+        if (b == null || b.owner == null || !b.owner.equalsIgnoreCase(self)) return;
+        b.subscribers.removeIf(s -> s.equalsIgnoreCase(sender));
+        b.admins.removeIf(a -> a.equalsIgnoreCase(sender));
+        config.save();
+    }
+
+    /** Ответ владельца на нашу заявку — заводит вкладку канала даже без единого поста. */
+    private static void handleIncomingBroadcastWelcome(String owner, String id, String name,
+                                                        String description, int count) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        boolean isNew = b == null;
+        if (b == null) {
+            b = new PmConfig.PmBroadcast();
+            b.id = id;
+            config.broadcasts.add(b);
+        }
+        b.owner = owner;
+        if (name != null && !name.isBlank()) b.name = name;
+        b.description = description == null ? "" : description;
+        b.knownSubscribers = count;
+        config.save();
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (isNew && !config.dnd) {
+            client.getToastManager().add(new PmToast("◈ " + b.name,
+                    Text.translatable("pmchat.broadcast.joined_toast").getString()));
+            playNotifySound(client);
+        }
+    }
+
+    /** Владелец выдал/обновил нам права админа — кэшируем состав подписчиков для рассылки. */
+    private static void handleIncomingBroadcastGrant(String sender, String id, String[] roster) {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        for (String r : roster) {
+            if (r != null && !r.isBlank()) list.add(r.trim());
+        }
+        broadcastAdminRosters.put(id, list);
+        if (config.findBroadcast(id) == null) {
+            PmConfig.PmBroadcast b = new PmConfig.PmBroadcast();
+            b.id = id;
+            b.name = "Канал";
+            b.owner = sender;
+            config.broadcasts.add(b);
+            config.save();
+        }
+    }
+
+    /** Входящий пост канала (владелец или админ). */
+    private static void handleIncomingBroadcastPost(String sender, String id, String owner, String name,
+                                                     String description, int count, String text) {
+        PmConfig.PmBroadcast b = config.findBroadcast(id);
+        if (b == null) {
+            b = new PmConfig.PmBroadcast();
+            b.id = id;
+            config.broadcasts.add(b);
+        }
+        if (owner != null && !owner.isBlank()) b.owner = owner;
+        if (name != null && !name.isBlank()) b.name = name;
+        if (description != null) b.description = description;
+        b.knownSubscribers = count;
+        config.save();
+
+        PmMessage msg = new PmMessage(false, text, System.currentTimeMillis(), 0);
+        msg.sender = sender;
+        addToBroadcastFeed(id, msg);
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        boolean viewing = client.currentScreen instanceof PmScreen screen
+                && screen.isViewing(BCAST_PREFIX + id);
+        if (viewing) {
+            sendBroadcastView(id, PmHistory.msgHash(text));
+        } else {
+            broadcastUnread.merge(id, 1, Integer::sum);
+            if (!config.dnd && !config.isMutedThread(BCAST_PREFIX + id)) {
+                client.getToastManager().add(new PmToast("◈ " + b.name, previewOf(text)));
                 playNotifySound(client);
             }
         }
@@ -922,6 +1254,66 @@ public class PmChatClient implements ClientModInitializer {
             return 2;
         }
 
+        // Публичные каналы (3.2) — заявки/ответы/посты, из ЛС прячем
+        String bcJoinId = PmWire.parseBcJoin(text);
+        if (bcJoinId != null) {
+            config.addModUser(sender);
+            handleIncomingBroadcastJoin(sender, bcJoinId);
+            return 2;
+        }
+        String bcLeaveId = PmWire.parseBcLeave(text);
+        if (bcLeaveId != null) {
+            config.addModUser(sender);
+            handleIncomingBroadcastLeave(sender, bcLeaveId);
+            return 2;
+        }
+        Object[] bcWelcome = PmWire.parseBcWelcome(text);
+        if (bcWelcome != null) {
+            config.addModUser(sender);
+            handleIncomingBroadcastWelcome(sender, (String) bcWelcome[0], (String) bcWelcome[1],
+                    (String) bcWelcome[2], (int) bcWelcome[3]);
+            return 2;
+        }
+        Object[] bcGrant = PmWire.parseBcGrant(text);
+        if (bcGrant != null) {
+            config.addModUser(sender);
+            handleIncomingBroadcastGrant(sender, (String) bcGrant[0], (String[]) bcGrant[1]);
+            return 2;
+        }
+        String bcRevokeId = PmWire.parseBcRevoke(text);
+        if (bcRevokeId != null) {
+            config.addModUser(sender);
+            broadcastAdminRosters.remove(bcRevokeId);
+            return 2;
+        }
+        String[] bcView = PmWire.parseBcView(text);
+        if (bcView != null) {
+            config.addModUser(sender);
+            recordBroadcastView(bcView[0], sender, bcView[1]);
+            return 2;
+        }
+        String[] bcPin = PmWire.parseBcPin(text);
+        if (bcPin != null) {
+            config.addModUser(sender);
+            String conv = BCAST_PREFIX + bcPin[0];
+            if ("-".equals(bcPin[1])) config.clearPins(conv);
+            else config.addPin(conv, bcPin[1]);
+            return 2;
+        }
+        String[] bcUnpin = PmWire.parseBcUnpin(text);
+        if (bcUnpin != null) {
+            config.addModUser(sender);
+            config.removePin(BCAST_PREFIX + bcUnpin[0], bcUnpin[1]);
+            return 2;
+        }
+        Object[] bcPost = PmWire.parseBcPost(text);
+        if (bcPost != null) {
+            config.addModUser(sender);
+            handleIncomingBroadcastPost(sender, (String) bcPost[0], (String) bcPost[1], (String) bcPost[2],
+                    (String) bcPost[3], (int) bcPost[4], (String) bcPost[5]);
+            return 2;
+        }
+
         // Структурированные сообщения (фото/голос/цитата) — точно от мода
         if (PmWire.isStructured(text)) {
             config.addModUser(sender);
@@ -970,7 +1362,7 @@ public class PmChatClient implements ClientModInitializer {
             sendSeen(sender);
         } else {
             history.markUnread(sender);
-            if (!config.dnd) {
+            if (!config.dnd && !config.isMutedThread(sender)) {
                 client.getToastManager().add(new PmToast(sender, previewOf(text)));
                 playNotifySound(client);
             }
@@ -1591,7 +1983,7 @@ public class PmChatClient implements ClientModInitializer {
         return PmWire.isTyping(wire) || PmWire.isSeen(wire) || PmWire.isHi(wire)
                 || PmWire.parseReaction(wire) != null || PmWire.isPinMeta(wire)
                 || PmWire.isVoteMeta(wire) || PmWire.isEditMeta(wire) || PmWire.isUnpinMeta(wire)
-                || PmWire.isSecretMeta(wire) || PmWire.isCallMeta(wire);
+                || PmWire.isSecretMeta(wire) || PmWire.isCallMeta(wire) || PmWire.isBcControlMeta(wire);
     }
 
     /** Читаемый текст для /tell не-мод получателю (пусто — не отправлять вовсе). */

@@ -100,6 +100,10 @@ One button sends your contact a Simple Voice Chat invite — no manual group set
 
 Send a photo or video blurred out, Telegram/Discord-style — your contact reveals it themselves with a click, whenever they're ready.
 
+## 📢 NEW: Broadcast channels
+
+A real analog of Telegram channels — create one, share an invite code, and post to every subscriber at once. Subscribers get a read-only feed with a live subscriber count; you get view counts on your own posts, admin roles you can hand out, pinned posts, and per-channel mute.
+
 ---
 
 ## 🧭 Commands

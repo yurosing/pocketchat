@@ -47,6 +47,28 @@ public final class PmWire {
     // Групповое сообщение: pmc grp <hexИмя> <составЧерезДефис> <текст>
     private static final Pattern GRP = Pattern.compile("^pmc grp ([0-9a-f]*) ([A-Za-z0-9_-]+) (.+)$", Pattern.DOTALL);
 
+    // ---------- Публичные каналы (аналог Telegram-каналов, 3.2) ----------
+    // Пост: pmc bc <id> <владелецHex> <имяHex> <описаниеHex> <числоПодписчиков> <текст>
+    private static final Pattern BC_POST = Pattern.compile(
+            "^pmc bc ([0-9a-f]{1,8}) ([0-9a-f]*) ([0-9a-f]*) ([0-9a-f]*) (\\d+) (.+)$", Pattern.DOTALL);
+    // «Добро пожаловать» (ответ на заявку, без поста): pmc bcw <id> <имяHex> <описаниеHex> <числоПодписчиков>
+    private static final Pattern BC_WELCOME = Pattern.compile(
+            "^pmc bcw ([0-9a-f]{1,8}) ([0-9a-f]*) ([0-9a-f]*) (\\d+)$");
+    // Заявка на подписку (получателю — владельцу канала): pmc bcj <id>
+    private static final Pattern BC_JOIN = Pattern.compile("^pmc bcj ([0-9a-f]{1,8})$");
+    // Отписка: pmc bcl <id>
+    private static final Pattern BC_LEAVE = Pattern.compile("^pmc bcl ([0-9a-f]{1,8})$");
+    // Выдача прав админа + копия состава подписчиков: pmc bcg <id> [составЧерезДефис]
+    // (состав необязателен — у свежесозданного канала подписчиков может ещё не быть)
+    private static final Pattern BC_GRANT = Pattern.compile("^pmc bcg ([0-9a-f]{1,8})(?: ([A-Za-z0-9_-]+))?$");
+    // Снятие прав админа: pmc bcr <id>
+    private static final Pattern BC_REVOKE = Pattern.compile("^pmc bcr ([0-9a-f]{1,8})$");
+    // Отметка «просмотрено» (владельцу, для счётчика просмотров): pmc bcv <id> <hash>
+    private static final Pattern BC_VIEW = Pattern.compile("^pmc bcv ([0-9a-f]{1,8}) ([0-9a-fA-F]{1,8})$");
+    // Закреп/откреп поста канала: pmc bcp <id> <hash|-> / pmc bcu <id> <hash>
+    private static final Pattern BC_PIN = Pattern.compile("^pmc bcp ([0-9a-f]{1,8}) ([0-9a-fA-F]{1,8}|-)$");
+    private static final Pattern BC_UNPIN = Pattern.compile("^pmc bcu ([0-9a-f]{1,8}) ([0-9a-fA-F]{1,8})$");
+
     // секретные чаты — сквозное шифрование.
     // pmc sec req <pubHex 64> — запрос сессии со своим публичным ключом X25519
     private static final Pattern SEC_REQ = Pattern.compile("^pmc sec req ([0-9a-f]{64})$");
@@ -292,6 +314,138 @@ public final class PmWire {
 
     public static boolean isGroupMeta(String text) {
         return parseGroup(text) != null;
+    }
+
+    // ---------- Публичные каналы (аналог Telegram-каналов, 3.2) ----------
+
+    /**
+     * Пост в канале. Владелец шлётся отдельным полем (не только sender), т.к. пост
+     * может прийти от админа, а не от владельца — получателю нужно знать, кому
+     * писать заявку/отписку/и т.п.
+     */
+    public static String bcPost(String id, String owner, String name, String description, int count, String text) {
+        return "pmc bc " + id + " " + hex(owner) + " " + hex(name) + " " + hex(description) + " " + count + " " + text;
+    }
+
+    /** {id, владелец, имя, описание, число подписчиков(Integer), текст} или null. */
+    public static Object[] parseBcPost(String text) {
+        if (text == null) return null;
+        Matcher m = BC_POST.matcher(text.trim());
+        if (!m.matches()) return null;
+        try {
+            return new Object[]{m.group(1), unhex(m.group(2)), unhex(m.group(3)), unhex(m.group(4)),
+                    Integer.parseInt(m.group(5)), m.group(6).trim()};
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** Ответ владельца на заявку на подписку — заводит вкладку канала даже без единого поста. */
+    public static String bcWelcome(String id, String name, String description, int count) {
+        return "pmc bcw " + id + " " + hex(name) + " " + hex(description) + " " + count;
+    }
+
+    /** {id, имя, описание, число подписчиков(Integer)} или null. */
+    public static Object[] parseBcWelcome(String text) {
+        if (text == null) return null;
+        Matcher m = BC_WELCOME.matcher(text.trim());
+        if (!m.matches()) return null;
+        try {
+            return new Object[]{m.group(1), unhex(m.group(2)), unhex(m.group(3)), Integer.parseInt(m.group(4))};
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    public static String bcJoin(String id) {
+        return "pmc bcj " + id;
+    }
+
+    /** id канала из заявки на подписку или null. */
+    public static String parseBcJoin(String text) {
+        if (text == null) return null;
+        Matcher m = BC_JOIN.matcher(text.trim());
+        return m.matches() ? m.group(1) : null;
+    }
+
+    public static String bcLeave(String id) {
+        return "pmc bcl " + id;
+    }
+
+    /** id канала из отписки или null. */
+    public static String parseBcLeave(String text) {
+        if (text == null) return null;
+        Matcher m = BC_LEAVE.matcher(text.trim());
+        return m.matches() ? m.group(1) : null;
+    }
+
+    public static String bcGrant(String id, java.util.List<String> roster) {
+        return roster.isEmpty() ? "pmc bcg " + id : "pmc bcg " + id + " " + String.join("-", roster);
+    }
+
+    /** {id, состав(String[])} или null. */
+    public static Object[] parseBcGrant(String text) {
+        if (text == null) return null;
+        Matcher m = BC_GRANT.matcher(text.trim());
+        if (!m.matches()) return null;
+        String rosterRaw = m.group(2);
+        String[] roster = rosterRaw == null || rosterRaw.isEmpty() ? new String[0] : rosterRaw.split("-");
+        return new Object[]{m.group(1), roster};
+    }
+
+    public static String bcRevoke(String id) {
+        return "pmc bcr " + id;
+    }
+
+    /** id канала из снятия прав админа или null. */
+    public static String parseBcRevoke(String text) {
+        if (text == null) return null;
+        Matcher m = BC_REVOKE.matcher(text.trim());
+        return m.matches() ? m.group(1) : null;
+    }
+
+    public static String bcView(String id, String hash) {
+        return "pmc bcv " + id + " " + hash;
+    }
+
+    /** {id, hash} или null. */
+    public static String[] parseBcView(String text) {
+        if (text == null) return null;
+        Matcher m = BC_VIEW.matcher(text.trim());
+        return m.matches() ? new String[]{m.group(1), m.group(2)} : null;
+    }
+
+    public static String bcPin(String id, String hash) {
+        return "pmc bcp " + id + " " + (hash == null || hash.isEmpty() ? "-" : hash);
+    }
+
+    /** {id, hash или "-" (открепить все)} или null. */
+    public static String[] parseBcPin(String text) {
+        if (text == null) return null;
+        Matcher m = BC_PIN.matcher(text.trim());
+        return m.matches() ? new String[]{m.group(1), m.group(2)} : null;
+    }
+
+    public static String bcUnpin(String id, String hash) {
+        return "pmc bcu " + id + " " + hash;
+    }
+
+    /** {id, hash} или null. */
+    public static String[] parseBcUnpin(String text) {
+        if (text == null) return null;
+        Matcher m = BC_UNPIN.matcher(text.trim());
+        return m.matches() ? new String[]{m.group(1), m.group(2)} : null;
+    }
+
+    /** Служебные (не-постовые) строки канала — их прячем как обычную мету, без пометки в истории. */
+    public static boolean isBcControlMeta(String text) {
+        return parseBcWelcome(text) != null || parseBcJoin(text) != null || parseBcLeave(text) != null
+                || parseBcGrant(text) != null || parseBcRevoke(text) != null || parseBcView(text) != null
+                || parseBcPin(text) != null || parseBcUnpin(text) != null;
+    }
+
+    public static boolean isBroadcastMeta(String text) {
+        return parseBcPost(text) != null || isBcControlMeta(text);
     }
 
     // ---------- секретные чаты (6.10) ----------
