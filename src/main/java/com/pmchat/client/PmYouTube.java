@@ -67,7 +67,7 @@ public final class PmYouTube {
         }
     }
 
-    /** Минимальная распаковка JSON-строки (\", \\, \/, \n, \t, \uXXXX) для значения title. */
+    /** Минимальная распаковка экранирования в JSON-строке (кавычки, слэши, переводы строк, unicode). */
     private static String unescapeJson(String s) {
         StringBuilder sb = new StringBuilder(s.length());
         for (int i = 0; i < s.length(); i++) {
