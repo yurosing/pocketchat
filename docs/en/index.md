@@ -20,10 +20,6 @@ hero:
       link: https://github.com/yurosing/pocketchat
 
 features:
-  - icon: 🔒
-    title: 'Secret chats'
-    details: A conversation not even the server can read. Never touches the disk, and can self-destruct after a set time.
-    link: /en/guide/secret-chats
   - icon: ▶️
     title: 'Video and YouTube'
     details: Watch your own videos and YouTube links right in the messenger — with pause, volume and seeking.

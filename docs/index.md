@@ -20,10 +20,6 @@ hero:
       link: https://github.com/yurosing/pocketchat
 
 features:
-  - icon: 🔒
-    title: 'Секретные чаты'
-    details: Переписка, которую не прочитает даже сервер. Не сохраняется на диск и может самоуничтожаться через заданное время.
-    link: /guide/secret-chats
   - icon: ▶️
     title: 'Видео и YouTube'
     details: Свои видео и ссылки на YouTube смотрите прямо в мессенджере — с паузой, громкостью и перемоткой.

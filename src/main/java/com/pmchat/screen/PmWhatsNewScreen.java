@@ -1,0 +1,125 @@
+package com.pmchat.screen;
+
+import com.pmchat.client.PmChatClient;
+import com.pmchat.client.PmConfig;
+import com.pmchat.client.PmUpdate;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.text.OrderedText;
+import net.minecraft.text.Text;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Панелька «Что нового» — открывается из мессенджера (кнопка 📖 внизу слева).
+ * Показывает версию мода и список изменений текущего релиза. Тексты — в lang
+ * (pmchat.whatsnew.*), поэтому и RU, и EN подхватываются автоматически.
+ */
+@Environment(EnvType.CLIENT)
+public class PmWhatsNewScreen extends Screen {
+
+    private static final int PANEL_W = 300;
+    private static final int TEXT_W = PANEL_W - 40;   // отступы слева/справа + буллет
+    private static final int LINE_H = 11;
+
+    /** Ключи пунктов «что нового» этого релиза (порядок = порядок показа). */
+    private static final String[] ITEMS = {
+            "pmchat.whatsnew.video_title",
+            "pmchat.whatsnew.photo_preview",
+            "pmchat.whatsnew.secret_removed",
+    };
+
+    private int BG, BORDER, LABEL, TITLE, SUBTLE, BTN_BG, BTN_HOVER, BTN_BORDER;
+
+    private final Screen parent;
+    private final PmConfig config = PmChatClient.getConfig();
+
+    private int px, py, panelH;
+    // Заранее развёрнутые в строки пункты (иконка-буллет рисуется у первой строки).
+    private final List<OrderedText> lines = new ArrayList<>();
+    private final List<Boolean> firstLine = new ArrayList<>();
+
+    public PmWhatsNewScreen(Screen parent) {
+        super(Text.translatable("pmchat.whatsnew.title"));
+        this.parent = parent;
+    }
+
+    private void applyTheme() {
+        PmTheme t = PmTheme.dialog(config.theme);
+        BG = t.bg; BORDER = t.border; LABEL = t.label; TITLE = t.title;
+        SUBTLE = t.value;
+        BTN_BG = t.btnBg; BTN_HOVER = t.btnHover; BTN_BORDER = t.btnBorder;
+    }
+
+    @Override
+    protected void init() {
+        applyTheme();
+        clearChildren();
+        lines.clear();
+        firstLine.clear();
+
+        for (String key : ITEMS) {
+            List<OrderedText> wrapped = textRenderer.wrapLines(Text.translatable(key), TEXT_W);
+            if (wrapped.isEmpty()) continue;
+            for (int i = 0; i < wrapped.size(); i++) {
+                lines.add(wrapped.get(i));
+                firstLine.add(i == 0);
+            }
+        }
+
+        // Шапка (заголовок + версия) + список + кнопка «Готово».
+        int headerH = 40;
+        int listH = lines.size() * LINE_H + 6;
+        panelH = headerH + listH + 30;
+        px = (width - PANEL_W) / 2;
+        py = (height - panelH) / 2;
+
+        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
+                Text.translatable("pmchat.settings.done"),
+                0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
+        context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
+        context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
+
+        Text title = Text.translatable("pmchat.whatsnew.title");
+        context.drawText(textRenderer, title,
+                px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
+
+        Text ver = Text.translatable("pmchat.whatsnew.version", PmUpdate.currentVersion());
+        context.drawText(textRenderer, ver,
+                px + (PANEL_W - textRenderer.getWidth(ver)) / 2, py + 22, SUBTLE, false);
+
+        // Разделитель под шапкой
+        context.fill(px + 12, py + 36, px + PANEL_W - 12, py + 37, BORDER);
+
+        int y = py + 43;
+        for (int i = 0; i < lines.size(); i++) {
+            if (firstLine.get(i)) {
+                context.drawText(textRenderer, "✦", px + 14, y, 0xFF6FBF8B, false);
+            }
+            context.drawText(textRenderer, lines.get(i), px + 28, y, LABEL, false);
+            y += LINE_H;
+        }
+
+        super.render(context, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public void close() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
+    }
+
+    @Override
+    public boolean shouldPause() {
+        return false;
+    }
+}

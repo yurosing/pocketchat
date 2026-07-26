@@ -93,26 +93,9 @@ public class PmHistory {
         return k;
     }
 
-    /**
-     * секретные сообщения (6.10) на диск не пишутся — ни текст, ни сам
-     * факт их существования. Перед сохранением строим копию без них.
-     */
     public void save() {
-        LinkedHashMap<String, List<PmMessage>> toWrite = conversations;
-        boolean hasSecret = conversations.values().stream()
-                .anyMatch(list -> list.stream().anyMatch(m -> m.secret));
-        if (hasSecret) {
-            toWrite = new LinkedHashMap<>();
-            for (Map.Entry<String, List<PmMessage>> e : conversations.entrySet()) {
-                List<PmMessage> filtered = new ArrayList<>();
-                for (PmMessage m : e.getValue()) {
-                    if (!m.secret) filtered.add(m);
-                }
-                if (!filtered.isEmpty()) toWrite.put(e.getKey(), filtered);
-            }
-        }
         try {
-            String json = GSON.toJson(toWrite, TYPE);
+            String json = GSON.toJson(conversations, TYPE);
             SecretKey key = PmCrypto.aesKey(loadOrCreateKey());
             byte[] blob = PmCrypto.seal(key, json.getBytes(StandardCharsets.UTF_8));
             byte[] out = new byte[MAGIC.length + blob.length];
@@ -123,30 +106,8 @@ public class PmHistory {
         }
     }
 
-    /** снести просроченные секретные сообщения (самоуничтожение). true, если что-то удалили. */
-    public boolean sweepExpiredSecrets(long now) {
-        boolean changed = false;
-        for (List<PmMessage> list : conversations.values()) {
-            changed |= list.removeIf(m -> m.secret && m.destructAt > 0 && m.destructAt <= now);
-        }
-        return changed;
-    }
-
     public PmMessage add(String player, boolean out, String text, long money) {
         PmMessage msg = new PmMessage(out, text, System.currentTimeMillis(), money);
-        conversations.computeIfAbsent(player, k -> new ArrayList<>()).add(msg);
-        save();
-        return msg;
-    }
-
-    /**
-     * добавить секретное сообщение (6.10) — помечено секретным ДО первого
-     * save(), чтобы текст ни на миг не попал в файл на диске.
-     */
-    public PmMessage addSecret(String player, boolean out, String text, int ttlSeconds) {
-        PmMessage msg = new PmMessage(out, text, System.currentTimeMillis(), 0);
-        msg.secret = true;
-        if (ttlSeconds > 0) msg.destructAt = System.currentTimeMillis() + ttlSeconds * 1000L;
         conversations.computeIfAbsent(player, k -> new ArrayList<>()).add(msg);
         save();
         return msg;

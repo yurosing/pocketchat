@@ -228,6 +228,64 @@ public final class PmImages {
         });
     }
 
+    /**
+     * Достаёт (или начинает грузить) картинку по ПРЯМОЙ ссылке — для превью
+     * фото под ссылкой в переписке (как в Telegram). Кэш по URL; на диск кладём
+     * под псевдо-хостом «u» со стабильным именем из хэша ссылки.
+     */
+    public static Entry getUrl(String url) {
+        return CACHE.computeIfAbsent("url|" + url, key -> {
+            Entry entry = new Entry();
+            String id = urlName(url);
+            EXECUTOR.submit(() -> {
+                try {
+                    Path cached = mediaFile("u", id);
+                    if (Files.exists(cached)) {
+                        register(id, Files.readAllBytes(cached), entry);
+                        return;
+                    }
+                } catch (Exception ignored) {
+                }
+                downloadUrl(url, id, entry);
+            });
+            return entry;
+        });
+    }
+
+    /** Стабильное имя файла из ссылки: хэш ссылки + расширение (для выбора декодера). */
+    private static String urlName(String url) {
+        int q = url.indexOf('?');
+        String clean = q >= 0 ? url.substring(0, q) : url;
+        int slash = clean.lastIndexOf('/');
+        String name = slash >= 0 ? clean.substring(slash + 1) : clean;
+        int dot = name.lastIndexOf('.');
+        String ext = dot > 0 && dot < name.length() - 1
+                ? name.substring(dot + 1).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "") : "png";
+        if (ext.isEmpty()) ext = "png";
+        return Integer.toHexString(url.hashCode()) + "." + ext;
+    }
+
+    private static void downloadUrl(String url, String id, Entry entry) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("User-Agent", "pmchat-mod/1.0")
+                    .GET()
+                    .build();
+            HttpResponse<byte[]> response = HTTP.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() != 200) {
+                throw new IllegalStateException("download failed: " + response.statusCode());
+            }
+            byte[] bytes = response.body();
+            saveToDisk("u", id, bytes);
+            register(id, bytes, entry);
+        } catch (Exception e) {
+            PmChatClient.LOGGER.warn("Failed to fetch link preview {}: {}", url, e.getMessage());
+            entry.state = State.FAILED;
+        }
+    }
+
     private static void download(String hostCode, String id, Entry entry) {
         try {
             byte[] bytes;

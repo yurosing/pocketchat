@@ -5,6 +5,9 @@ browser. Works for your own videos and for YouTube links.
 
 <Shot src="/img/video-player.png" caption="The built-in player: pause, seek, volume, speed." />
 
+The **video's title** is shown at the top of the player — pulled in automatically
+for YouTube, or taken from the file name for your own videos.
+
 ## What it needs
 
 The built-in player runs through **VLC media player** installed on your

@@ -36,12 +36,6 @@ another one — just wait a bit.
 
 Most settings apply **after restarting the game** — just quit and reopen it.
 
-## A secret chat disappeared after restarting the game
-
-That's by design. Secret chats aren't saved anywhere — you'll need to start a
-new one the next time you launch the game. See
-[Secret chats](/en/guide/secret-chats) for details.
-
 ## Video won't open in the built-in player
 
 This needs **VLC media player** installed on your computer. If you don't

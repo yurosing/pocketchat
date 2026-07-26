@@ -100,11 +100,6 @@ public class PmChatClient implements ClientModInitializer {
     private static final java.util.Map<String, Long> lastTypingSent = new java.util.HashMap<>();
     private static final java.util.Map<String, Long> lastSeenSent = new java.util.HashMap<>();
 
-    /** секретные чаты — сессия на собеседника, только в памяти. */
-    private static final java.util.Map<String, PmSecretSession> secretSessions =
-            new java.util.concurrent.ConcurrentHashMap<>();
-    private static long lastSecretSweep = 0;
-
     @Override
     public void onInitializeClient() {
         // Разблокируем AWT-буфер обмена для Ctrl+V картинок (кроме macOS,
@@ -207,13 +202,6 @@ public class PmChatClient implements ClientModInitializer {
                 lastHealth = hp;
             } else if (client.player != null) {
                 lastHealth = client.player.getHealth();
-            }
-
-            // самоуничтожение секретных сообщений — проверяем раз в секунду
-            long now = System.currentTimeMillis();
-            if (now - lastSecretSweep >= 1000) {
-                lastSecretSweep = now;
-                history.sweepExpiredSecrets(now); // истёкшие и так никогда не были на диске
             }
         });
 
@@ -1165,31 +1153,6 @@ public class PmChatClient implements ClientModInitializer {
             return 2;
         }
 
-        // секретные чаты — запрос/подтверждение/конец сессии, зашифрованное сообщение
-        String reqPub = PmWire.parseSecretRequest(text);
-        if (reqPub != null) {
-            config.addModUser(sender);
-            onSecretRequest(sender, reqPub);
-            return 2;
-        }
-        String ackPub = PmWire.parseSecretAck(text);
-        if (ackPub != null) {
-            config.addModUser(sender);
-            onSecretAck(sender, ackPub);
-            return 2;
-        }
-        if (PmWire.isSecretEnd(text)) {
-            config.addModUser(sender);
-            secretSessions.remove(sender.toLowerCase(Locale.ROOT));
-            return 2;
-        }
-        String[] secMsg = PmWire.parseSecretMessage(text);
-        if (secMsg != null) {
-            config.addModUser(sender);
-            onSecretMessage(sender, Integer.parseInt(secMsg[0]), secMsg[1], secMsg[2]);
-            return 1;
-        }
-
         // входящий звонок — просто уведомление; само приглашение в голосовой
         // канал уже пришло от сервера через команду /voicechat invite отправителя.
         if (PmWire.isCall(text)) {
@@ -1594,137 +1557,6 @@ public class PmChatClient implements ClientModInitializer {
         }
     }
 
-    // ---------- секретные чаты (6.10) ----------
-
-    private static PmSecretSession session(String target) {
-        return secretSessions.computeIfAbsent(target.toLowerCase(Locale.ROOT), k -> new PmSecretSession());
-    }
-
-    public static PmSecretSession.State secretState(String target) {
-        if (target == null) return PmSecretSession.State.NONE;
-        PmSecretSession s = secretSessions.get(target.toLowerCase(Locale.ROOT));
-        return s == null ? PmSecretSession.State.NONE : s.state;
-    }
-
-    public static boolean isSecretActive(String target) {
-        return secretState(target) == PmSecretSession.State.ACTIVE;
-    }
-
-    /** Таймер самоуничтожения для следующих сообщений в этом секретном чате (сек, 0 — выкл). */
-    public static int secretTtl(String target) {
-        if (target == null) return 0;
-        PmSecretSession s = secretSessions.get(target.toLowerCase(Locale.ROOT));
-        return s == null ? 0 : s.ttlSeconds;
-    }
-
-    /** Варианты таймера по кругу: выкл → 10с → 30с → 1мин → 1ч → выкл. */
-    private static final int[] TTL_OPTIONS = {0, 10, 30, 60, 3600};
-
-    public static void cycleSecretTtl(String target) {
-        PmSecretSession s = session(target);
-        int idx = 0;
-        for (int i = 0; i < TTL_OPTIONS.length; i++) {
-            if (TTL_OPTIONS[i] == s.ttlSeconds) { idx = i; break; }
-        }
-        s.ttlSeconds = TTL_OPTIONS[(idx + 1) % TTL_OPTIONS.length];
-    }
-
-    /** Начать секретный чат: генерируем ключ, шлём запрос собеседнику. */
-    public static void startSecretChat(String target) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null || target == null || target.isBlank()) return;
-        PmSecretSession s = session(target);
-        s.myKeyPair = PmCrypto.generateKeyPair();
-        s.aesKey = null;
-        s.state = PmSecretSession.State.PENDING;
-        String pub = PmCrypto.hex(PmCrypto.rawPublicKey(s.myKeyPair));
-        pmDeliver(target, PmWire.secretRequest(pub));
-    }
-
-    /** Завершить секретный чат: собеседнику уходит метка, локально сессия стирается сразу. */
-    public static void endSecretChat(String target) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        secretSessions.remove(target.toLowerCase(Locale.ROOT));
-        if (client.player == null || target == null || target.isBlank()) return;
-        pmDeliver(target, PmWire.secretEnd());
-    }
-
-    /**
-     * Пришёл запрос секретного чата: генерируем свой ключ, считаем общий
-     * секрет и сразу подтверждаем — без ручного «принять», чтобы не плодить
-     * лишний UI поверх и без того сложного экрана.
-     */
-    private static void onSecretRequest(String sender, String peerPubHex) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null) return;
-        try {
-            PmSecretSession s = session(sender);
-            s.myKeyPair = PmCrypto.generateKeyPair();
-            byte[] shared = PmCrypto.agree(s.myKeyPair, PmCrypto.unhex(peerPubHex));
-            s.aesKey = PmCrypto.deriveAesKey(shared);
-            s.state = PmSecretSession.State.ACTIVE;
-            String pub = PmCrypto.hex(PmCrypto.rawPublicKey(s.myKeyPair));
-            pmDeliver(sender, PmWire.secretAck(pub));
-        } catch (Exception e) {
-            LOGGER.warn("Secret chat handshake failed (request from {}): {}", sender, e.toString());
-        }
-    }
-
-    /** Пришло подтверждение — досчитываем общий секрет со своей стороны, сессия активна. */
-    private static void onSecretAck(String sender, String peerPubHex) {
-        PmSecretSession s = secretSessions.get(sender.toLowerCase(Locale.ROOT));
-        if (s == null || s.myKeyPair == null) return;
-        try {
-            byte[] shared = PmCrypto.agree(s.myKeyPair, PmCrypto.unhex(peerPubHex));
-            s.aesKey = PmCrypto.deriveAesKey(shared);
-            s.state = PmSecretSession.State.ACTIVE;
-        } catch (Exception e) {
-            LOGGER.warn("Secret chat handshake failed (ack from {}): {}", sender, e.toString());
-        }
-    }
-
-    /** Пришло зашифрованное сообщение — расшифровываем и кладём в историю (в память, не на диск). */
-    private static void onSecretMessage(String sender, int ttl, String nonceHex, String cipherHex) {
-        PmSecretSession s = secretSessions.get(sender.toLowerCase(Locale.ROOT));
-        String text = s != null && s.isActive() ? PmCrypto.decrypt(s.aesKey, nonceHex, cipherHex) : null;
-        if (text == null) {
-            text = Text.translatable("pmchat.secret.undecryptable").getString();
-        }
-        PmMessage msg = history.addSecret(sender, false, text, ttl);
-
-        MinecraftClient client = MinecraftClient.getInstance();
-        boolean viewing = client.currentScreen instanceof PmScreen screen && screen.isViewing(sender);
-        if (viewing) {
-            sendSeen(sender);
-        } else {
-            history.markUnread(sender);
-            if (!config.dnd) {
-                client.getToastManager().add(new PmToast(sender,
-                        Text.translatable("pmchat.secret.toast").getString()));
-                playNotifySound(client);
-            }
-        }
-    }
-
-    /** Отправка сообщения в активный секретный чат: шифруем и шлём вместо обычного /m текста. */
-    public static PmMessage sendSecretMessage(String target, String text) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        PmSecretSession s = secretSessions.get(target.toLowerCase(Locale.ROOT));
-        if (client.player == null || s == null || !s.isActive() || text == null || text.isBlank()) return null;
-        try {
-            String[] enc = PmCrypto.encrypt(s.aesKey, text);
-            String wire = PmWire.secretMessage(s.ttlSeconds, enc[0], enc[1]);
-            pmDeliver(target, wire);
-            synchronized (pendingEcho) {
-                pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
-            }
-            return history.addSecret(target, true, text, s.ttlSeconds);
-        } catch (Exception e) {
-            LOGGER.warn("Secret message encryption failed: {}", e.toString());
-            return null;
-        }
-    }
-
     // ---------- звонки через Simple Voice Chat ----------
 
     /**
@@ -1901,7 +1733,7 @@ public class PmChatClient implements ClientModInitializer {
         if (PmWire.isTyping(text) || PmWire.isSeen(text) || PmWire.isHi(text)
                 || PmWire.parseReaction(text) != null || PmWire.isPinMeta(text)
                 || PmWire.isVoteMeta(text) || PmWire.isEditMeta(text) || PmWire.isUnpinMeta(text)
-                || PmWire.isSecretMeta(text) || PmWire.isCallMeta(text)) {
+                || PmWire.isCallMeta(text)) {
             return 2; // эхо собственной меты — прячем, в историю не пишем
         }
         long now = System.currentTimeMillis();
@@ -1983,7 +1815,7 @@ public class PmChatClient implements ClientModInitializer {
         return PmWire.isTyping(wire) || PmWire.isSeen(wire) || PmWire.isHi(wire)
                 || PmWire.parseReaction(wire) != null || PmWire.isPinMeta(wire)
                 || PmWire.isVoteMeta(wire) || PmWire.isEditMeta(wire) || PmWire.isUnpinMeta(wire)
-                || PmWire.isSecretMeta(wire) || PmWire.isCallMeta(wire) || PmWire.isBcControlMeta(wire);
+                || PmWire.isCallMeta(wire) || PmWire.isBcControlMeta(wire);
     }
 
     /** Читаемый текст для /tell не-мод получателю (пусто — не отправлять вовсе). */

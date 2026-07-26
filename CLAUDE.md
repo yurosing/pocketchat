@@ -54,12 +54,13 @@ docs/                    — VitePress docs site (RU root + /en); published from
   and the **gift** subsystem (catalog/balance/inventory + buy). Opcodes MUST match
   the plugin's `Proto`.
 - **PmWire** — wire-string encoding for structured messages over `/m` (voice, images,
-  reactions, replies, forwards, polls, typing/seen meta, secret-chat handshake).
+  reactions, replies, forwards, polls, typing/seen meta).
 - **PmHistory / PmMessage** — persisted conversations + message model.
 - Media/voice stack: PmImages, PmHosts (external image hosts w/ fallback order),
   PmMedia/PmVlc/PmVideo/PmYtDlp/PmYouTube/PmGif (VLC + JCodec players), PmVoice
   (recording), PmStt/PmVoiceTranscript (Vosk offline speech-to-text — **Pro-gated**),
-  PmSvc (Simple Voice Chat calls), PmClipboard, PmCrypto (secret chats), PmUpdate.
+  PmSvc (Simple Voice Chat calls), PmClipboard, PmCrypto (local history encryption
+  at rest), PmUpdate.
 
 ### Screen package (`com.pmchat.screen`) — key files
 - **PmScreen** — THE main messenger window (~5k lines). Conversation list, chat view,

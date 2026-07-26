@@ -90,8 +90,8 @@ public final class PmUpdate {
         client.inGameHud.getChatHud().addMessage(msg);
     }
 
-    /** Текущая версия мода из его метаданных (например «1.10.0-secret»). */
-    private static String currentVersion() {
+    /** Текущая версия мода из его метаданных (например «1.10.0»). */
+    public static String currentVersion() {
         return FabricLoader.getInstance().getModContainer(PmChatClient.MOD_ID)
                 .map(c -> c.getMetadata().getVersion().getFriendlyString())
                 .orElse("0");

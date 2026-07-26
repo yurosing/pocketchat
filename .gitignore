@@ -31,3 +31,4 @@ docs/.vitepress/dist/
 docs/.vitepress/cache/
 .yttest/
 .yttest2/
+graphify-out/

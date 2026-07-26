@@ -48,12 +48,6 @@ public class PmMessage {
         return pollQuestion != null && pollOptions != null;
     }
 
-    /** секретный чат (6.10) — сквозное шифрование, не сохраняется на диск. */
-    public transient boolean secret;
-
-    /** когда самоуничтожится (мс, 0 — никогда). Не сохраняется — секретные сообщения не пишутся в файл. */
-    public transient long destructAt;
-
     /** спойлер-фото/видео открыто кликом — запоминается, как в Telegram. */
     public boolean spoilerRevealed;
 

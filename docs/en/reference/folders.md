@@ -38,9 +38,3 @@ All of the mod's own files go into the game folder, next to `mods`, inside a
 To avoid losing your chat history, copy the `pmchat-history.json` file
 somewhere safe — for example, before reinstalling Windows.
 :::
-
-::: tip Secret chats never end up here
-[Secret chats](/en/guide/secret-chats) aren't saved anywhere — on purpose, so
-they can't be read even by someone with access to this folder. They only
-exist while the game is running.
-:::

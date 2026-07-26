@@ -11,6 +11,12 @@ reachable from your connection. More in
 [Where files get uploaded](/en/config/hosts).
 :::
 
+## Photo link previews
+
+Like Telegram: if a message contains a link to an image (ending in `.png`,
+`.jpg`, `.gif`, `.webp`), a thumbnail of it shows up right under the text — no
+need to open a browser. Click the preview to open the photo full-screen.
+
 ## Spoiler photos and videos
 
 Like Telegram or Discord: you can send a photo or video blurred out, so your
