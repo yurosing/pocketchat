@@ -8,6 +8,10 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
+// `jar` below reads :api-mod's sourceSets at configuration time, which only works once
+// that project has been evaluated.
+evaluationDependsOn(':api-mod')
+
 base {
     archivesName = project.archives_base_name
 }
@@ -72,7 +76,7 @@ dependencies {
 // Pack the API classes into the mod jar, unrelocated: other mods compile against
 // com.pmchat.api.client from Maven Central and must find that exact package at runtime.
 jar {
-    dependsOn project(':api-mod').tasks.named('classes')
+    dependsOn ':api-mod:classes'
     from project(':api-mod').sourceSets.main.output
 }
 

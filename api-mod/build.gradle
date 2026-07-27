@@ -32,9 +32,9 @@ tasks.withType(Javadoc).configureEach {
 }
 
 mavenPublishing {
-    // automaticRelease: the deployment goes live without anyone clicking "Publish"
-    // in the Central Portal UI.
-    publishToMavenCentral(true)
+    // automaticRelease = true: the deployment goes live without anyone clicking
+    // "Publish" in the Central Portal UI.
+    publishToMavenCentral('CENTRAL_PORTAL', true)
     signAllPublications()
 
     coordinates(group.toString(), 'pocketchat-api-mod', version.toString())

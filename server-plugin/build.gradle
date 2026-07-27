@@ -12,6 +12,10 @@ version = '2.0.0'
 // can move without breaking API consumers, and vice versa.
 ext.apiVersion = '1.0.0'
 
+// The edition Jar tasks below read :api's sourceSets at configuration time, which only
+// works once that project has been evaluated.
+evaluationDependsOn(':api')
+
 repositories {
     mavenCentral()
     maven { url = 'https://repo.papermc.io/repository/maven-public/' }
@@ -59,7 +63,7 @@ editions.each { ed ->
         expand(version: project.version.toString(), pluginName: ed.pluginName)
     }
     def jarTask = tasks.register("${ed.id}Jar", Jar) {
-        dependsOn genTask, tasks.named('classes'), project(':api').tasks.named('classes')
+        dependsOn genTask, tasks.named('classes'), ':api:classes'
         archiveBaseName = ed.pluginName
         archiveVersion = project.version.toString()
         from sourceSets.main.output   // compiled classes + shared config.yml
