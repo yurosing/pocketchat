@@ -41,8 +41,12 @@ public class PmProfileScreen extends Screen {
         super(Text.translatable("pmchat.profile.title"));
         this.parent = parent;
         String me = PmChatClient.selfName();
-        this.self = player == null || player.isBlank() || player.equalsIgnoreCase(me);
-        this.player = self ? me : player.trim();
+        // Служебные ключи вкладок (§global, §bc:…, §grp:… и т.п.) — не ники:
+        // такой «профиль» показывать нечего, и раньше он молча подменялся своим.
+        String nick = player == null ? "" : player.trim();
+        if (nick.startsWith("§")) nick = "";
+        this.self = nick.isBlank() || nick.equalsIgnoreCase(me);
+        this.player = self ? me : nick;
     }
 
     private void applyTheme() {

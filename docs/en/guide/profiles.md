@@ -4,9 +4,18 @@ New in 1.8.4: every player has a profile — Telegram-style.
 
 ## Opening a profile
 
+- **Right-click a message → “Player profile”** — the universal way: it works in
+  DMs, the global chat, channels and groups, and opens the profile of **that
+  message's author** (new in 1.10.1), **or**
 - **Right-click** a chat in the left list, **or**
 - the **“☺”** button in an open private chat's header, **or**
 - the **“⋮” → “Profile”** menu.
+
+::: tip Only players have profiles
+A broadcast channel, a group, the global chat and the CoreProtect feed have no
+profile — there is no profile button for them. Previously such a tab silently
+opened **your own** profile.
+:::
 
 ## What a profile shows
 

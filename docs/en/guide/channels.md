@@ -41,7 +41,8 @@ Anyone who receives the code pastes it into "🔗 Join with a code" and their
 request goes straight to the owner.
 
 ::: tip
-The owner sees the exact subscriber count and per-post view counts;
+The owner sees the exact subscriber count and per-post view counts (an eye icon
+👁 on its own line at the bottom of the post, new in 1.10.1);
 subscribers see the last known count. Posts can be pinned (right-click →
 "Pin", available to whoever can post) and the channel can be muted from the
 bell icon in the header, just like Telegram.
