@@ -39,3 +39,130 @@
 @media (max-width: 640px) {
   .VPHero .image-src { width: 110px; }
 }
+
+/* ==========================================================================
+   Блоки кода — раздел «Разработчикам»
+   ========================================================================== */
+
+/* Мягкая рамка и скругление вместо «плитки» по умолчанию. */
+.vp-doc div[class*='language-'] {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.dark .vp-doc div[class*='language-'] {
+  box-shadow: none;
+}
+
+/* Ярлык языка (java / gradle / xml) — фирменный зелёный вместо серого. */
+.vp-doc div[class*='language-']:before {
+  color: var(--vp-c-brand-1);
+  opacity: 0.75;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Заголовок файла у ```java [MyListener.java] — отдельная плашка сверху. */
+.vp-doc div[class*='language-'] > span.lang + .vp-code-title,
+.vp-doc .vp-code-title {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vp-c-text-2);
+  background-color: var(--vp-c-bg-soft);
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+/* Вкладки ::: code-group (Gradle / Kotlin DSL / Maven). */
+.vp-doc .vp-code-group .tabs {
+  border-bottom: 1px solid var(--vp-c-divider);
+  background-color: var(--vp-c-bg-soft);
+  border-radius: 10px 10px 0 0;
+}
+.vp-doc .vp-code-group .tabs label {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.vp-doc .vp-code-group input:checked + label {
+  color: var(--vp-c-brand-1);
+}
+.vp-doc .vp-code-group .tabs:after {
+  background-color: var(--vp-c-brand-1);
+  height: 2px;
+}
+.vp-doc .vp-code-group div[class*='language-'] {
+  border-radius: 0 0 10px 10px;
+  border-top: 0;
+}
+
+/* Подсвеченная строка — зелёная полоска слева вместо однотонной заливки. */
+.vp-doc .has-focused-lines .line:not(.has-focus) {
+  filter: blur(0.085rem);
+  opacity: 0.55;
+}
+.vp-doc div[class*='language-'] .highlighted {
+  background-color: var(--vp-c-brand-soft);
+  box-shadow: inset 2px 0 0 0 var(--vp-c-brand-1);
+}
+
+/* Номера строк чуть тише, чтобы не спорили с кодом. */
+.vp-doc div[class*='language-'] .line-numbers-wrapper {
+  color: var(--vp-c-text-3);
+  border-right: 1px solid var(--vp-c-divider);
+}
+
+/* ==========================================================================
+   Мелочи для справочника API
+   ========================================================================== */
+
+/* Сигнатура метода в тексте: `send(target, text)` — моноширинный, приглушённый фон. */
+.vp-doc .pc-sig {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.86em;
+  background-color: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  white-space: nowrap;
+}
+
+/* Пилюли-пометки в таблицах событий. */
+.vp-doc .pc-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.vp-doc .pc-badge.cancel {
+  color: #a33a3a;
+  background-color: rgba(200, 80, 80, 0.14);
+  border-color: rgba(200, 80, 80, 0.32);
+}
+.dark .vp-doc .pc-badge.cancel {
+  color: #f09a9a;
+}
+.vp-doc .pc-badge.info {
+  color: var(--vp-c-brand-1);
+  background-color: var(--vp-c-brand-soft);
+  border-color: rgba(111, 191, 139, 0.4);
+}
+.vp-doc .pc-badge.pro {
+  color: #8a6d1f;
+  background-color: rgba(214, 178, 62, 0.16);
+  border-color: rgba(214, 178, 62, 0.38);
+}
+.dark .vp-doc .pc-badge.pro {
+  color: #e6cc71;
+}
+
+/* Таблицы справочника: не растягиваем первый столбец с сигнатурами. */
+.vp-doc table code {
+  white-space: nowrap;
+}

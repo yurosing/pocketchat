@@ -1,6 +1,8 @@
 plugins {
     id 'fabric-loom' version '1.13.6'
     id 'maven-publish'
+    // Version declared once here; :api-mod applies it and does the actual publishing.
+    id 'com.vanniktech.maven.publish' version '0.30.0' apply false
 }
 
 version = project.mod_version
@@ -23,6 +25,10 @@ repositories {
 }
 
 dependencies {
+    // The public client API — compiled into the mod jar (see the `jar` block below) so
+    // other mods find com.pmchat.api.client at runtime.
+    implementation project(':api-mod')
+
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
@@ -61,6 +67,13 @@ dependencies {
     include 'net.java.dev.jna:jna:5.13.0'
     implementation 'net.java.dev.jna:jna-platform:5.13.0'
     include 'net.java.dev.jna:jna-platform:5.13.0'
+}
+
+// Pack the API classes into the mod jar, unrelocated: other mods compile against
+// com.pmchat.api.client from Maven Central and must find that exact package at runtime.
+jar {
+    dependsOn project(':api-mod').tasks.named('classes')
+    from project(':api-mod').sourceSets.main.output
 }
 
 processResources {

@@ -1,0 +1,14 @@
+# JitPack fallback for the public API artifacts.
+#
+# Maven Central is the primary channel (io.github.yurosing:pocketchat-api-*), but JitPack
+# needs no namespace approval and no signing key, so it works from any git tag straight
+# away — handy for testing against an unreleased commit.
+#
+#   repositories { maven { url 'https://jitpack.io' } }
+#   compileOnly 'com.github.yurosing.pocketchat:api-mod:<tag>'
+#   compileOnly 'com.github.yurosing.pocketchat:api:<tag>'   // server plugin API
+jdk:
+  - openjdk21
+
+before_install:
+  - sdk install java 21.0.2-tem || true

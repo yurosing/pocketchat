@@ -35,6 +35,27 @@ Mod users are switched over automatically on their next join.
 | `max-file-mb` | `25` | Largest single file accepted; bigger ones fall back to external hosts. |
 | `tell-command` | `msg` | Whisper command used to deliver to players without the mod (msg/tell/w/m…). |
 
+## API for other plugins
+
+The plugin publishes a public API to Maven Central:
+
+```groovy
+repositories { mavenCentral() }
+dependencies { compileOnly 'io.github.yurosing:pocketchat-api-plugin:1.0.0' }
+```
+
+```yaml
+# plugin.yml — the editions have different names, so soft-depend on both
+softdepend: [PocketChat, PocketChatPro]
+```
+
+It gives you cancellable events for private messages, media uploads/downloads and
+gift purchases, plus a `PocketChatApi` service for sending messages, registering
+your own gifts and reaching the media store. The API is resolved through Bukkit's
+services manager, so it works the same on both editions.
+
+Full reference: <https://yurosing.github.io/pocketchat/en/api/plugin>
+
 ## Notes
 
 - Uploads are streamed to a temp file and downloads streamed off disk — whole

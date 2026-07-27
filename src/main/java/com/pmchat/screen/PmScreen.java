@@ -1087,6 +1087,13 @@ public class PmScreen extends Screen {
         super(Text.translatable("screen.pmchat.title"));
     }
 
+    /** Opens straight onto a conversation — used by {@code PocketChatClientApi.open(String)}. */
+    public PmScreen(String openConversation) {
+        this();
+        this.selected = openConversation;
+        com.pmchat.client.api.PocketChatClientImpl.fireConversationOpened(openConversation);
+    }
+
     public boolean isViewing(String player) {
         return player != null && player.equalsIgnoreCase(selected);
     }
@@ -4732,6 +4739,7 @@ public class PmScreen extends Screen {
                 }
                 boolean hadUnread = history.unreadCount((String) r[4]) > 0;
                 selected = (String) r[4];
+                com.pmchat.client.api.PocketChatClientImpl.fireConversationOpened(selected);
                 history.clearUnread(selected);
                 if (selected.startsWith(PmChatClient.CHANNEL_PREFIX)) {
                     PmChatClient.clearChannelUnread(

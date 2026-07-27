@@ -1,5 +1,6 @@
 package com.pmchat.plugin;
 
+import com.pmchat.api.ReceivedGift;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
@@ -50,17 +51,17 @@ final class GiftStore {
         save();
     }
 
-    /** Returns each received gift as {name, icon, from}. Newest last. */
-    synchronized List<String[]> get(String player) {
-        List<String[]> out = new ArrayList<>();
+    /** Returns each received gift, newest last. */
+    synchronized List<ReceivedGift> received(String player) {
+        List<ReceivedGift> out = new ArrayList<>();
         for (String raw : yaml.getStringList(key(player))) {
             String[] parts = raw.split(String.valueOf(SEP), -1);
-            String name = parts.length > 0 ? parts[0] : "";
-            String icon = parts.length > 1 ? parts[1] : "";
-            String from = parts.length > 2 ? parts[2] : "";
-            out.add(new String[]{name, icon, from});
+            out.add(new ReceivedGift(
+                    parts.length > 0 ? parts[0] : "",
+                    parts.length > 1 ? parts[1] : "",
+                    parts.length > 2 ? parts[2] : ""));
         }
-        return out;
+        return List.copyOf(out);
     }
 
     private void save() {

@@ -56,4 +56,8 @@ features:
     title: Только у вас на компьютере
     details: Ничего не нужно настраивать на сервере. Скачал — положил в mods — пользуешься.
     link: /guide/install
+  - icon: 🧩
+    title: API для разработчиков
+    details: Свои подарки, фильтры ЛС, права на файлы, мост в Discord. Две библиотеки на Maven Central — для плагина Paper и для мода Fabric.
+    link: /api/
 ---

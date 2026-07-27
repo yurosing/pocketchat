@@ -41,6 +41,17 @@ const sidebarRu = [
     ],
   },
   {
+    text: 'Разработчикам',
+    collapsed: false,
+    items: [
+      { text: 'Обзор API', link: '/api/' },
+      { text: 'API плагина', link: '/api/plugin' },
+      { text: 'API мода', link: '/api/mod' },
+      { text: 'Протокол pmchat:media', link: '/api/protocol' },
+      { text: 'Примеры', link: '/api/examples' },
+    ],
+  },
+  {
     text: 'Справка',
     collapsed: false,
     items: [
@@ -91,6 +102,17 @@ const sidebarEn = [
     ],
   },
   {
+    text: 'For developers',
+    collapsed: false,
+    items: [
+      { text: 'API overview', link: '/en/api/' },
+      { text: 'Plugin API', link: '/en/api/plugin' },
+      { text: 'Mod API', link: '/en/api/mod' },
+      { text: 'pmchat:media protocol', link: '/en/api/protocol' },
+      { text: 'Examples', link: '/en/api/examples' },
+    ],
+  },
+  {
     text: 'Reference',
     collapsed: false,
     items: [
@@ -99,6 +121,44 @@ const sidebarEn = [
     ],
   },
 ]
+
+/**
+ * Заголовок файла у блока кода: ```java [MyPlugin.java]
+ *
+ * VitePress рисует такое имя только внутри ::: code-group (как подпись вкладки), а у
+ * одиночного блока молча выбрасывает — имя файла просто пропадает. Дорисовываем плашку
+ * сами.
+ *
+ * Имя приходится снимать на этапе разбора: к моменту рендера `token.info` уже очищен
+ * от `[...]`, поэтому в core-правиле кладём его в `token.meta`, а в рендерере только
+ * читаем. Блоки внутри code-group пропускаем — там подпись уже есть.
+ */
+function codeBlockTitles(md) {
+  md.core.ruler.push('pmchat_code_title', (state) => {
+    let insideCodeGroup = 0
+    for (const token of state.tokens) {
+      if (token.type === 'container_code-group_open') insideCodeGroup++
+      else if (token.type === 'container_code-group_close') insideCodeGroup--
+      else if (token.type === 'fence' && insideCodeGroup === 0) {
+        const match = /\[([^\]]+)\]/.exec(token.info)
+        if (match) token.meta = { ...token.meta, pmchatTitle: match[1] }
+      }
+    }
+    return true
+  })
+
+  const fence = md.renderer.rules.fence
+  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+    const html = fence(tokens, idx, options, env, self)
+    const title = tokens[idx].meta?.pmchatTitle
+    if (!title) return html
+    // Плашка должна оказаться ВНУТРИ .language-*, иначе скругления разъедутся.
+    const insertAt = html.indexOf('>') + 1
+    return html.slice(0, insertAt)
+      + `<div class="vp-code-title">${md.utils.escapeHtml(title)}</div>`
+      + html.slice(insertAt)
+  }
+}
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -111,6 +171,11 @@ export default defineConfig({
 
   cleanUrls: true,
   lastUpdated: true,
+
+  markdown: {
+    theme: { light: 'github-light', dark: 'github-dark' },
+    config: codeBlockTitles,
+  },
 
   head: [
     ['link', { rel: 'icon', type: 'image/png', href: '/pocketchat/img/logo.png' }],
@@ -152,8 +217,10 @@ export default defineConfig({
         nav: [
           { text: 'Документация', link: '/guide/what-is' },
           { text: 'Настройка', link: '/config/' },
-          { text: 'v1.10.1', items: [
+          { text: 'API', link: '/api/' },
+          { text: 'v1.11.0', items: [
             { text: 'Minecraft 1.21.11', link: '/guide/install' },
+            { text: 'API 1.0.0', link: '/api/' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},
         ],
@@ -181,8 +248,10 @@ export default defineConfig({
         nav: [
           { text: 'Docs', link: '/en/guide/what-is' },
           { text: 'Config', link: '/en/config/' },
-          { text: 'v1.10.1', items: [
+          { text: 'API', link: '/en/api/' },
+          { text: 'v1.11.0', items: [
             { text: 'Minecraft 1.21.11', link: '/en/guide/install' },
+            { text: 'API 1.0.0', link: '/en/api/' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},
         ],

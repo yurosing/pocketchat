@@ -1,0 +1,65 @@
+plugins {
+    id 'java'
+    id 'com.vanniktech.maven.publish'
+}
+
+group = 'io.github.yurosing'
+version = project.api_version
+
+repositories {
+    mavenCentral()
+}
+
+// Deliberately dependency-free: the client API is records, enums and interfaces over
+// plain Java types only. No Minecraft, no Fabric, no Yarn mappings — so it compiles
+// anywhere, never breaks on a Minecraft update, and consumers can use it from a mod
+// targeting any version.
+dependencies {
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+mavenPublishing {
+    // automaticRelease: the deployment goes live without anyone clicking "Publish"
+    // in the Central Portal UI.
+    publishToMavenCentral(true)
+    signAllPublications()
+
+    coordinates(group.toString(), 'pocketchat-api-mod', version.toString())
+
+    pom {
+        name = 'PocketChat Mod API'
+        description = 'Client-side API for the PocketChat Fabric mod: read conversations, send messages and listen to chat events from another mod.'
+        url = 'https://github.com/yurosing/pocketchat'
+        licenses {
+            license {
+                name = 'MIT License'
+                url = 'https://github.com/yurosing/pocketchat/blob/main/LICENSE'
+            }
+        }
+        developers {
+            developer {
+                id = 'yurosing'
+                name = 'yurosing'
+                url = 'https://github.com/yurosing'
+            }
+        }
+        scm {
+            url = 'https://github.com/yurosing/pocketchat'
+            connection = 'scm:git:https://github.com/yurosing/pocketchat.git'
+            developerConnection = 'scm:git:ssh://git@github.com/yurosing/pocketchat.git'
+        }
+    }
+}

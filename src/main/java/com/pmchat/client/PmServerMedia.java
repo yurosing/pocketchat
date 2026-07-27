@@ -207,6 +207,8 @@ public final class PmServerMedia {
         uploads.clear();
         downloads.values().forEach(d -> d.future.completeExceptionally(new IllegalStateException("disconnected")));
         downloads.clear();
+        // Left the server — API listeners see the tier drop back to NONE.
+        com.pmchat.client.api.PocketChatClientImpl.refreshServerTier();
     }
 
     // ---------- public transfer API ----------
@@ -324,6 +326,8 @@ public final class PmServerMedia {
                     chunkBytes = in.readInt();
                     // tier byte is optional for forward/backward compatibility
                     tier = in.available() > 0 ? in.readByte() : TIER_FREE;
+                    // Handshake done — the tier is only known now, so tell API listeners.
+                    com.pmchat.client.api.PocketChatClientImpl.refreshServerTier();
                 }
                 case UPLOAD_OK -> {
                     long id = in.readLong();

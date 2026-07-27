@@ -33,9 +33,12 @@ src/main/resources/
   fabric.mod.json        — entrypoints: client=PmChatClient, modmenu=PmModMenu
   pmchat.mixins.json
   assets/pmchat/lang/    — ru_ru.json, en_us.json (ALL user-facing strings)
+api-mod/                 — PUBLIC client API (com.pmchat.api.client), plain Java, no loom
 server-plugin/           — the Paper plugin (free edition only in this repo)
+server-plugin/api/       — PUBLIC plugin API (com.pmchat.api[.event|.protocol])
 docs/                    — VitePress docs site (RU root + /en); published from here
-.github/workflows/       — release.yml (build+publish, free-only), docs.yml
+.github/workflows/       — release.yml (build+publish, free-only), docs.yml,
+                           publish-api.yml (Maven Central, workflow_dispatch)
 ```
 
 ### Client package (`com.pmchat.client`) — key files
@@ -51,8 +54,8 @@ docs/                    — VitePress docs site (RU root + /en); published from
   filters, pinned, stickerCache.
 - **PmServerMedia** — client side of the `pmchat:media` plugin channel. Detects the
   plugin (`isAvailable()`), tier (`isPro()`), streams media up/down, routes PMs,
-  and the **gift** subsystem (catalog/balance/inventory + buy). Opcodes MUST match
-  the plugin's `Proto`.
+  and the **gift** subsystem (catalog/balance/inventory + buy). Its private opcode
+  copy MUST match `com.pmchat.api.protocol.PocketChatProtocol` in `server-plugin/api`.
 - **PmWire** — wire-string encoding for structured messages over `/m` (voice, images,
   reactions, replies, forwards, polls, typing/seen meta).
 - **PmHistory / PmMessage** — persisted conversations + message model.
@@ -79,19 +82,44 @@ docs/                    — VitePress docs site (RU root + /en); published from
 - FlatButton, PmFilters*/PmMediaScreen — dialogs.
 
 ### Server plugin (`com.pmchat.plugin`)
-- **PocketChatPlugin** — `onEnable`; loads the gift catalog from config.yml. (This repo
-  builds only the free `PocketChat` edition — `server-plugin/build.gradle` `editions`.)
+- **PocketChatPlugin** — `onEnable`; loads the gift catalog from config.yml and registers
+  `PocketChatApi` with the Bukkit `ServicesManager`. (This repo builds only the free
+  `PocketChat` edition — `server-plugin/build.gradle` `editions`.)
 - **MediaChannel** — the `pmchat:media` `PluginMessageListener`: media relay (chunked
   to disk), PM routing, gifts (Vault economy via the `Economy` service, `GiftStore`).
-  **Proto** — the opcode contract (mirror of the mod's).
+  Fires every API event; `routePm`/`pushPm`/`announceGift` are the shared entry points
+  the API impl calls into. Opcodes come from `PocketChatProtocol`.
+- **PocketChatApiImpl** — the `PocketChatApi` + `GiftRegistry` implementation and the
+  ONLY place events are fired from (`fire(...)`). **MediaServiceImpl** wraps `MediaStore`.
 - **MediaStore / GiftStore** — disk persistence.
+
+## Public API (`com.pmchat.api*`) — published to Maven Central
+
+Two artifacts under `io.github.yurosing`, versioned independently of mod/plugin:
+- `pocketchat-api-plugin` (`server-plugin/api`) — `PocketChat`/`PocketChatApi`,
+  8 Bukkit events in `com.pmchat.api.event` (4 cancellable), `Gift`/`GiftRegistry`,
+  `MediaService`, and `PocketChatProtocol`. Needs `paper-api` `compileOnly`.
+- `pocketchat-api-mod` (`api-mod`) — `PocketChatClient`/`PocketChatClientApi`,
+  `PocketChatListener`, `PmChatMessage`/`Conversation`. **Zero Minecraft imports** —
+  keep it that way, it is what makes the artifact version-proof.
+
+Both are packed UNRELOCATED into the shipped jars (`from …sourceSets.main.output` in
+the edition `Jar` tasks and in the mod's `jar`), so consumers use `compileOnly` only.
+Every Bukkit event needs its OWN `HandlerList` + static `getHandlerList()` — the
+abstract `PocketChatEvent` deliberately has neither.
+
+Mod-side fire points live in `PocketChatClientImpl` (static `fireX` helpers) and are
+called from `PmChatClient` (receive/send/gift/init), `PmServerMedia` (HELLO_ACK, reset)
+and `PmScreen` (conversation opened). Adding a listener method → give it a `default`
+body so existing implementors keep compiling.
 
 ## Wire protocol (mod ↔ plugin)
 
 Single plugin-messaging channel `pmchat:media`. Each message = `[opcode byte][payload]`
-written with `DataOutputStream`. Opcodes are defined **twice** (plugin `Proto.java`
-and mod `PmServerMedia.java`) and MUST stay in sync. Handshake HELLO/HELLO_ACK carries
-the tier. Media is chunked. Gifts: `GIFT_LIST_REQ/GIFT_BUY/GIFT_INV_REQ` (C→S) and
+written with `DataOutputStream`. Opcodes live in `PocketChatProtocol` (API module,
+used by the plugin) and are mirrored privately in the mod's `PmServerMedia.java` —
+those two MUST stay in sync. Handshake HELLO/HELLO_ACK carries the tier. Media is
+chunked. Gifts: `GIFT_LIST_REQ/GIFT_BUY/GIFT_INV_REQ` (C→S) and
 `GIFT_CATALOG/GIFT_RESULT/GIFT_RECV/GIFT_INV` (S→C).
 
 ## Build & release
@@ -111,6 +139,15 @@ the tier. Media is chunked. Gifts: `GIFT_LIST_REQ/GIFT_BUY/GIFT_INV_REQ` (C→S)
   version is higher (semver "latest").
 - Watch runs with mcp github `actions_list`/`get_job_logs`. Fabric's first build is slow
   (~5–10 min).
+- **API artifacts**: `publish-api.yml`, `workflow_dispatch`. `dry_run: true` (default)
+  compiles both API modules and publishes to mavenLocal — no credentials, so it is the
+  fast way to check an API change. `dry_run: false` deploys to Central and needs
+  `MAVEN_CENTRAL_USERNAME/PASSWORD` + `SIGNING_KEY/PASSWORD`. Version is
+  `api_version` in `gradle.properties` (mod side) and `ext.apiVersion` in
+  `server-plugin/build.gradle` — bump BOTH together.
+- **The API modules DO compile in this sandbox**: `api-mod` is dependency-free
+  (`javac` it directly), and `server-plugin/api` + the plugin compile against hand-
+  written Bukkit/Vault stubs. Worth doing before pushing — CI is slow.
 
 ## Gotchas / conventions
 
@@ -124,5 +161,9 @@ the tier. Media is chunked. Gifts: `GIFT_LIST_REQ/GIFT_BUY/GIFT_INV_REQ` (C→S)
   `PmTheme.COUNT`, keep `isLight` correct.
 - Adding a settings row → bump `rows` in `PmSettingsScreen.init()`.
 - PmScreen is immediate-mode: draw + store rects, handle clicks in `mouseClicked`.
+- Docs code fences support ```` ```java [File.java] ```` titles via the `codeBlockTitles`
+  markdown rule in `config.mjs` — VitePress itself drops that syntax outside
+  `::: code-group`, and the rule has to read the title in a **core** rule because
+  `token.info` is already stripped by render time.
 - This repo is synced FROM `pocketchat-sec` (its code is the source of truth, minus the
   Pro plugin edition + special Pro mod). Keep public free-only.

@@ -112,6 +112,10 @@ public class PmChatClient implements ClientModInitializer {
         history = PmHistory.load();
         compilePatterns();
 
+        // Публичное API для других модов (com.pmchat.api.client). Ставим сразу после
+        // загрузки состояния, чтобы слушатели могли регистрироваться с самого старта.
+        com.pmchat.client.api.PocketChatClientImpl.install();
+
         // Категорию создаём ОДИН раз и переиспользуем для всех клавиш —
         // повторный create() с тем же id падает «already registered».
         KeyBinding.Category category = KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
@@ -1318,6 +1322,7 @@ public class PmChatClient implements ClientModInitializer {
         if (forwardFrom != null) msg.forwardFrom = forwardFrom;
         applyPoll(msg, text);
         if (replyTo != null || forwardFrom != null || msg.isPoll()) history.save();
+        com.pmchat.client.api.PocketChatClientImpl.fireReceived(sender, msg);
 
         MinecraftClient client = MinecraftClient.getInstance();
         boolean viewing = client.currentScreen instanceof PmScreen screen && screen.isViewing(sender);
@@ -1870,6 +1875,8 @@ public class PmChatClient implements ClientModInitializer {
                                         int fragStart, int fragLen, String fragText) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target.isBlank() || text.isBlank()) return null;
+        // Другие моды могут запретить отправку через API-слушателей.
+        if (!com.pmchat.client.api.PocketChatClientImpl.allowOutgoing(target, text)) return null;
         boolean hasFrag = replyToHash != null && fragStart >= 0 && fragText != null;
 
         // Локальный чат (Избранное) — только сохраняем, ничего не шлём на сервер
@@ -1879,6 +1886,7 @@ public class PmChatClient implements ClientModInitializer {
             if (replyToHash != null) m.replyTo = replyToHash;
             if (hasFrag) m.replyFragment = fragText;
             history.save();
+            com.pmchat.client.api.PocketChatClientImpl.fireSent(target, m);
             return m;
         }
 
@@ -1900,6 +1908,7 @@ public class PmChatClient implements ClientModInitializer {
             if (hasFrag) msg.replyFragment = fragText;
             history.save();
         }
+        com.pmchat.client.api.PocketChatClientImpl.fireSent(target, msg);
         return msg;
     }
 
@@ -1991,6 +2000,7 @@ public class PmChatClient implements ClientModInitializer {
         MinecraftClient client = MinecraftClient.getInstance();
         client.execute(() -> client.getToastManager().add(
                 new PmToast((icon == null ? "🎁" : icon) + " " + from, giftName)));
+        com.pmchat.client.api.PocketChatClientImpl.fireGift(from, giftName, icon);
     }
 
     public static String selfName() {

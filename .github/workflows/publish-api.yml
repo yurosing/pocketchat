@@ -1,0 +1,112 @@
+name: Publish API to Maven Central
+
+# Builds and publishes the two public API artifacts:
+#   io.github.yurosing:pocketchat-api-plugin  (server-plugin/api)
+#   io.github.yurosing:pocketchat-api-mod     (api-mod)
+#
+# Run with dry_run = true (the default) to compile both modules and publish them to the
+# local Maven repository only — that needs NO credentials and is the quick way to check
+# a change before releasing. Run with dry_run = false to deploy to Maven Central; that
+# needs the four secrets listed below.
+#
+# Required repository secrets for a real deploy:
+#   MAVEN_CENTRAL_USERNAME  — Central Portal user token name
+#   MAVEN_CENTRAL_PASSWORD  — Central Portal user token password
+#   SIGNING_KEY             — ASCII-armored GPG private key (whole block, incl. headers)
+#   SIGNING_PASSWORD        — passphrase for that key
+#
+# Deployments use automaticRelease, so nothing has to be confirmed by hand in the
+# Central Portal UI — a successful run is a published artifact.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only build and publish to the local Maven repo (no credentials needed)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+
+      # ---------- pocketchat-api-mod (root build, plain Java, no Minecraft) ----------
+
+      - name: Build mod API
+        run: ./gradlew :api-mod:build --stacktrace
+
+      - name: Publish mod API locally
+        if: ${{ inputs.dry_run }}
+        run: ./gradlew :api-mod:publishToMavenLocal --stacktrace
+
+      - name: Publish mod API to Maven Central
+        if: ${{ !inputs.dry_run }}
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew :api-mod:publishAndReleaseToMavenCentral --no-configuration-cache --stacktrace
+
+      # ---------- pocketchat-api-plugin (server-plugin build, needs paper-api) ----------
+
+      - name: Build plugin API
+        working-directory: server-plugin
+        run: gradle :api:build --no-daemon --stacktrace
+
+      - name: Publish plugin API locally
+        if: ${{ inputs.dry_run }}
+        working-directory: server-plugin
+        run: gradle :api:publishToMavenLocal --no-daemon --stacktrace
+
+      - name: Publish plugin API to Maven Central
+        if: ${{ !inputs.dry_run }}
+        working-directory: server-plugin
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: gradle :api:publishAndReleaseToMavenCentral --no-daemon --no-configuration-cache --stacktrace
+
+      - name: Summary
+        run: |
+          {
+            echo "### API build"
+            echo
+            echo '| Artifact | Jar |'
+            echo '|---|---|'
+            for jar in api-mod/build/libs/*.jar server-plugin/api/build/libs/*.jar; do
+              [ -e "$jar" ] || continue
+              echo "| \`$(basename "$jar")\` | $(du -h "$jar" | cut -f1) |"
+            done
+            echo
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo '_Dry run — published to the local Maven repo only._'
+            else
+              echo '_Deployed to Maven Central._'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pocketchat-api-jars
+          path: |
+            api-mod/build/libs/*.jar
+            server-plugin/api/build/libs/*.jar
+          if-no-files-found: error

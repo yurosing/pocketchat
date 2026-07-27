@@ -1,9 +1,16 @@
 plugins {
     id 'java'
+    // Applied (but not used) at the root so the version is declared in one place for
+    // the :api subproject, which does the actual publishing.
+    id 'com.vanniktech.maven.publish' version '0.30.0' apply false
 }
 
 group = 'com.pmchat'
 version = '2.0.0'
+
+// Version of the published API artifact. Independent of the plugin version: the plugin
+// can move without breaking API consumers, and vice versa.
+ext.apiVersion = '1.0.0'
 
 repositories {
     mavenCentral()
@@ -12,6 +19,10 @@ repositories {
 }
 
 dependencies {
+    // The public API — compiled into the plugin jar (see the edition Jar tasks below)
+    // so third-party plugins find com.pmchat.api at runtime.
+    implementation project(':api')
+
     // Only the stable Bukkit/Paper API is used (plugin messaging, scheduler,
     // config) — no NMS/internals — so a single 1.21.x API artifact is enough
     // and the plugin runs on any 1.21.x server via api-version 1.21.
@@ -48,10 +59,14 @@ editions.each { ed ->
         expand(version: project.version.toString(), pluginName: ed.pluginName)
     }
     def jarTask = tasks.register("${ed.id}Jar", Jar) {
-        dependsOn genTask, tasks.named('classes')
+        dependsOn genTask, tasks.named('classes'), project(':api').tasks.named('classes')
         archiveBaseName = ed.pluginName
         archiveVersion = project.version.toString()
         from sourceSets.main.output   // compiled classes + shared config.yml
+        // The API classes ship inside the plugin jar, unrelocated: consumers compile
+        // against com.pmchat.api from Maven Central and must find that exact package
+        // at runtime.
+        from project(':api').sourceSets.main.output
         from metaDir                  // generated plugin.yml
     }
     editionJars << jarTask

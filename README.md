@@ -180,6 +180,35 @@ All settings live in <code>config/pmchat.json</code> and take effect on the next
 
 ---
 
+## 🧩 For developers
+
+PocketChat has a public API on **Maven Central** — for Paper plugins and for other
+Fabric mods. Add your own gifts, filter or cancel private messages, gate media
+uploads by permission, bridge chats to Discord, or drive the messenger from your
+own mod.
+
+```groovy
+repositories { mavenCentral() }
+
+dependencies {
+    compileOnly 'io.github.yurosing:pocketchat-api-plugin:1.0.0'   // Paper plugin
+    modCompileOnly 'io.github.yurosing:pocketchat-api-mod:1.0.0'   // Fabric mod
+}
+```
+
+```java
+@EventHandler
+public void onPm(PocketChatMessageEvent event) {
+    if (mutes.isMuted(event.getSender())) event.setCancelled(true);
+}
+```
+
+📚 **[API documentation](https://yurosing.github.io/pocketchat/en/api/)** —
+events, service reference, the `pmchat:media` wire protocol and copy-paste
+examples.
+
+---
+
 <div align="center">
   <p>Client-side only · No server plugin required · Your messages, saved locally, always</p>
 </div>

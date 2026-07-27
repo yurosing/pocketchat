@@ -1,10 +1,21 @@
 package com.pmchat.plugin;
 
+import com.pmchat.api.Gift;
+import com.pmchat.api.PocketChat;
+import com.pmchat.api.ReceivedGift;
+import com.pmchat.api.event.PocketChatClientConnectEvent;
+import com.pmchat.api.event.PocketChatGiftPurchaseEvent;
+import com.pmchat.api.event.PocketChatGiftReceiveEvent;
+import com.pmchat.api.event.PocketChatMediaDownloadEvent;
+import com.pmchat.api.event.PocketChatMediaStoredEvent;
+import com.pmchat.api.event.PocketChatMediaUploadEvent;
+import com.pmchat.api.event.PocketChatMessageEvent;
+import com.pmchat.api.event.PocketChatMessageOfflineEvent;
+import com.pmchat.api.protocol.PocketChatProtocol;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -27,6 +38,10 @@ import java.util.logging.Level;
  * (never the whole file in RAM), streams stored media back to clients off disk a
  * few chunks per tick, and routes private messages. Incoming messages arrive on the
  * main server thread; the heavier work (commit/move, resolve) is offloaded async.
+ *
+ * <p>Every externally interesting step fires one of the events in
+ * {@code com.pmchat.api.event}. Async legs hop back to the main thread through
+ * {@link #runMain(Runnable)} before firing, so listeners always run on the main thread.
  */
 final class MediaChannel implements PluginMessageListener {
 
@@ -36,6 +51,7 @@ final class MediaChannel implements PluginMessageListener {
     private static final int CHUNKS_PER_TICK = 6;
 
     private final Plugin plugin;
+    private final PocketChatApiImpl api;
     private final MediaStore store;
     private final int maxFileBytes;
     private final String tellCommand;
@@ -43,7 +59,6 @@ final class MediaChannel implements PluginMessageListener {
 
     // Gifts (bought with Vault coins)
     private final boolean giftsEnabled;
-    private final List<Gift> catalog;
     private final GiftStore gifts;
 
     /** In-flight uploads, keyed by player then client-chosen transfer id. */
@@ -51,15 +66,15 @@ final class MediaChannel implements PluginMessageListener {
     /** Active download streams per player, to cap concurrency. */
     private final ConcurrentHashMap<UUID, AtomicInteger> activeDownloads = new ConcurrentHashMap<>();
 
-    MediaChannel(Plugin plugin, MediaStore store, int maxFileBytes, String tellCommand, boolean pro,
-                 boolean giftsEnabled, List<Gift> catalog, GiftStore gifts) {
+    MediaChannel(Plugin plugin, PocketChatApiImpl api, MediaStore store, int maxFileBytes,
+                 String tellCommand, boolean pro, boolean giftsEnabled, GiftStore gifts) {
         this.plugin = plugin;
+        this.api = api;
         this.store = store;
         this.maxFileBytes = maxFileBytes;
         this.tellCommand = tellCommand;
         this.pro = pro;
         this.giftsEnabled = giftsEnabled;
-        this.catalog = catalog;
         this.gifts = gifts;
     }
 
@@ -99,19 +114,19 @@ final class MediaChannel implements PluginMessageListener {
 
     @Override
     public void onPluginMessageReceived(String channel, Player player, byte[] message) {
-        if (!PocketChatPlugin.CHANNEL.equals(channel) || message.length < 1) return;
+        if (!PocketChat.CHANNEL.equals(channel) || message.length < 1) return;
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(message))) {
             byte op = in.readByte();
             switch (op) {
-                case Proto.HELLO -> handleHello(player);
-                case Proto.UPLOAD_BEGIN -> handleUploadBegin(player, in);
-                case Proto.UPLOAD_CHUNK -> handleUploadChunk(player, in);
-                case Proto.UPLOAD_END -> handleUploadEnd(player, in);
-                case Proto.DOWNLOAD_REQ -> handleDownloadReq(player, in);
-                case Proto.PM_SEND -> handlePmSend(player, in);
-                case Proto.GIFT_LIST_REQ -> handleGiftList(player);
-                case Proto.GIFT_BUY -> handleGiftBuy(player, in);
-                case Proto.GIFT_INV_REQ -> handleGiftInv(player, in);
+                case PocketChatProtocol.HELLO -> handleHello(player, in);
+                case PocketChatProtocol.UPLOAD_BEGIN -> handleUploadBegin(player, in);
+                case PocketChatProtocol.UPLOAD_CHUNK -> handleUploadChunk(player, in);
+                case PocketChatProtocol.UPLOAD_END -> handleUploadEnd(player, in);
+                case PocketChatProtocol.DOWNLOAD_REQ -> handleDownloadReq(player, in);
+                case PocketChatProtocol.PM_SEND -> handlePmSend(player, in);
+                case PocketChatProtocol.GIFT_LIST_REQ -> handleGiftList(player);
+                case PocketChatProtocol.GIFT_BUY -> handleGiftBuy(player, in);
+                case PocketChatProtocol.GIFT_INV_REQ -> handleGiftInv(player, in);
                 default -> { /* unknown opcode — ignore for forward-compat */ }
             }
         } catch (IOException e) {
@@ -121,14 +136,16 @@ final class MediaChannel implements PluginMessageListener {
 
     // ---------- handshake ----------
 
-    private void handleHello(Player player) {
-        byte[] out = build(Proto.HELLO_ACK, dos -> {
-            dos.writeInt(Proto.PROTOCOL_VERSION);
+    private void handleHello(Player player, DataInputStream in) throws IOException {
+        int clientVersion = in.available() >= 4 ? in.readInt() : 0;
+        byte[] out = build(PocketChatProtocol.HELLO_ACK, dos -> {
+            dos.writeInt(PocketChatProtocol.PROTOCOL_VERSION);
             dos.writeInt(maxFileBytes);
-            dos.writeInt(Proto.CHUNK_BYTES);
-            dos.writeByte(pro ? Proto.TIER_PRO : Proto.TIER_FREE);
+            dos.writeInt(PocketChatProtocol.CHUNK_BYTES);
+            dos.writeByte(pro ? PocketChatProtocol.TIER_PRO : PocketChatProtocol.TIER_FREE);
         });
         send(player, out);
+        api.fire(new PocketChatClientConnectEvent(player, clientVersion, api.tier()));
     }
 
     // ---------- upload (client -> server), streamed to a temp file ----------
@@ -140,6 +157,13 @@ final class MediaChannel implements PluginMessageListener {
         in.readByte(); // kind — reserved, not used yet
         if (total <= 0 || total > maxFileBytes) {
             send(player, uploadErr(transferId, "too large"));
+            return;
+        }
+        PocketChatMediaUploadEvent event =
+                api.fire(new PocketChatMediaUploadEvent(player, ext, total));
+        if (event.isCancelled()) {
+            String reason = event.getDenyReason();
+            send(player, uploadErr(transferId, reason == null || reason.isBlank() ? "denied" : reason));
             return;
         }
         ConcurrentHashMap<Long, Upload> mine = uploads.computeIfAbsent(player.getUniqueId(), k -> new ConcurrentHashMap<>());
@@ -200,6 +224,7 @@ final class MediaChannel implements PluginMessageListener {
             return;
         }
         UUID uuid = player.getUniqueId();
+        long size = up.total;
         runAsync(() -> {
             String fileId;
             try {
@@ -210,10 +235,17 @@ final class MediaChannel implements PluginMessageListener {
                 runMain(() -> sendIfOnline(uuid, uploadErr(transferId, "store failed")));
                 return;
             }
-            runMain(() -> sendIfOnline(uuid, build(Proto.UPLOAD_OK, dos -> {
-                dos.writeLong(transferId);
-                dos.writeUTF(fileId);
-            })));
+            runMain(() -> {
+                Player p = plugin.getServer().getPlayer(uuid);
+                if (p != null) {
+                    String ext = fileId.substring(fileId.lastIndexOf('.') + 1);
+                    api.fire(new PocketChatMediaStoredEvent(p, fileId, ext, size));
+                }
+                sendIfOnline(uuid, build(PocketChatProtocol.UPLOAD_OK, dos -> {
+                    dos.writeLong(transferId);
+                    dos.writeUTF(fileId);
+                }));
+            });
         });
     }
 
@@ -222,6 +254,13 @@ final class MediaChannel implements PluginMessageListener {
     private void handleDownloadReq(Player player, DataInputStream in) throws IOException {
         String fileId = in.readUTF();
         UUID uuid = player.getUniqueId();
+        PocketChatMediaDownloadEvent event =
+                api.fire(new PocketChatMediaDownloadEvent(player, fileId));
+        if (event.isCancelled()) {
+            String reason = event.getDenyReason();
+            send(player, downloadErr(fileId, reason == null || reason.isBlank() ? "denied" : reason));
+            return;
+        }
         AtomicInteger active = activeDownloads.computeIfAbsent(uuid, k -> new AtomicInteger());
         if (active.get() >= MAX_CONCURRENT_DOWNLOADS_PER_PLAYER) {
             send(player, downloadErr(fileId, "too many downloads"));
@@ -259,13 +298,13 @@ final class MediaChannel implements PluginMessageListener {
             return;
         }
         active.incrementAndGet();
-        send(player, build(Proto.DOWNLOAD_BEGIN, dos -> {
+        send(player, build(PocketChatProtocol.DOWNLOAD_BEGIN, dos -> {
             dos.writeUTF(fileId);
             dos.writeInt((int) Math.min(size, Integer.MAX_VALUE));
         }));
         new BukkitRunnable() {
             long offset = 0;
-            final byte[] buf = new byte[Proto.CHUNK_BYTES];
+            final byte[] buf = new byte[PocketChatProtocol.CHUNK_BYTES];
 
             @Override
             public void run() {
@@ -276,11 +315,11 @@ final class MediaChannel implements PluginMessageListener {
                 }
                 try {
                     for (int i = 0; i < CHUNKS_PER_TICK && offset < size; i++) {
-                        int len = (int) Math.min(Proto.CHUNK_BYTES, size - offset);
+                        int len = (int) Math.min(PocketChatProtocol.CHUNK_BYTES, size - offset);
                         raf.seek(offset);
                         raf.readFully(buf, 0, len);
                         long off = offset;
-                        send(p, build(Proto.DOWNLOAD_CHUNK, dos -> {
+                        send(p, build(PocketChatProtocol.DOWNLOAD_CHUNK, dos -> {
                             dos.writeUTF(fileId);
                             dos.writeInt((int) off);
                             dos.writeInt(len);
@@ -294,7 +333,7 @@ final class MediaChannel implements PluginMessageListener {
                     return;
                 }
                 if (offset >= size) {
-                    send(p, build(Proto.DOWNLOAD_END, dos -> dos.writeUTF(fileId)));
+                    send(p, build(PocketChatProtocol.DOWNLOAD_END, dos -> dos.writeUTF(fileId)));
                     finish();
                 }
             }
@@ -316,56 +355,72 @@ final class MediaChannel implements PluginMessageListener {
         String target = in.readUTF();
         String wire = in.readUTF();
         String plain = in.readUTF();
+        routePm(sender, target, wire, plain);
+    }
+
+    /**
+     * Delivers one private message, firing {@link PocketChatMessageEvent} first. Shared by
+     * the wire handler and {@link com.pmchat.api.PocketChatApi#sendMessage}.
+     *
+     * @return true when the message reached the recipient
+     */
+    boolean routePm(Player sender, String target, String wire, String plain) {
         Player recipient = plugin.getServer().getPlayerExact(target);
-        if (recipient == null || !recipient.isOnline()) {
-            send(sender, build(Proto.PM_OFFLINE, dos -> dos.writeUTF(target)));
-            return;
+        boolean online = recipient != null && recipient.isOnline();
+        boolean hasMod = online && recipient.getListeningPluginChannels().contains(PocketChat.CHANNEL);
+
+        PocketChatMessageEvent.DeliveryMode mode = !online
+                ? PocketChatMessageEvent.DeliveryMode.OFFLINE
+                : hasMod ? PocketChatMessageEvent.DeliveryMode.MOD
+                : PocketChatMessageEvent.DeliveryMode.FALLBACK_WHISPER;
+
+        PocketChatMessageEvent event = api.fire(new PocketChatMessageEvent(
+                sender, target, online ? recipient : null, wire, plain, mode));
+        if (event.isCancelled()) return false;
+
+        if (!online) {
+            PocketChatMessageOfflineEvent offline =
+                    api.fire(new PocketChatMessageOfflineEvent(sender, target, wire, event.getPlain()));
+            if (!offline.isHandled()) {
+                send(sender, build(PocketChatProtocol.PM_OFFLINE, dos -> dos.writeUTF(target)));
+            }
+            return false;
         }
-        if (recipient.getListeningPluginChannels().contains(PocketChatPlugin.CHANNEL)) {
-            send(recipient, build(Proto.PM_RECV, dos -> {
-                dos.writeUTF(sender.getName());
-                dos.writeUTF(wire);
-            }));
-        } else if (!plain.isEmpty()) {
+        if (hasMod) {
+            pushPm(recipient, sender.getName(), wire);
+        } else if (!event.getPlain().isEmpty()) {
             // Recipient has no mod — deliver as a normal whisper so they still get it.
-            sender.performCommand(tellCommand + " " + recipient.getName() + " " + plain);
+            sender.performCommand(tellCommand + " " + recipient.getName() + " " + event.getPlain());
         }
+        return true;
+    }
+
+    /** Pushes a message straight into a modded client's chat thread. */
+    void pushPm(Player recipient, String senderName, String wire) {
+        send(recipient, build(PocketChatProtocol.PM_RECV, dos -> {
+            dos.writeUTF(senderName);
+            dos.writeUTF(wire);
+        }));
     }
 
     // ---------- gifts (Vault) ----------
 
-    /** Vault economy provider, or null when Vault / an economy plugin is absent. */
-    private Economy economy() {
-        if (plugin.getServer().getPluginManager().getPlugin("Vault") == null) return null;
-        RegisteredServiceProvider<Economy> rsp =
-                plugin.getServer().getServicesManager().getRegistration(Economy.class);
-        return rsp == null ? null : rsp.getProvider();
-    }
-
     private double balanceOf(Player player) {
-        Economy eco = economy();
+        Economy eco = api.economy();
         return eco == null ? 0d : eco.getBalance(player);
-    }
-
-    private Gift findGift(String id) {
-        for (Gift g : catalog) {
-            if (g.id().equalsIgnoreCase(id)) return g;
-        }
-        return null;
     }
 
     private void handleGiftList(Player player) {
         double bal = balanceOf(player);
-        send(player, build(Proto.GIFT_CATALOG, dos -> {
+        List<Gift> catalog = giftsEnabled ? api.all() : List.of();
+        send(player, build(PocketChatProtocol.GIFT_CATALOG, dos -> {
             dos.writeDouble(bal);
-            dos.writeInt(giftsEnabled ? catalog.size() : 0);
-            if (giftsEnabled) {
-                for (Gift g : catalog) {
-                    dos.writeUTF(g.id());
-                    dos.writeUTF(g.name());
-                    dos.writeUTF(g.icon());
-                    dos.writeDouble(g.price());
-                }
+            dos.writeInt(catalog.size());
+            for (Gift g : catalog) {
+                dos.writeUTF(g.id());
+                dos.writeUTF(g.name());
+                dos.writeUTF(g.icon());
+                dos.writeDouble(g.price());
             }
         }));
     }
@@ -373,7 +428,7 @@ final class MediaChannel implements PluginMessageListener {
     private void handleGiftBuy(Player buyer, DataInputStream in) throws IOException {
         String target = in.readUTF();
         String giftId = in.readUTF();
-        Gift gift = findGift(giftId);
+        Gift gift = api.byId(giftId);
         if (!giftsEnabled || gift == null) {
             send(buyer, giftResult(false, "Подарок недоступен", balanceOf(buyer)));
             return;
@@ -382,55 +437,78 @@ final class MediaChannel implements PluginMessageListener {
             send(buyer, giftResult(false, "Нельзя дарить самому себе", balanceOf(buyer)));
             return;
         }
-        Economy eco = economy();
+
+        PocketChatGiftPurchaseEvent purchase =
+                api.fire(new PocketChatGiftPurchaseEvent(buyer, target, gift, gift.price()));
+        if (purchase.isCancelled()) {
+            String why = purchase.getFailureMessage();
+            send(buyer, giftResult(false, why == null || why.isBlank() ? "Покупка отклонена" : why,
+                    balanceOf(buyer)));
+            return;
+        }
+        double price = purchase.getPrice();
+
+        Economy eco = api.economy();
         if (eco == null) {
             send(buyer, giftResult(false, "Экономика (Vault) недоступна", 0d));
             return;
         }
-        if (eco.getBalance(buyer) < gift.price()) {
+        if (eco.getBalance(buyer) < price) {
             send(buyer, giftResult(false, "Недостаточно монет", eco.getBalance(buyer)));
             return;
         }
-        EconomyResponse resp = eco.withdrawPlayer(buyer, gift.price());
-        if (resp == null || !resp.transactionSuccess()) {
-            String reason = resp == null || resp.errorMessage == null ? "Ошибка оплаты" : resp.errorMessage;
-            send(buyer, giftResult(false, reason, eco.getBalance(buyer)));
-            return;
+        if (price > 0d) {
+            EconomyResponse resp = eco.withdrawPlayer(buyer, price);
+            if (resp == null || !resp.transactionSuccess()) {
+                String reason = resp == null || resp.errorMessage == null ? "Ошибка оплаты" : resp.errorMessage;
+                send(buyer, giftResult(false, reason, eco.getBalance(buyer)));
+                return;
+            }
         }
         double newBal = eco.getBalance(buyer);
         gifts.add(target, gift.name(), gift.icon(), buyer.getName());
         send(buyer, giftResult(true, "Подарок отправлен: " + gift.icon() + " " + gift.name(), newBal));
+        announceGift(target, gift, buyer.getName(), price);
+    }
 
-        Player recipient = plugin.getServer().getPlayerExact(target);
-        if (recipient != null && recipient.isOnline()) {
-            if (recipient.getListeningPluginChannels().contains(PocketChatPlugin.CHANNEL)) {
-                send(recipient, build(Proto.GIFT_RECV, dos -> {
-                    dos.writeUTF(buyer.getName());
-                    dos.writeUTF(gift.name());
-                    dos.writeUTF(gift.icon());
-                }));
-            }
-            recipient.sendMessage("§d" + gift.icon() + " §f" + buyer.getName()
-                    + " §7подарил вам §f" + gift.name());
+    /**
+     * Notifies the recipient of a granted gift and fires {@link PocketChatGiftReceiveEvent},
+     * which may rewrite or suppress the chat line. Shared by purchases and
+     * {@link com.pmchat.api.PocketChatApi#giveGift}.
+     */
+    void announceGift(String targetName, Gift gift, String from, double pricePaid) {
+        Player recipient = plugin.getServer().getPlayerExact(targetName);
+        PocketChatGiftReceiveEvent event = api.fire(new PocketChatGiftReceiveEvent(
+                targetName, recipient, gift, from, pricePaid,
+                PocketChatApiImpl.defaultAnnouncement(gift, from)));
+        if (recipient == null || !recipient.isOnline()) return;
+        if (recipient.getListeningPluginChannels().contains(PocketChat.CHANNEL)) {
+            send(recipient, build(PocketChatProtocol.GIFT_RECV, dos -> {
+                dos.writeUTF(from);
+                dos.writeUTF(gift.name());
+                dos.writeUTF(gift.icon());
+            }));
         }
+        String line = event.getAnnouncement();
+        if (line != null && !line.isEmpty()) recipient.sendMessage(line);
     }
 
     private void handleGiftInv(Player player, DataInputStream in) throws IOException {
         String who = in.readUTF();
-        List<String[]> list = gifts.get(who);
-        send(player, build(Proto.GIFT_INV, dos -> {
+        List<ReceivedGift> list = gifts.received(who);
+        send(player, build(PocketChatProtocol.GIFT_INV, dos -> {
             dos.writeUTF(who);
             dos.writeInt(list.size());
-            for (String[] rec : list) {
-                dos.writeUTF(rec.length > 0 ? rec[0] : "");
-                dos.writeUTF(rec.length > 1 ? rec[1] : "");
-                dos.writeUTF(rec.length > 2 ? rec[2] : "");
+            for (ReceivedGift rec : list) {
+                dos.writeUTF(rec.name());
+                dos.writeUTF(rec.icon());
+                dos.writeUTF(rec.from());
             }
         }));
     }
 
     private byte[] giftResult(boolean ok, String message, double newBalance) {
-        return build(Proto.GIFT_RESULT, dos -> {
+        return build(PocketChatProtocol.GIFT_RESULT, dos -> {
             dos.writeBoolean(ok);
             dos.writeUTF(message == null ? "" : message);
             dos.writeDouble(newBalance);
@@ -440,14 +518,14 @@ final class MediaChannel implements PluginMessageListener {
     // ---------- helpers ----------
 
     private byte[] uploadErr(long transferId, String reason) {
-        return build(Proto.UPLOAD_ERR, dos -> {
+        return build(PocketChatProtocol.UPLOAD_ERR, dos -> {
             dos.writeLong(transferId);
             dos.writeUTF(reason);
         });
     }
 
     private byte[] downloadErr(String fileId, String reason) {
-        return build(Proto.DOWNLOAD_ERR, dos -> {
+        return build(PocketChatProtocol.DOWNLOAD_ERR, dos -> {
             dos.writeUTF(fileId);
             dos.writeUTF(reason);
         });
@@ -469,7 +547,7 @@ final class MediaChannel implements PluginMessageListener {
     }
 
     private void send(Player player, byte[] bytes) {
-        player.sendPluginMessage(plugin, PocketChatPlugin.CHANNEL, bytes);
+        player.sendPluginMessage(plugin, PocketChat.CHANNEL, bytes);
     }
 
     private void sendIfOnline(UUID uuid, byte[] bytes) {

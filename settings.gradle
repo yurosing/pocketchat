@@ -6,3 +6,7 @@ pluginManagement {
 }
 
 rootProject.name = 'pmchat-mod'
+
+// Public client API published to Maven Central as io.github.yurosing:pocketchat-api-mod.
+// Plain Java, no loom — its classes are packed into the mod jar so they exist at runtime.
+include 'api-mod'

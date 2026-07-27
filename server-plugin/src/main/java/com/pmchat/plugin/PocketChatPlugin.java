@@ -1,9 +1,14 @@
 package com.pmchat.plugin;
 
+import com.pmchat.api.Gift;
+import com.pmchat.api.PocketChat;
+import com.pmchat.api.PocketChatApi;
+import com.pmchat.api.PocketChatTier;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -22,13 +27,23 @@ import java.util.List;
  *       transcription). The edition is baked into the jar via the plugin name, so
  *       it can't be flipped on with a config edit.</li>
  * </ul>
+ *
+ * Other plugins integrate through {@link PocketChatApi}, which is registered with the
+ * Bukkit services manager here — see {@link PocketChat} for the entry point.
  */
 public final class PocketChatPlugin extends JavaPlugin implements Listener {
 
-    /** Plugin-messaging channel shared with the client mod. */
-    public static final String CHANNEL = "pmchat:media";
+    /**
+     * Plugin-messaging channel shared with the client mod.
+     *
+     * @deprecated use {@link PocketChat#CHANNEL} — it is part of the published API and
+     *             does not require depending on this class.
+     */
+    @Deprecated
+    public static final String CHANNEL = PocketChat.CHANNEL;
 
     private MediaChannel channel;
+    private PocketChatApiImpl api;
 
     /** True for the Pro edition — derived from the plugin name in plugin.yml. */
     private boolean isPro() {
@@ -42,6 +57,7 @@ public final class PocketChatPlugin extends JavaPlugin implements Listener {
         long maxTotalMb = getConfig().getLong("max-total-mb", 512);
         int maxFileMb = getConfig().getInt("max-file-mb", 25);
         String tellCommand = getConfig().getString("tell-command", "msg");
+        int maxFileBytes = maxFileMb * 1024 * 1024;
 
         MediaStore store = new MediaStore(
                 getDataFolder().toPath().resolve("media"), retentionHours, maxTotalMb, getLogger());
@@ -50,18 +66,27 @@ public final class PocketChatPlugin extends JavaPlugin implements Listener {
         List<Gift> catalog = loadGiftCatalog();
         GiftStore gifts = new GiftStore(getDataFolder().toPath().resolve("gifts.yml").toFile(), getLogger());
 
-        channel = new MediaChannel(this, store, maxFileMb * 1024 * 1024, tellCommand, isPro(),
-                giftsEnabled, catalog, gifts);
+        api = new PocketChatApiImpl(this, store, gifts,
+                isPro() ? PocketChatTier.PRO : PocketChatTier.FREE,
+                giftsEnabled, maxFileBytes, catalog);
+        channel = new MediaChannel(this, api, store, maxFileBytes, tellCommand, isPro(),
+                giftsEnabled, gifts);
+        api.bind(channel);
 
-        getServer().getMessenger().registerOutgoingPluginChannel(this, CHANNEL);
-        getServer().getMessenger().registerIncomingPluginChannel(this, CHANNEL, channel);
+        getServer().getMessenger().registerOutgoingPluginChannel(this, PocketChat.CHANNEL);
+        getServer().getMessenger().registerIncomingPluginChannel(this, PocketChat.CHANNEL, channel);
         getServer().getPluginManager().registerEvents(this, this);
+
+        // Public API: other plugins find it with PocketChat.api(), which works on both
+        // editions because the lookup goes through the service and not the plugin name.
+        getServer().getServicesManager().register(PocketChatApi.class, api, this, ServicePriority.Normal);
 
         // Periodic retention/size cleanup (pure disk I/O — safe async). First run after
         // one minute, then every 30 minutes.
         getServer().getScheduler().runTaskTimerAsynchronously(this, store::cleanup, 20L * 60, 20L * 60 * 30);
 
-        getLogger().info("PocketChat" + (isPro() ? " Pro" : "") + " enabled (channel '" + CHANNEL + "').");
+        getLogger().info("PocketChat" + (isPro() ? " Pro" : "") + " enabled (channel '"
+                + PocketChat.CHANNEL + "', API registered).");
     }
 
     /** Reads the gift catalog from config.yml (gifts: id -> {name, icon, price}). */
@@ -82,6 +107,7 @@ public final class PocketChatPlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        if (api != null) getServer().getServicesManager().unregister(PocketChatApi.class, api);
         getServer().getMessenger().unregisterIncomingPluginChannel(this);
         getServer().getMessenger().unregisterOutgoingPluginChannel(this);
     }

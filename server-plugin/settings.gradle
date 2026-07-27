@@ -1,1 +1,11 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+    }
+}
+
 rootProject.name = 'PocketChatMedia'
+
+// Public API published to Maven Central as io.github.yurosing:pocketchat-api-plugin.
+// Its classes are also packed into the plugin jar so they exist at runtime.
+include 'api'
