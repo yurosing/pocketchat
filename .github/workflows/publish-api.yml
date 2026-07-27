@@ -25,9 +25,24 @@ on:
         description: 'Only build and publish to the local Maven repo (no credentials needed)'
         type: boolean
         default: true
+  # Pushes only ever build — a real deploy has to be dispatched by hand.
+  push:
+    paths:
+      - 'api-mod/**'
+      - 'server-plugin/api/**'
+      - 'server-plugin/build.gradle'
+      - 'server-plugin/settings.gradle'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - '.github/workflows/publish-api.yml'
 
 permissions:
   contents: read
+
+env:
+  # A push can never deploy; only an explicit dispatch with dry_run = false does.
+  DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}
 
 jobs:
   publish:
@@ -51,11 +66,11 @@ jobs:
         run: ./gradlew :api-mod:build --stacktrace
 
       - name: Publish mod API locally
-        if: ${{ inputs.dry_run }}
+        if: ${{ env.DRY_RUN == 'true' }}
         run: ./gradlew :api-mod:publishToMavenLocal --stacktrace
 
       - name: Publish mod API to Maven Central
-        if: ${{ !inputs.dry_run }}
+        if: ${{ env.DRY_RUN != 'true' }}
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
@@ -70,12 +85,12 @@ jobs:
         run: gradle :api:build --no-daemon --stacktrace
 
       - name: Publish plugin API locally
-        if: ${{ inputs.dry_run }}
+        if: ${{ env.DRY_RUN == 'true' }}
         working-directory: server-plugin
         run: gradle :api:publishToMavenLocal --no-daemon --stacktrace
 
       - name: Publish plugin API to Maven Central
-        if: ${{ !inputs.dry_run }}
+        if: ${{ env.DRY_RUN != 'true' }}
         working-directory: server-plugin
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -96,7 +111,7 @@ jobs:
               echo "| \`$(basename "$jar")\` | $(du -h "$jar" | cut -f1) |"
             done
             echo
-            if [ "${{ inputs.dry_run }}" = "true" ]; then
+            if [ "${{ env.DRY_RUN }}" = "true" ]; then
               echo '_Dry run — published to the local Maven repo only._'
             else
               echo '_Deployed to Maven Central._'
