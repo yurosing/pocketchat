@@ -47,14 +47,22 @@ dependencies {
 ```
 
 ```xml [pom.xml]
-<dependency>
-    <groupId>io.github.yurosing</groupId>
-    <artifactId>pocketchat-api-plugin</artifactId>
-    <version>1.0.0</version>
-    <scope>provided</scope>
-</dependency>
+<!-- add inside the <dependencies> block of your pom.xml -->
+<dependencies>
+    <dependency>
+        <groupId>io.github.yurosing</groupId>
+        <artifactId>pocketchat-api-plugin</artifactId>
+        <version>1.0.0</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
 ```
 
+:::
+
+::: tip Maven is plugin-only
+The Fabric mod is not built with Maven — it uses Gradle + Loom — so the Maven
+tab only has the plugin dependency. Use the Gradle tab above for the mod.
 :::
 
 ::: tip `compileOnly` only

@@ -47,14 +47,23 @@ dependencies {
 ```
 
 ```xml [pom.xml]
-<dependency>
-    <groupId>io.github.yurosing</groupId>
-    <artifactId>pocketchat-api-plugin</artifactId>
-    <version>1.0.0</version>
-    <scope>provided</scope>
-</dependency>
+<!-- добавьте в существующий <dependencies> вашего pom.xml -->
+<dependencies>
+    <dependency>
+        <groupId>io.github.yurosing</groupId>
+        <artifactId>pocketchat-api-plugin</artifactId>
+        <version>1.0.0</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
 ```
 
+:::
+
+::: tip Maven — только для плагина
+Мод Fabric на Maven не собирают (сборка идёт через Gradle + Loom), поэтому в
+Maven-варианте только зависимость на плагин. Для мода используйте вкладку
+Gradle выше.
 :::
 
 ::: tip Только `compileOnly`

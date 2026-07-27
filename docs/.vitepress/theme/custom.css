@@ -99,6 +99,28 @@
    Блоки кода — раздел «Разработчикам»
    ========================================================================== */
 
+/* Monocraft — моно-шрифт, срисованный с шрифта Minecraft (SIL OFL 1.1,
+   github.com/IdreesInc/Monocraft). Самим файлом раздаём с сайта — сам шрифт
+   маленький (~31 КБ woff2), а внешний CDN ронять раздел «Разработчикам» из-за
+   чужого простоя не должен. */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('/pocketchat/fonts/Monocraft.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Только сами блоки кода (не инлайн `код` в тексте, не вкладки/заголовки —
+   там шрифт сайта остаётся читаемым по умолчанию). Пиксельный шрифт мельче
+   обычного моно на глаз, поэтому чуть увеличиваем кегль и межстрочный интервал. */
+.vp-doc div[class*='language-'] pre,
+.vp-doc div[class*='language-'] code {
+  font-family: 'Monocraft', var(--vp-font-family-mono);
+  font-size: 15px;
+  line-height: 1.8;
+}
+
 /* Мягкая рамка и скругление вместо «плитки» по умолчанию. */
 .vp-doc div[class*='language-'] {
   border: 1px solid var(--vp-c-divider);
