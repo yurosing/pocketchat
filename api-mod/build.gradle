@@ -35,7 +35,14 @@ mavenPublishing {
     // automaticRelease = true: the deployment goes live without anyone clicking
     // "Publish" in the Central Portal UI.
     publishToMavenCentral('CENTRAL_PORTAL', true)
-    signAllPublications()
+
+    // Sign only when a key is actually configured. signAllPublications() wires the
+    // signing tasks into `build`, so an unconditional call fails every ordinary build
+    // (and every dry run) with "no configured signatory". CI sets the key through
+    // ORG_GRADLE_PROJECT_signingInMemoryKey, which Gradle exposes as this property.
+    if (project.findProperty('signingInMemoryKey')) {
+        signAllPublications()
+    }
 
     coordinates(group.toString(), 'pocketchat-api-mod', version.toString())
 
