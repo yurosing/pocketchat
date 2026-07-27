@@ -152,7 +152,7 @@ export default defineConfig({
         nav: [
           { text: 'Документация', link: '/guide/what-is' },
           { text: 'Настройка', link: '/config/' },
-          { text: 'v1.10.0', items: [
+          { text: 'v1.10.1', items: [
             { text: 'Minecraft 1.21.11', link: '/guide/install' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},
@@ -181,7 +181,7 @@ export default defineConfig({
         nav: [
           { text: 'Docs', link: '/en/guide/what-is' },
           { text: 'Config', link: '/en/config/' },
-          { text: 'v1.10.0', items: [
+          { text: 'v1.10.1', items: [
             { text: 'Minecraft 1.21.11', link: '/en/guide/install' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},

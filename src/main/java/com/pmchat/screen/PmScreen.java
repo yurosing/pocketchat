@@ -247,16 +247,38 @@ public class PmScreen extends Screen {
         return PmChatClient.isGroup(selected);
     }
 
-    /** Личный диалог с игроком (не глобал/канал/группа/локальная лента). */
+    /**
+     * Настоящий ник игрока (а не служебная вкладка/лента). Все служебные ключи
+     * начинаются с «§» (§global, §saved, §cp, §ch:, §grp:, §bc:), поэтому такой
+     * проверки достаточно и она не забудет новый тип ленты.
+     */
+    private static boolean isPlayerName(String nick) {
+        return nick != null
+                && !nick.isBlank()
+                && !nick.startsWith("§")
+                && !"?".equals(nick.trim());
+    }
+
+    /** Личный диалог с игроком (не глобал/канал/группа/лента/локальная вкладка). */
     private boolean isPlayerTab(String tab) {
-        return tab != null
-                && !tab.isBlank()
+        return isPlayerName(tab)
                 && !PmChatClient.GLOBAL.equals(tab)
                 && !PmChatClient.COREPROTECT.equals(tab)
                 && !PmChatClient.SAVED.equals(tab)
                 && !PmChatClient.isLocalChat(tab)
                 && !tab.startsWith(PmChatClient.CHANNEL_PREFIX)
-                && !PmChatClient.isGroup(tab);
+                && !PmChatClient.isGroup(tab)
+                && !PmChatClient.isBroadcast(tab);
+    }
+
+    /**
+     * Открыть профиль ИМЕННО этого игрока. Пустой/служебный ник профилем не
+     * является: раньше такой ник молча превращался в «мой профиль», из-за чего
+     * вместо чужого профиля открывался свой.
+     */
+    private void openProfile(String nick) {
+        if (!isPlayerName(nick)) return;
+        MinecraftClient.getInstance().setScreen(new PmProfileScreen(this, nick.trim()));
     }
 
     private String groupId() {
@@ -341,6 +363,9 @@ public class PmScreen extends Screen {
     private int LEFT_W = 116;
     private int BUBBLE_MAX_TEXT_W = 128;
     private static final int ROW_H = 26;
+    /** Высота строки «просмотры» под постом канала и ширина места под значок-глаз. */
+    private static final int VIEWS_H = 11;
+    private static final int VIEWS_ICON = 11;
 
     private final PmHistory history = PmChatClient.getHistory();
     private final PmConfig config = PmChatClient.getConfig();
@@ -595,12 +620,13 @@ public class PmScreen extends Screen {
                 }));
         // Профиль игрока (4.5 / 5.5) — только для личного диалога
         if (isPlayerTab(selected)) {
+            String peer = selected; // фиксируем собеседника на момент постройки меню
             y += rowH + 2;
             addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
                     Text.literal("☺ " + Text.translatable("pmchat.profile.open").getString()),
                     WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B, btn -> {
                         moreMenuOpen = false;
-                        MinecraftClient.getInstance().setScreen(new PmProfileScreen(this, selected));
+                        openProfile(peer);
                     }));
         }
     }
@@ -1045,14 +1071,16 @@ public class PmScreen extends Screen {
                 cx, py + PANEL_H - 40, SUBTLE, false);
     }
 
-    /** Ник исходного автора сообщения (для пересылки). */
+    /** Ник исходного автора сообщения (для пересылки/профиля/предупреждения). */
     private String senderOfMessage(PmMessage msg) {
         if (msg.forwardFrom != null) return msg.forwardFrom; // уже переслано — сохраняем первоисточник
         if (isFeedTab() && msg.sender != null) {
             return msg.sender.contains(" [") ? msg.sender.substring(0, msg.sender.indexOf(" [")) : msg.sender;
         }
         if (msg.out) return PmChatClient.selfNamePublic();
-        return selected != null ? selected : "?";
+        // В ленте (глобал/канал/группа) ключ вкладки — не ник, а служебный id:
+        // отдавать его как автора нельзя, иначе получаем «профиль §bc:…».
+        return isPlayerName(selected) ? selected : "?";
     }
 
     public PmScreen() {
@@ -1164,7 +1192,7 @@ public class PmScreen extends Screen {
                 String peer = selected;
                 FlatButton profBtn = FlatButton.centered(textRenderer, px + PANEL_W - 152, py + 6, 18, 14,
                         Text.literal("☺"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B,
-                        btn -> MinecraftClient.getInstance().setScreen(new PmProfileScreen(this, peer)));
+                        btn -> openProfile(peer));
                 profBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(
                         Text.translatable("pmchat.tip.profile")));
                 addDrawableChild(profBtn);
@@ -3502,6 +3530,15 @@ public class PmScreen extends Screen {
                 textW = Math.max(textW, Math.min(BUBBLE_MAX_TEXT_W,
                         textRenderer.getWidth(senderName) + 10 + (senderHasMod ? 9 : 0)));
             }
+            // 3.2: счётчик просмотров поста канала (виден владельцу) — ему нужна
+            // СВОЯ строка внизу пузыря, иначе цифры наезжают на текст сообщения.
+            String viewsLabel = null;
+            if (msg.out && isBroadcastTab() && isBroadcastOwner() && msg.text != null) {
+                viewsLabel = String.valueOf(
+                        PmChatClient.broadcastViewCount(broadcastId(), PmHistory.msgHash(msg.text)));
+                bh += VIEWS_H;
+                textW = Math.max(textW, textRenderer.getWidth(viewsLabel) + VIEWS_ICON + 6);
+            }
 
             int bw = textW + 12;
             // Реакции: моя + собеседника, но одинаковые символы не дублируем
@@ -3721,13 +3758,20 @@ public class PmScreen extends Screen {
                         bx + dx + bw - 6 - textRenderer.getWidth(ticks), y + dy + bh - 10,
                         applyAlpha(tc, alpha), false);
             }
-            // 3.2: счётчик просмотров поста канала — виден только владельцу, под своим постом
-            if (msg.out && isBroadcastTab() && isBroadcastOwner() && msg.text != null) {
-                int views = PmChatClient.broadcastViewCount(broadcastId(), PmHistory.msgHash(msg.text));
-                String vlabel = "◈ " + views;
-                context.drawText(textRenderer, vlabel,
-                        bx + dx + bw - 6 - textRenderer.getWidth(vlabel), y + dy + bh - 10,
-                        applyAlpha(0xFF9CC4DC, alpha), false);
+            // 3.2: счётчик просмотров поста канала — виден только владельцу, под
+            // своим постом. Рисуем в отдельной строке (место под неё уже
+            // зарезервировано в bh), значком-глазом, приглушённым цветом и с
+            // тонкой линией-отбивкой — чтобы не сливаться с текстом сообщения.
+            if (viewsLabel != null) {
+                int base = msg.out ? OUT_TEXT : IN_TEXT;
+                int vTop = y + dy + bh - VIEWS_H;   // начало зарезервированной строки
+                int vy = vTop + 2;
+                int vx = bx + dx + bw - 6 - textRenderer.getWidth(viewsLabel);
+                int vfg = applyAlpha(applyAlpha(base, 0.75f), alpha);
+                context.fill(bx + dx + 6, vTop, bx + dx + bw - 6, vTop + 1,
+                        applyAlpha(applyAlpha(base, 0.20f), alpha));
+                PmIcons.draw(context, PmIcons.EYE, vx - VIEWS_ICON, vy - 1, 9, 9, vfg);
+                context.drawText(textRenderer, viewsLabel, vx, vy, vfg, false);
             }
 
             // Чип реакций — внизу пузыря, как в Telegram (цветные символы)
@@ -4600,6 +4644,9 @@ public class PmScreen extends Screen {
                         // СЕКРЕТНО: расшифровка голосового (не в открытой версии мода)
                         String[] v = voiceOf(msg);
                         if (v != null) com.pmchat.client.PmVoiceTranscript.toggle(v[0], v[1]);
+                    } else if (action.equals("profile")) {
+                        // Профиль ИМЕННО автора сообщения (а не свой и не вкладки)
+                        openProfile(senderOfMessage(msg));
                     } else if (action.equals("warn")) {
                         PmChatClient.warnPlayer(senderOfMessage(msg));
                     } else if (action.equals("forward")) {
@@ -4667,7 +4714,7 @@ public class PmScreen extends Screen {
                 String tab = (String) r[4];
                 // ПКМ по личному диалогу — открыть профиль игрока (4.5 / 5.5)
                 if (click.button() == 1 && isPlayerTab(tab)) {
-                    MinecraftClient.getInstance().setScreen(new PmProfileScreen(this, tab));
+                    openProfile(tab);
                     return true;
                 }
                 // Пересылка: клик по диалогу-получателю
@@ -5001,6 +5048,12 @@ public class PmScreen extends Screen {
             items.add(isPinned
                     ? new String[]{"unpin", "⚐ " + Text.translatable("pmchat.menu.unpin").getString()}
                     : new String[]{"pin", "⚑ " + Text.translatable("pmchat.menu.pin").getString()});
+        }
+        // Профиль автора сообщения — работает в любом чате (ЛС, общий, канал,
+        // группа), а не только во вкладке личного диалога.
+        String ctxAuthor = senderOfMessage(ctxMsg);
+        if (isPlayerName(ctxAuthor) && !ctxAuthor.equalsIgnoreCase(PmChatClient.selfNamePublic())) {
+            items.add(new String[]{"profile", "☺ " + Text.translatable("pmchat.menu.profile").getString()});
         }
         // 6.1/6.8: предупреждение автору (для хелперов; по умолчанию выкл). Работает
         // и в ЛС, и в общем чате/каналах — исключаем только Избранное и свои сообщения.
