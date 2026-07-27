@@ -282,6 +282,8 @@
   "pmchat.profile.desc.hint": "A few words about you…",
   "pmchat.profile.rename": "Name",
   "pmchat.profile.rename.hint": "Rename",
+  "pmchat.profile.note": "Note",
+  "pmchat.profile.note.hint": "Private note, only you can see it…",
   "pmchat.profile.balance": "Balance",
   "pmchat.profile.balance.unknown": "—",
   "pmchat.profile.block": "Blacklist",
@@ -293,5 +295,16 @@
   "pmchat.profile.save": "Save",
   "pmchat.profile.done": "Done",
   "pmchat.tip.profile": "Open profile",
-  "pmchat.tip.groupavatar": "Group avatar (files from config/pmchat-avatars)"
+  "pmchat.tip.groupavatar": "Group avatar (files from config/pmchat-avatars)",
+
+  "pmchat.photoedit.title": "Edit photo",
+  "pmchat.photoedit.rotate": "Rotate",
+  "pmchat.photoedit.mirror": "Mirror",
+  "pmchat.photoedit.draw": "Draw",
+  "pmchat.photoedit.undo": "Undo",
+  "pmchat.photoedit.reset": "Reset",
+  "pmchat.photoedit.cancel": "Cancel",
+  "pmchat.photoedit.send": "Send",
+  "pmchat.photoedit.drawhint": "Drag over the photo to circle something",
+  "pmchat.photoedit.error": "Couldn't open the photo"
 }

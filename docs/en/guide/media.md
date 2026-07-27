@@ -11,6 +11,22 @@ reachable from your connection. More in
 [Where files get uploaded](/en/config/hosts).
 :::
 
+## Editing a photo before sending
+
+Before a photo reaches your contact, an edit screen opens — whether you pasted
+a screenshot with <kbd>Ctrl</kbd>+<kbd>V</kbd> or picked one from the send
+panel — with:
+
+- **Rotate** — turns it 90° at a time, press it as many times as you like;
+- **Mirror** — flips it horizontally;
+- **Draw** — switches on a pen: drag it across the photo to circle whatever
+  you want to point out, in red;
+- **Undo** — steps back one action;
+- **Reset** — reverts the photo to how it looked when you opened it.
+
+**Send** delivers it to the chat, **Cancel** closes the screen without
+sending — the original file on disk is never touched either way.
+
 ## Photo link previews
 
 Like Telegram: if a message contains a link to an image (ending in `.png`,

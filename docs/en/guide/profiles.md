@@ -44,6 +44,17 @@ shown next to the name:
 Keywords are recognised too: `helper`, `moder(ator)`, `developer`, `event`,
 `content` (and their Russian equivalents).
 
+## Private notes
+
+Like Discord: any player's profile has a **"Note"** field — a short reminder
+for yourself (e.g. "sold me an enchanted pickaxe for 5 diamonds").
+
+::: tip Only you can see the note
+The note is never published or sent anywhere — it lives only on your own
+computer, in `pmchat.json`. The other player never finds out about it, even if
+they run PocketChat too.
+:::
+
 ## Rename a player
 
 Any player's profile has a **“Name”** field. Type a name there and the player

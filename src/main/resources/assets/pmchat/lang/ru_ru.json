@@ -282,6 +282,8 @@
   "pmchat.profile.desc.hint": "Пара слов о себе…",
   "pmchat.profile.rename": "Имя",
   "pmchat.profile.rename.hint": "Переименовать",
+  "pmchat.profile.note": "Заметка",
+  "pmchat.profile.note.hint": "Личная заметка, видна только вам…",
   "pmchat.profile.balance": "Баланс",
   "pmchat.profile.balance.unknown": "—",
   "pmchat.profile.block": "В чёрный список",
@@ -293,5 +295,16 @@
   "pmchat.profile.save": "Сохранить",
   "pmchat.profile.done": "Готово",
   "pmchat.tip.profile": "Открыть профиль",
-  "pmchat.tip.groupavatar": "Аватарка группы (файлы из config/pmchat-avatars)"
+  "pmchat.tip.groupavatar": "Аватарка группы (файлы из config/pmchat-avatars)",
+
+  "pmchat.photoedit.title": "Правка фото",
+  "pmchat.photoedit.rotate": "Повернуть",
+  "pmchat.photoedit.mirror": "Зеркально",
+  "pmchat.photoedit.draw": "Рисовать",
+  "pmchat.photoedit.undo": "Отменить",
+  "pmchat.photoedit.reset": "Сброс",
+  "pmchat.photoedit.cancel": "Отмена",
+  "pmchat.photoedit.send": "Отправить",
+  "pmchat.photoedit.drawhint": "Проведите мышью по фото, чтобы обвести",
+  "pmchat.photoedit.error": "Не удалось открыть фото"
 }

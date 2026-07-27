@@ -2008,7 +2008,8 @@ public class PmScreen extends Screen {
                 }));
     }
 
-    private void startUpload(Path file) {
+    /** Package-private: {@link PmPhotoEditScreen} calls back into this after «Отправить». */
+    void startUpload(Path file) {
         if (uploading || selected == null) return;
         uploading = true;
         uploadFailed = false;
@@ -4775,7 +4776,8 @@ public class PmScreen extends Screen {
                     if ((boolean) r[5]) {
                         sendSticker((Path) r[4]);
                     } else {
-                        startUpload((Path) r[4]);
+                        // Обычное фото (не стикер) — сперва в редактор: поворот/зеркало/обвести.
+                        MinecraftClient.getInstance().setScreen(new PmPhotoEditScreen(this, (Path) r[4]));
                     }
                     return true;
                 }
@@ -5280,7 +5282,7 @@ public class PmScreen extends Screen {
                 && (input.modifiers() & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0) {
             java.nio.file.Path clip = com.pmchat.client.PmClipboard.tryAwtImage();
             if (clip != null) {
-                startUpload(clip);
+                MinecraftClient.getInstance().setScreen(new PmPhotoEditScreen(this, clip));
                 return true;
             }
             // AWT не дал картинку — проверяем через PowerShell в фоне,
@@ -5290,7 +5292,7 @@ public class PmScreen extends Screen {
                 if (path != null) {
                     MinecraftClient.getInstance().execute(() -> {
                         if (target.equalsIgnoreCase(selected) && !uploading) {
-                            startUpload(path);
+                            MinecraftClient.getInstance().setScreen(new PmPhotoEditScreen(this, path));
                         }
                     });
                 }

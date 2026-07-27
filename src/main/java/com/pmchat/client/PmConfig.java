@@ -245,6 +245,25 @@ public class PmConfig {
         save();
     }
 
+    /**
+     * Личные заметки о других игроках (ник → текст) — как в Discord: видно только
+     * тебе, никуда не отправляется, хранится исключительно в {@code pmchat.json}.
+     */
+    public Map<String, String> playerNotes = new HashMap<>();
+
+    public String noteOf(String name) {
+        if (name == null) return "";
+        String n = playerNotes.get(name.trim());
+        return n == null ? "" : n;
+    }
+
+    public void setNote(String name, String note) {
+        if (name == null || name.isBlank()) return;
+        if (note == null || note.isBlank()) playerNotes.remove(name.trim());
+        else playerNotes.put(name.trim(), note.trim());
+        save();
+    }
+
     public boolean isBlocked(String name) {
         return listContainsIgnoreCase(blocked, name);
     }
@@ -600,6 +619,7 @@ public class PmConfig {
                     if (cfg.blocked == null) cfg.blocked = new ArrayList<>();
                     if (cfg.ignoreCommand == null || cfg.ignoreCommand.isBlank()) cfg.ignoreCommand = "ignore";
                     if (cfg.playerRoles == null) cfg.playerRoles = new HashMap<>();
+                    if (cfg.playerNotes == null) cfg.playerNotes = new HashMap<>();
                     if (cfg.profileBirthday == null) cfg.profileBirthday = "";
                     if (cfg.profileDescription == null) cfg.profileDescription = "";
                     if (cfg.profileRole == null) cfg.profileRole = "";

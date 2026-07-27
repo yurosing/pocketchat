@@ -36,6 +36,7 @@ public class PmProfileScreen extends Screen {
     private TextFieldWidget birthdayField;
     private TextFieldWidget descField;
     private TextFieldWidget aliasField;
+    private TextFieldWidget noteField;
 
     public PmProfileScreen(Screen parent, String player) {
         super(Text.translatable("pmchat.profile.title"));
@@ -64,7 +65,7 @@ public class PmProfileScreen extends Screen {
     protected void init() {
         applyTheme();
         clearChildren();
-        panelH = self ? 214 : 258;
+        panelH = self ? 214 : 291;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
@@ -126,6 +127,18 @@ public class PmProfileScreen extends Screen {
                         reinit();
                     }));
             contentY += 22;
+
+            // Личная заметка (4.2+) — как в Discord: видна только тебе, хранится
+            // только в pmchat.json, никогда не отправляется собеседнику.
+            noteField = new TextFieldWidget(textRenderer, px + 12, contentY + 12, PANEL_W - 24, 15,
+                    Text.translatable("pmchat.profile.note"));
+            noteField.setMaxLength(200);
+            noteField.setText(config.noteOf(player));
+            String nh = Text.translatable("pmchat.profile.note.hint").getString();
+            noteField.setSuggestion(noteField.getText().isEmpty() ? nh : "");
+            noteField.setChangedListener(s -> noteField.setSuggestion(s.isEmpty() ? nh : ""));
+            addDrawableChild(noteField);
+            contentY += 33;
         }
 
         // Кнопка «Готово»
@@ -144,6 +157,7 @@ public class PmProfileScreen extends Screen {
         if (birthdayField != null) config.profileBirthday = birthdayField.getText().trim();
         if (descField != null) config.profileDescription = descField.getText().trim();
         if (aliasField != null) config.setAlias(player, aliasField.getText());
+        if (noteField != null) config.setNote(player, noteField.getText());
         config.save();
     }
 
@@ -222,6 +236,9 @@ public class PmProfileScreen extends Screen {
                     px + 12, contentY + 4, LABEL, false);
             contentY += 21;
             contentY += 22;
+            context.drawText(textRenderer, Text.translatable("pmchat.profile.note"),
+                    px + 12, contentY, LABEL, false);
+            contentY += 33;
         }
 
         // ---- Раздел подарков (4.2) ----
