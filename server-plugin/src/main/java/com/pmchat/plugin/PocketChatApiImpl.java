@@ -33,6 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 final class PocketChatApiImpl implements PocketChatApi, GiftRegistry {
 
     private final Plugin plugin;
+    private final String version;
     private final MediaStore store;
     private final GiftStore gifts;
     private final PocketChatTier tier;
@@ -42,9 +43,10 @@ final class PocketChatApiImpl implements PocketChatApi, GiftRegistry {
     private final CopyOnWriteArrayList<Gift> catalog;
     private MediaChannel channel;
 
-    PocketChatApiImpl(Plugin plugin, MediaStore store, GiftStore gifts, PocketChatTier tier,
-                      boolean giftsEnabled, int maxFileBytes, List<Gift> catalog) {
+    PocketChatApiImpl(Plugin plugin, String version, MediaStore store, GiftStore gifts,
+                      PocketChatTier tier, boolean giftsEnabled, int maxFileBytes, List<Gift> catalog) {
         this.plugin = plugin;
+        this.version = version;
         this.store = store;
         this.gifts = gifts;
         this.tier = tier;
@@ -77,7 +79,7 @@ final class PocketChatApiImpl implements PocketChatApi, GiftRegistry {
 
     @Override
     public String version() {
-        return plugin.getPluginMeta().getVersion();
+        return version;
     }
 
     @Override

@@ -66,7 +66,7 @@ public final class PocketChatPlugin extends JavaPlugin implements Listener {
         List<Gift> catalog = loadGiftCatalog();
         GiftStore gifts = new GiftStore(getDataFolder().toPath().resolve("gifts.yml").toFile(), getLogger());
 
-        api = new PocketChatApiImpl(this, store, gifts,
+        api = new PocketChatApiImpl(this, getPluginMeta().getVersion(), store, gifts,
                 isPro() ? PocketChatTier.PRO : PocketChatTier.FREE,
                 giftsEnabled, maxFileBytes, catalog);
         channel = new MediaChannel(this, api, store, maxFileBytes, tellCommand, isPro(),
