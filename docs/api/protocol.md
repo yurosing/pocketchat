@@ -53,6 +53,10 @@ player.sendPluginMessage(plugin, PocketChat.CHANNEL, bos.toByteArray());
 | `GIFT_LIST_REQ` | `0x40` | *(пусто)* — каталог и свой баланс |
 | `GIFT_BUY` | `0x41` | `[UTF target][UTF giftId]` |
 | `GIFT_INV_REQ` | `0x42` | `[UTF player]` |
+| `STREAM_START` | `0x50` | `[UTF title][UTF url]` — объявить, что этот игрок начал стримить |
+| `STREAM_STOP` | `0x51` | *(пусто)* — стрим закончен |
+| `STREAM_LIST_REQ` | `0x52` | *(пусто)* — запросить текущий список стримов |
+| `STREAM_DONATE` | `0x54` | `[UTF target][double amount]` — задонатить стримеру |
 
 ## Сервер → клиент
 
@@ -71,6 +75,9 @@ player.sendPluginMessage(plugin, PocketChat.CHANNEL, bos.toByteArray());
 | `GIFT_RESULT` | `0x44` | `[boolean ok][UTF message][double newBalance]` |
 | `GIFT_RECV` | `0x45` | `[UTF from][UTF giftName][UTF icon]` |
 | `GIFT_INV` | `0x46` | `[UTF player][int n]` × `{[UTF giftName][UTF icon][UTF from]}` |
+| `STREAM_LIST` | `0x53` | `[int n]` × `{[UTF player][UTF title][UTF url]}` — список сейчас идущих стримов |
+| `STREAM_DONATE_RESULT` | `0x55` | `[boolean ok][UTF message][double newBalance]` |
+| `STREAM_DONATE_RECV` | `0x56` | `[UTF from][double amount]` |
 
 ## Как проходит обмен
 
@@ -129,6 +136,26 @@ player.sendPluginMessage(plugin, PocketChat.CHANNEL, bos.toByteArray());
 
 Каталог пустой, если подарки выключены (`gifts-enabled: false`) или не подключена
 экономика Vault.
+
+### Стримы
+
+```
+клиент → STREAM_START (название, ссылка)   |   клиент → STREAM_STOP
+сервер → STREAM_LIST (broadcast всем с плагином)
+
+клиент → STREAM_LIST_REQ
+сервер → STREAM_LIST (только запросившему)
+
+клиент → STREAM_DONATE (кому, сумма)
+сервер → STREAM_DONATE_RESULT (успех, сообщение, новый баланс)   донатеру
+сервер → STREAM_DONATE_RECV (от кого, сумма)                     стримеру
+```
+
+Список стримов хранится только в памяти плагина (никакого файла) и рассылается
+всем онлайн-игрокам с модом при каждом `STREAM_START`/`STREAM_STOP`, а также
+отдельно тому, кто прислал `STREAM_LIST_REQ`. `STREAM_DONATE` списывает монеты
+через Vault и зачисляет их получателю — плагин не транслирует и не хранит
+видео, только заголовок и внешнюю ссылку (Twitch/YouTube и т.п.).
 
 ::: warning id файла — это и есть право доступа
 `fileId` — 16 случайных символов плюс расширение. Никакой другой проверки прав на

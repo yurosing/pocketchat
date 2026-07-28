@@ -53,6 +53,12 @@ API (и нельзя — блокировать поток надолго).
 | `PocketChatGiftPurchaseEvent` | <span class="pc-badge cancel">отменяемое</span> | покупка подарка, до списания денег |
 | `PocketChatGiftReceiveEvent` | <span class="pc-badge info">инфо</span> | подарок выдан получателю |
 
+::: tip Стримы пока без событий
+Стримы и донаты (see [протокол](/api/protocol#стримы)) обрабатываются внутри
+`MediaChannel` напрямую и **не** фигурируют в этом списке — публичного события
+на старт/донат стрима пока нет. Если он вам нужен — откройте issue.
+:::
+
 ### Личные сообщения
 
 `PocketChatMessageEvent` — центральное событие. У сообщения PocketChat **две

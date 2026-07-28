@@ -54,6 +54,12 @@ not block for long.
 | `PocketChatGiftPurchaseEvent` | <span class="pc-badge cancel">cancellable</span> | a gift purchase, before any money moves |
 | `PocketChatGiftReceiveEvent` | <span class="pc-badge info">info</span> | a gift was granted to its recipient |
 
+::: tip Streams have no events yet
+Streams and donations (see the [protocol](/en/api/protocol#streams)) are handled
+straight inside `MediaChannel` and **do not** show up in this list — there is no
+public event for a stream starting or a donation yet. Open an issue if you need one.
+:::
+
 ### Private messages
 
 `PocketChatMessageEvent` is the central one. A PocketChat message has **two

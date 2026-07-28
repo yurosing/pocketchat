@@ -54,6 +54,10 @@ without breaking older mods and plugins.
 | `GIFT_LIST_REQ` | `0x40` | *(empty)* — catalog and own balance |
 | `GIFT_BUY` | `0x41` | `[UTF target][UTF giftId]` |
 | `GIFT_INV_REQ` | `0x42` | `[UTF player]` |
+| `STREAM_START` | `0x50` | `[UTF title][UTF url]` — announce that this player started streaming |
+| `STREAM_STOP` | `0x51` | *(empty)* — the stream ended |
+| `STREAM_LIST_REQ` | `0x52` | *(empty)* — ask for the current list of live streams |
+| `STREAM_DONATE` | `0x54` | `[UTF target][double amount]` — donate coins to a streamer |
 
 ## Server → client
 
@@ -72,6 +76,9 @@ without breaking older mods and plugins.
 | `GIFT_RESULT` | `0x44` | `[boolean ok][UTF message][double newBalance]` |
 | `GIFT_RECV` | `0x45` | `[UTF from][UTF giftName][UTF icon]` |
 | `GIFT_INV` | `0x46` | `[UTF player][int n]` × `{[UTF giftName][UTF icon][UTF from]}` |
+| `STREAM_LIST` | `0x53` | `[int n]` × `{[UTF player][UTF title][UTF url]}` — currently live streams |
+| `STREAM_DONATE_RESULT` | `0x55` | `[boolean ok][UTF message][double newBalance]` |
+| `STREAM_DONATE_RECV` | `0x56` | `[UTF from][double amount]` |
 
 ## How an exchange goes
 
@@ -131,6 +138,27 @@ server → GIFT_RECV (from whom, what, icon)             to the recipient
 
 The catalog is empty when gifts are switched off (`gifts-enabled: false`) or no
 Vault economy is hooked up.
+
+### Streams
+
+```
+client → STREAM_START (title, link)   |   client → STREAM_STOP
+server → STREAM_LIST (broadcast to everyone with the plugin)
+
+client → STREAM_LIST_REQ
+server → STREAM_LIST (to the requester only)
+
+client → STREAM_DONATE (to whom, amount)
+server → STREAM_DONATE_RESULT (success, message, new balance)   to the donor
+server → STREAM_DONATE_RECV (from whom, amount)                 to the streamer
+```
+
+The stream list only lives in the plugin's memory (nothing on disk) and is
+re-broadcast to every online player with the mod on each `STREAM_START` /
+`STREAM_STOP`, plus sent individually to whoever sent `STREAM_LIST_REQ`.
+`STREAM_DONATE` withdraws coins through Vault and deposits them to the
+recipient — the plugin never streams or stores any video, only a title and an
+external link (Twitch/YouTube etc.).
 
 ::: warning A file id *is* the access right
 `fileId` is 16 random characters plus an extension. There is no other download
