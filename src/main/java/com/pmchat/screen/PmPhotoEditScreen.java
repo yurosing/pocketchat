@@ -324,8 +324,12 @@ public class PmPhotoEditScreen extends Screen {
     /** Область показа: под шапкой, над панелью инструментов. */
     private int[] imageRect() {
         if (current == null) return null;
+        // Важно: граница не должна зависеть от cropHasSelection — иначе картинка
+        // сдвинется/пересчитает масштаб ПРЯМО ВО ВРЕМЯ протяжки (клик уже
+        // выставляет cropHasSelection=true), и координаты выделения разъедутся
+        // с тем, что покажет imageRect() в момент применения обрезки.
         int top = 24;
-        int bottom = height - (drawMode ? 114 : (textMode ? 120 : 60));
+        int bottom = height - (drawMode ? 114 : (textMode ? 120 : (cropMode ? 84 : 60)));
         int areaW = Math.max(1, width - 40), areaH = Math.max(1, bottom - top);
         float scale = Math.min(areaW / (float) current.getWidth(), areaH / (float) current.getHeight());
         scale = Math.min(scale, 4f);
@@ -438,7 +442,13 @@ public class PmPhotoEditScreen extends Screen {
         dragging = false;
         if (cropDragging) {
             cropDragging = false;
-            init(); // показать кнопки «Применить/Отмена»
+            // Слишком маленькое выделение (случайный клик без протяжки) — не
+            // показываем «Применить» на невидимом прямоугольнике: тогда клик по
+            // нему ничего бы не обрезал и выглядело бы как «ничего не работает».
+            if (Math.abs(cropX2 - cropX1) < 6 || Math.abs(cropY2 - cropY1) < 6) {
+                cropHasSelection = false;
+            }
+            init(); // показать кнопки «Применить/Отмена», если выделение достаточное
         }
         return super.mouseReleased(click);
     }
