@@ -96,7 +96,7 @@ public final class PmPhotoEdit {
         BufferedImage probe = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
         Graphics2D pg = probe.createGraphics();
         pg.setFont(font);
-        java.awt.font.FontMetrics fm = pg.getFontMetrics();
+        java.awt.FontMetrics fm = pg.getFontMetrics();
         int maxTextW = w - 24;
         java.util.List<String> lines = wrap(text, fm, maxTextW);
         pg.dispose();
@@ -121,7 +121,7 @@ public final class PmPhotoEdit {
         return out;
     }
 
-    private static java.util.List<String> wrap(String text, java.awt.font.FontMetrics fm, int maxW) {
+    private static java.util.List<String> wrap(String text, java.awt.FontMetrics fm, int maxW) {
         java.util.List<String> out = new java.util.ArrayList<>();
         StringBuilder cur = new StringBuilder();
         for (String word : text.split("\\s+")) {
