@@ -70,6 +70,74 @@ public final class PmPhotoEdit {
         return out;
     }
 
+    /** Вырезает прямоугольник {@code (x,y,w,h)} из изображения (координаты — в пикселях картинки). */
+    public static BufferedImage crop(BufferedImage src, int x, int y, int w, int h) {
+        int cx = Math.max(0, Math.min(x, src.getWidth() - 1));
+        int cy = Math.max(0, Math.min(y, src.getHeight() - 1));
+        int cw = Math.max(1, Math.min(w, src.getWidth() - cx));
+        int ch = Math.max(1, Math.min(h, src.getHeight() - cy));
+        BufferedImage out = new BufferedImage(cw, ch, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = out.createGraphics();
+        g.drawImage(src, 0, 0, cw, ch, cx, cy, cx + cw, cy + ch, null);
+        g.dispose();
+        return out;
+    }
+
+    /**
+     * Добавляет подпись под фото — как в Telegram: холст расширяется вниз на
+     * тёмную плашку с текстом. Подпись впечатывается в саму картинку, так что
+     * дальше едет обычным файлом по существующему конвейеру отправки.
+     */
+    public static BufferedImage addCaption(BufferedImage src, String text, int argbColor) {
+        if (text == null || text.isBlank()) return src;
+        int w = src.getWidth();
+        java.awt.Font font = new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.PLAIN,
+                Math.max(12, w / 22));
+        BufferedImage probe = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D pg = probe.createGraphics();
+        pg.setFont(font);
+        java.awt.font.FontMetrics fm = pg.getFontMetrics();
+        int maxTextW = w - 24;
+        java.util.List<String> lines = wrap(text, fm, maxTextW);
+        pg.dispose();
+
+        int lineH = fm.getHeight();
+        int barH = lines.size() * lineH + 20;
+        BufferedImage out = new BufferedImage(w, src.getHeight() + barH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = out.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g.drawImage(src, 0, 0, null);
+        g.setColor(new Color(0xFF000000, true));
+        g.fillRect(0, src.getHeight(), w, barH);
+        g.setFont(font);
+        g.setColor(new Color(argbColor, true));
+        int ty = src.getHeight() + 14 + fm.getAscent();
+        for (String line : lines) {
+            int tx = (w - fm.stringWidth(line)) / 2;
+            g.drawString(line, Math.max(12, tx), ty);
+            ty += lineH;
+        }
+        g.dispose();
+        return out;
+    }
+
+    private static java.util.List<String> wrap(String text, java.awt.font.FontMetrics fm, int maxW) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        StringBuilder cur = new StringBuilder();
+        for (String word : text.split("\\s+")) {
+            String test = cur.isEmpty() ? word : cur + " " + word;
+            if (fm.stringWidth(test) > maxW && !cur.isEmpty()) {
+                out.add(cur.toString());
+                cur = new StringBuilder(word);
+            } else {
+                cur = new StringBuilder(test);
+            }
+        }
+        if (!cur.isEmpty()) out.add(cur.toString());
+        if (out.isEmpty()) out.add("");
+        return out;
+    }
+
     /** Рисует один сегмент от руки прямо поверх изображения (мутирует {@code img}). */
     public static void drawSegment(BufferedImage img, float x1, float y1, float x2, float y2,
                                     int argbColor, float strokeWidth) {

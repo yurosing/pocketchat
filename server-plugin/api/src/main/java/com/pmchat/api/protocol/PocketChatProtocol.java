@@ -61,6 +61,14 @@ public final class PocketChatProtocol {
     public static final byte GIFT_BUY = 0x41;
     /** {@code [UTF player]} — ask for a player's received gifts. */
     public static final byte GIFT_INV_REQ = 0x42;
+    /** {@code [UTF title][UTF url]} — announce that this player has started streaming. */
+    public static final byte STREAM_START = 0x50;
+    /** <i>(no payload)</i> — announce that this player has stopped streaming. */
+    public static final byte STREAM_STOP = 0x51;
+    /** <i>(no payload)</i> — ask for the current list of live streams. */
+    public static final byte STREAM_LIST_REQ = 0x52;
+    /** {@code [UTF target][double amount]} — donate coins to a live streamer (requires Vault). */
+    public static final byte STREAM_DONATE = 0x54;
 
     // ---------- server -> client ----------
 
@@ -90,6 +98,12 @@ public final class PocketChatProtocol {
     public static final byte GIFT_RECV = 0x45;
     /** {@code [UTF player][int n]{[UTF giftName][UTF icon][UTF from]}} — a player's received gifts. */
     public static final byte GIFT_INV = 0x46;
+    /** {@code [int n]{[UTF player][UTF title][UTF url]}} — broadcast of currently live streams. */
+    public static final byte STREAM_LIST = 0x53;
+    /** {@code [boolean ok][UTF message][double newBalance]} — outcome of a {@link #STREAM_DONATE}. */
+    public static final byte STREAM_DONATE_RESULT = 0x55;
+    /** {@code [UTF from][double amount]} — somebody donated coins to your stream. */
+    public static final byte STREAM_DONATE_RECV = 0x56;
 
     /**
      * A human-readable name for an opcode, for logging and debugging.
@@ -121,6 +135,13 @@ public final class PocketChatProtocol {
             case GIFT_RESULT -> "GIFT_RESULT";
             case GIFT_RECV -> "GIFT_RECV";
             case GIFT_INV -> "GIFT_INV";
+            case STREAM_START -> "STREAM_START";
+            case STREAM_STOP -> "STREAM_STOP";
+            case STREAM_LIST_REQ -> "STREAM_LIST_REQ";
+            case STREAM_DONATE -> "STREAM_DONATE";
+            case STREAM_LIST -> "STREAM_LIST";
+            case STREAM_DONATE_RESULT -> "STREAM_DONATE_RESULT";
+            case STREAM_DONATE_RECV -> "STREAM_DONATE_RECV";
             default -> String.format("UNKNOWN(0x%02X)", opcode);
         };
     }

@@ -55,6 +55,13 @@ public class PmConfig {
     /** Репозиторий для проверки обновлений (owner/repo, публичный). */
     public String updateRepo = "yurosing/pocketchat";
 
+    /**
+     * Приглашение на Discord-сервер (полная ссылка, напр. https://discord.gg/xxxx).
+     * Пусто по умолчанию — значок в мессенджере появляется, только если задано.
+     * Правится напрямую в pmchat.json (как uploadUrl и другие ссылочные поля).
+     */
+    public String discordUrl = "";
+
     /** Хостинг картинок: куда грузим и откуда качаем по id. */
     public String uploadUrl = "https://catbox.moe/user/api.php";
     public String imageHost = "https://files.catbox.moe/";
@@ -641,6 +648,7 @@ public class PmConfig {
                     if (cfg.sttModelUrlEn == null || !cfg.sttModelUrlEn.contains(",")) {
                         cfg.sttModelUrlEn = new PmConfig().sttModelUrlEn;
                     }
+                    if (cfg.discordUrl == null) cfg.discordUrl = "";
                     if (cfg.textScalePct < 60 || cfg.textScalePct > 150) cfg.textScalePct = 100;
                     if (cfg.notifyVolume < 5 || cfg.notifyVolume > 100) cfg.notifyVolume = 100;
                     return cfg;

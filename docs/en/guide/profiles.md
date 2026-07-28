@@ -88,6 +88,21 @@ The **“Gifts”** section works when the server runs the **PocketChat** plugin
 
 Without the plugin the section shows “requires the plugin”.
 
+## Streams + donations (Vault)
+
+The camera icon at the bottom of the messenger opens a list of players who are
+currently live on an external service (Twitch/YouTube — the mod doesn't
+stream video itself, it only shows the status and link):
+
+- **“Start streaming”** — a title + link, visible to everyone with the
+  plugin installed;
+- **Donate** — next to a streamer's name, withdraws Vault coins from your
+  balance and deposits them to the streamer.
+
+The stream list and donations only work with the server **PocketChat** plugin
++ **Vault** and an economy — without the plugin the section shows “requires
+the plugin”.
+
 ## Interface themes
 
 New themes were added in settings (dark and light): **Midnight**, **Nord**,

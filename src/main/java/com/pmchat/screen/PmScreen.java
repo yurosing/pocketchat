@@ -1195,6 +1195,16 @@ public class PmScreen extends Screen {
         addDrawableChild(icon(px + 66, py + PANEL_H - 19, 16, 13, PmIcons.BOOK, 0xFF9CC4DC,
                 "pmchat.tip.whatsnew", btn ->
                         MinecraftClient.getInstance().setScreen(new PmWhatsNewScreen(this))));
+        // Стримы: список стримящих + донат Vault-монетами (донат — только с плагином)
+        addDrawableChild(icon(px + 86, py + PANEL_H - 19, 16, 13, PmIcons.STREAM,
+                com.pmchat.client.PmServerMedia.get().isSelfStreaming() ? 0xFFE07A6A : 0xFF9CC4DC,
+                "pmchat.tip.streams", btn ->
+                        MinecraftClient.getInstance().setScreen(new PmStreamsScreen(this))));
+        // Discord сервера — открыть приглашение, если задано в pmchat.json (discordUrl)
+        if (config.discordUrl != null && !config.discordUrl.isBlank()) {
+            addDrawableChild(icon(px + 106, py + PANEL_H - 19, 16, 13, PmIcons.DISCORD, 0xFF8FA7E0,
+                    "pmchat.tip.discord", btn -> PmChatClient.openDiscord()));
+        }
 
         // Поиск (слева сверху)
         searchField = new TextFieldWidget(textRenderer, px + 6, py + 22, LEFT_W - 12, 14,

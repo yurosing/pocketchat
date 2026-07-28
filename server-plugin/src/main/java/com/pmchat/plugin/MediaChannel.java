@@ -61,13 +61,17 @@ final class MediaChannel implements PluginMessageListener {
     private final boolean giftsEnabled;
     private final GiftStore gifts;
 
+    // Streams (announcement + Vault donations)
+    private final StreamManager streams;
+
     /** In-flight uploads, keyed by player then client-chosen transfer id. */
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<Long, Upload>> uploads = new ConcurrentHashMap<>();
     /** Active download streams per player, to cap concurrency. */
     private final ConcurrentHashMap<UUID, AtomicInteger> activeDownloads = new ConcurrentHashMap<>();
 
     MediaChannel(Plugin plugin, PocketChatApiImpl api, MediaStore store, int maxFileBytes,
-                 String tellCommand, boolean pro, boolean giftsEnabled, GiftStore gifts) {
+                 String tellCommand, boolean pro, boolean giftsEnabled, GiftStore gifts,
+                 StreamManager streams) {
         this.plugin = plugin;
         this.api = api;
         this.store = store;
@@ -76,6 +80,7 @@ final class MediaChannel implements PluginMessageListener {
         this.pro = pro;
         this.giftsEnabled = giftsEnabled;
         this.gifts = gifts;
+        this.streams = streams;
     }
 
     private static final class Upload {
@@ -110,6 +115,7 @@ final class MediaChannel implements PluginMessageListener {
             }
         }
         activeDownloads.remove(player);
+        if (streams.stop(player)) broadcastStreams();
     }
 
     @Override
@@ -127,6 +133,10 @@ final class MediaChannel implements PluginMessageListener {
                 case PocketChatProtocol.GIFT_LIST_REQ -> handleGiftList(player);
                 case PocketChatProtocol.GIFT_BUY -> handleGiftBuy(player, in);
                 case PocketChatProtocol.GIFT_INV_REQ -> handleGiftInv(player, in);
+                case PocketChatProtocol.STREAM_START -> handleStreamStart(player, in);
+                case PocketChatProtocol.STREAM_STOP -> handleStreamStop(player);
+                case PocketChatProtocol.STREAM_LIST_REQ -> send(player, streamList());
+                case PocketChatProtocol.STREAM_DONATE -> handleStreamDonate(player, in);
                 default -> { /* unknown opcode — ignore for forward-compat */ }
             }
         } catch (IOException e) {
@@ -513,6 +523,107 @@ final class MediaChannel implements PluginMessageListener {
             dos.writeUTF(message == null ? "" : message);
             dos.writeDouble(newBalance);
         });
+    }
+
+    // ---------- streams (announcement + Vault donations) ----------
+
+    private static final int MAX_STREAM_TEXT = 96;
+
+    private void handleStreamStart(Player player, DataInputStream in) throws IOException {
+        String title = clip(in.readUTF(), MAX_STREAM_TEXT);
+        String url = clip(in.readUTF(), MAX_STREAM_TEXT);
+        streams.start(player.getUniqueId(), player.getName(), title, url);
+        broadcastStreams();
+    }
+
+    private void handleStreamStop(Player player) {
+        if (streams.stop(player.getUniqueId())) broadcastStreams();
+    }
+
+    private byte[] streamList() {
+        List<StreamManager.Live> list = streams.list();
+        return build(PocketChatProtocol.STREAM_LIST, dos -> {
+            dos.writeInt(list.size());
+            for (StreamManager.Live l : list) {
+                dos.writeUTF(l.player());
+                dos.writeUTF(l.title());
+                dos.writeUTF(l.url());
+            }
+        });
+    }
+
+    private void broadcastStreams() {
+        byte[] msg = streamList();
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
+            if (p.getListeningPluginChannels().contains(PocketChat.CHANNEL)) send(p, msg);
+        }
+    }
+
+    private void handleStreamDonate(Player donor, DataInputStream in) throws IOException {
+        String target = in.readUTF();
+        double amount = in.readDouble();
+        if (target.equalsIgnoreCase(donor.getName())) {
+            send(donor, streamDonateResult(false, "Нельзя донатить самому себе", balanceOf(donor)));
+            return;
+        }
+        if (!(amount > 0d) || !Double.isFinite(amount)) {
+            send(donor, streamDonateResult(false, "Некорректная сумма", balanceOf(donor)));
+            return;
+        }
+        if (!streams.isLive(target)) {
+            send(donor, streamDonateResult(false, "Игрок сейчас не стримит", balanceOf(donor)));
+            return;
+        }
+        Economy eco = api.economy();
+        if (eco == null) {
+            send(donor, streamDonateResult(false, "Экономика (Vault) недоступна", 0d));
+            return;
+        }
+        if (eco.getBalance(donor) < amount) {
+            send(donor, streamDonateResult(false, "Недостаточно монет", eco.getBalance(donor)));
+            return;
+        }
+        EconomyResponse withdraw = eco.withdrawPlayer(donor, amount);
+        if (withdraw == null || !withdraw.transactionSuccess()) {
+            String reason = withdraw == null || withdraw.errorMessage == null ? "Ошибка оплаты" : withdraw.errorMessage;
+            send(donor, streamDonateResult(false, reason, eco.getBalance(donor)));
+            return;
+        }
+        Player recipient = plugin.getServer().getPlayerExact(target);
+        if (recipient != null) {
+            eco.depositPlayer(recipient, amount);
+        } else {
+            // Стример вышел между проверкой и переводом — возвращаем деньги донатеру.
+            eco.depositPlayer(donor, amount);
+            send(donor, streamDonateResult(false, "Игрок вышел, донат отменён", eco.getBalance(donor)));
+            return;
+        }
+        send(donor, streamDonateResult(true, "Донат отправлен: " + fmtCoins(amount), eco.getBalance(donor)));
+        if (recipient.getListeningPluginChannels().contains(PocketChat.CHANNEL)) {
+            send(recipient, build(PocketChatProtocol.STREAM_DONATE_RECV, dos -> {
+                dos.writeUTF(donor.getName());
+                dos.writeDouble(amount);
+            }));
+        }
+        recipient.sendMessage(donor.getName() + " задонатил(а) вам " + fmtCoins(amount) + " на стриме!");
+    }
+
+    private byte[] streamDonateResult(boolean ok, String message, double newBalance) {
+        return build(PocketChatProtocol.STREAM_DONATE_RESULT, dos -> {
+            dos.writeBoolean(ok);
+            dos.writeUTF(message == null ? "" : message);
+            dos.writeDouble(newBalance);
+        });
+    }
+
+    private static String fmtCoins(double d) {
+        long l = (long) d;
+        return d == l ? Long.toString(l) : String.format(java.util.Locale.ROOT, "%.2f", d);
+    }
+
+    private static String clip(String s, int max) {
+        if (s == null) return "";
+        return s.length() > max ? s.substring(0, max) : s;
     }
 
     // ---------- helpers ----------

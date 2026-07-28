@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.pmchat'
-version = '2.0.0'
+version = '2.1.0'
 
 // Version of the published API artifact. Independent of the plugin version: the plugin
 // can move without breaking API consumers, and vice versa.

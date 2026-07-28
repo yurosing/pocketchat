@@ -19,8 +19,11 @@ panel — with:
 
 - **Rotate** — turns it 90° at a time, press it as many times as you like;
 - **Mirror** — flips it horizontally;
-- **Draw** — switches on a pen: drag it across the photo to circle whatever
-  you want to point out, in red;
+- **Draw** — a pen with a 10-color palette and 4 line thicknesses: drag it
+  across the photo to circle whatever you want to point out;
+- **Crop** — drag a rectangle, then hit “Apply” to keep only that area;
+- **Text** — a caption below the photo (Telegram-style): the text is baked
+  into the image itself on a dark bar at the bottom;
 - **Undo** — steps back one action;
 - **Reset** — reverts the photo to how it looked when you opened it.
 

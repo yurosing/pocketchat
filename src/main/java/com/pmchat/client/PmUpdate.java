@@ -88,6 +88,23 @@ public final class PmUpdate {
                                 .withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
                                 .withHoverEvent(new HoverEvent.ShowText(Text.literal(url)))));
         client.inGameHud.getChatHud().addMessage(msg);
+
+        // Заодно приглашение в Discord — если задано (pmchat.json: discordUrl).
+        String discord = PmChatClient.getConfig().discordUrl;
+        if (discord != null && !discord.isBlank()) {
+            try {
+                URI discordUri = URI.create(discord);
+                MutableText dmsg = Text.literal("[pmchat] ").formatted(Formatting.AQUA)
+                        .append(Text.literal("Наш Discord: ").formatted(Formatting.WHITE))
+                        .append(Text.literal(discord)
+                                .styled(s -> s.withFormatting(Formatting.BLUE, Formatting.UNDERLINE)
+                                        .withClickEvent(new ClickEvent.OpenUrl(discordUri))
+                                        .withHoverEvent(new HoverEvent.ShowText(Text.literal(discord)))));
+                client.inGameHud.getChatHud().addMessage(dmsg);
+            } catch (IllegalArgumentException ignored) {
+                // некорректная ссылка в конфиге — молча пропускаем
+            }
+        }
     }
 
     /** Текущая версия мода из его метаданных (например «1.10.0»). */

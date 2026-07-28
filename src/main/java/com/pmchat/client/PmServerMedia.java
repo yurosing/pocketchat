@@ -50,6 +50,13 @@ public final class PmServerMedia {
     private static final byte GIFT_RESULT = 0x44;
     private static final byte GIFT_RECV = 0x45;
     private static final byte GIFT_INV = 0x46;
+    private static final byte STREAM_START = 0x50;
+    private static final byte STREAM_STOP = 0x51;
+    private static final byte STREAM_LIST_REQ = 0x52;
+    private static final byte STREAM_LIST = 0x53;
+    private static final byte STREAM_DONATE = 0x54;
+    private static final byte STREAM_DONATE_RESULT = 0x55;
+    private static final byte STREAM_DONATE_RECV = 0x56;
 
     private static final int DEFAULT_CHUNK_BYTES = 24_000;
     private static final int MESSAGES_PER_TICK = 8;
@@ -93,6 +100,19 @@ public final class PmServerMedia {
     private volatile boolean lastResultOk = false;
     private volatile long lastResultAt = 0L;
     private final java.util.concurrent.atomic.AtomicInteger giftVersion = new java.util.concurrent.atomic.AtomicInteger();
+
+    // ---------- Streams (announcement + Vault donations) ----------
+
+    /** Один активный стрим: игрок, название, ссылка (Twitch/YouTube/...). */
+    public record LiveStream(String player, String title, String url) {
+    }
+
+    private volatile java.util.List<LiveStream> liveStreams = java.util.List.of();
+    private volatile boolean selfStreaming = false;
+    private volatile String lastDonateMsg = null;
+    private volatile boolean lastDonateOk = false;
+    private volatile long lastDonateAt = 0L;
+    private final java.util.concurrent.atomic.AtomicInteger streamVersion = new java.util.concurrent.atomic.AtomicInteger();
 
     private PmServerMedia() {
     }
@@ -189,6 +209,65 @@ public final class PmServerMedia {
         return lastResultAt;
     }
 
+    // ---------- streams API ----------
+
+    /** Список сейчас идущих стримов (обновляется сервером push'ом). */
+    public java.util.List<LiveStream> liveStreams() {
+        return liveStreams;
+    }
+
+    public boolean isSelfStreaming() {
+        return selfStreaming;
+    }
+
+    /** Счётчик изменений списка стримов/доната — экран стримов перечитывает по нему. */
+    public int streamVersion() {
+        return streamVersion.get();
+    }
+
+    public String lastDonateMsg() {
+        return lastDonateMsg;
+    }
+
+    public boolean lastDonateOk() {
+        return lastDonateOk;
+    }
+
+    public long lastDonateAt() {
+        return lastDonateAt;
+    }
+
+    /** Объявить, что этот игрок начал стримить. Требует серверный плагин. */
+    public void startStream(String title, String url) {
+        if (!serverHasPlugin) return;
+        selfStreaming = true;
+        enqueue(build(STREAM_START, dos -> {
+            dos.writeUTF(title == null ? "" : title);
+            dos.writeUTF(url == null ? "" : url);
+        }));
+    }
+
+    public void stopStream() {
+        if (!serverHasPlugin) return;
+        selfStreaming = false;
+        enqueue(build(STREAM_STOP, dos -> {
+        }));
+    }
+
+    public void requestStreams() {
+        if (serverHasPlugin) enqueue(build(STREAM_LIST_REQ, dos -> {
+        }));
+    }
+
+    /** Задонатить {@code amount} монет стримеру {@code target} (должен сейчас стримить). */
+    public void donate(String target, double amount) {
+        if (!serverHasPlugin || target == null || target.isBlank()) return;
+        enqueue(build(STREAM_DONATE, dos -> {
+            dos.writeUTF(target);
+            dos.writeDouble(amount);
+        }));
+    }
+
     private static String formatCoins(double d) {
         long l = (long) d;
         return d == l ? Long.toString(l) : String.format(java.util.Locale.ROOT, "%.2f", d);
@@ -202,6 +281,8 @@ public final class PmServerMedia {
         inventories.clear();
         hasBalance = false;
         selfBalance = 0d;
+        liveStreams = java.util.List.of();
+        selfStreaming = false;
         outbound.clear();
         uploads.values().forEach(p -> p.future.completeExceptionally(new IllegalStateException("disconnected")));
         uploads.clear();
@@ -442,6 +523,37 @@ public final class PmServerMedia {
                     }
                     inventories.put(who.toLowerCase(java.util.Locale.ROOT), list);
                     giftVersion.incrementAndGet();
+                }
+                case STREAM_LIST -> {
+                    int n = in.readInt();
+                    java.util.List<LiveStream> list = new java.util.ArrayList<>();
+                    for (int i = 0; i < n; i++) {
+                        String player = in.readUTF();
+                        String title = in.readUTF();
+                        String url = in.readUTF();
+                        list.add(new LiveStream(player, title, url));
+                    }
+                    liveStreams = list;
+                    selfStreaming = list.stream().anyMatch(l -> l.player().equalsIgnoreCase(PmChatClient.selfName()));
+                    streamVersion.incrementAndGet();
+                }
+                case STREAM_DONATE_RESULT -> {
+                    boolean ok = in.readBoolean();
+                    String msg = in.readUTF();
+                    double nb = in.readDouble();
+                    selfBalance = nb;
+                    hasBalance = true;
+                    PmChatClient.setKnownBalance(formatCoins(nb));
+                    lastDonateOk = ok;
+                    lastDonateMsg = msg;
+                    lastDonateAt = System.currentTimeMillis();
+                    streamVersion.incrementAndGet();
+                }
+                case STREAM_DONATE_RECV -> {
+                    String from = in.readUTF();
+                    double amount = in.readDouble();
+                    PmChatClient.giftToast(from, "+" + formatCoins(amount), "$");
+                    streamVersion.incrementAndGet();
                 }
                 default -> { /* unknown — ignore */ }
             }

@@ -2025,6 +2025,17 @@ public class PmChatClient implements ClientModInitializer {
         }
     }
 
+    /** Открыть Discord-сервер (ссылка из {@link PmConfig#discordUrl}), если задана. */
+    public static void openDiscord() {
+        String url = config.discordUrl;
+        if (url == null || url.isBlank()) return;
+        try {
+            net.minecraft.util.Util.getOperatingSystem().open(url);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to open Discord URL: {}", e.toString());
+        }
+    }
+
     public static PmConfig getConfig() {
         return config;
     }

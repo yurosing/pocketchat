@@ -69,8 +69,9 @@ public final class PocketChatPlugin extends JavaPlugin implements Listener {
         api = new PocketChatApiImpl(this, getPluginMeta().getVersion(), store, gifts,
                 isPro() ? PocketChatTier.PRO : PocketChatTier.FREE,
                 giftsEnabled, maxFileBytes, catalog);
+        StreamManager streams = new StreamManager();
         channel = new MediaChannel(this, api, store, maxFileBytes, tellCommand, isPro(),
-                giftsEnabled, gifts);
+                giftsEnabled, gifts, streams);
         api.bind(channel);
 
         getServer().getMessenger().registerOutgoingPluginChannel(this, PocketChat.CHANNEL);
