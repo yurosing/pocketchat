@@ -84,41 +84,43 @@ public final class PmPhotoEdit {
     }
 
     /**
-     * Добавляет подпись под фото — как в Telegram: холст расширяется вниз на
-     * тёмную плашку с текстом. Подпись впечатывается в саму картинку, так что
-     * дальше едет обычным файлом по существующему конвейеру отправки.
+     * Впечатывает текст прямо в фото в точке {@code (x,y)} (координаты картинки,
+     * левый верхний угол текстового блока) — как надпись стикером в Телеграме,
+     * а не подпись-плашка снизу. Цвет выбирается игроком; чтобы текст было видно
+     * на любом фоне, вокруг букв рисуется тонкая тёмная обводка. Мутирует
+     * {@code img}, поддерживает перенос по словам по ширине картинки.
      */
-    public static BufferedImage addCaption(BufferedImage src, String text, int argbColor) {
-        if (text == null || text.isBlank()) return src;
-        int w = src.getWidth();
-        java.awt.Font font = new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.PLAIN,
-                Math.max(12, w / 22));
-        BufferedImage probe = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D pg = probe.createGraphics();
-        pg.setFont(font);
-        java.awt.FontMetrics fm = pg.getFontMetrics();
-        int maxTextW = w - 24;
+    public static void stampText(BufferedImage img, float x, float y, String text, int argbColor) {
+        if (text == null || text.isBlank()) return;
+        int w = img.getWidth();
+        java.awt.Font font = new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD,
+                Math.max(12, w / 18));
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setFont(font);
+        java.awt.FontMetrics fm = g.getFontMetrics();
+        int maxTextW = Math.max(20, (int) (w - x - 8));
         java.util.List<String> lines = wrap(text, fm, maxTextW);
-        pg.dispose();
 
         int lineH = fm.getHeight();
-        int barH = lines.size() * lineH + 20;
-        BufferedImage out = new BufferedImage(w, src.getHeight() + barH, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = out.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g.drawImage(src, 0, 0, null);
-        g.setColor(new Color(0xFF000000, true));
-        g.fillRect(0, src.getHeight(), w, barH);
-        g.setFont(font);
-        g.setColor(new Color(argbColor, true));
-        int ty = src.getHeight() + 14 + fm.getAscent();
+        int outline = Math.max(1, font.getSize() / 14);
+        Color fill = new Color(argbColor, true);
+        Color stroke = new Color(0, 0, 0, fill.getAlpha());
+        int ty = Math.round(y) + fm.getAscent();
         for (String line : lines) {
-            int tx = (w - fm.stringWidth(line)) / 2;
-            g.drawString(line, Math.max(12, tx), ty);
+            int tx = Math.round(x);
+            g.setColor(stroke);
+            for (int dx = -outline; dx <= outline; dx++) {
+                for (int dy = -outline; dy <= outline; dy++) {
+                    if (dx != 0 || dy != 0) g.drawString(line, tx + dx, ty + dy);
+                }
+            }
+            g.setColor(fill);
+            g.drawString(line, tx, ty);
             ty += lineH;
         }
         g.dispose();
-        return out;
     }
 
     private static java.util.List<String> wrap(String text, java.awt.FontMetrics fm, int maxW) {

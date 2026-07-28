@@ -242,6 +242,7 @@
   "pmchat.streams.empty": "Nobody is streaming right now",
   "pmchat.streams.notitle": "No title",
   "pmchat.streams.needplugin": "The stream list and donations need the PocketChat server plugin",
+  "pmchat.streams.noplugin_note": "Without the server plugin, only you can see your own stream",
   "pmchat.whatsnew.title": "What's new",
   "pmchat.whatsnew.version": "Version %s",
   "pmchat.whatsnew.streams": "Streams: a list of players currently live + Vault-coin donations right from the messenger (donations need the server plugin).",
@@ -328,6 +329,7 @@
   "pmchat.photoedit.crophint": "Drag a rectangle to crop",
   "pmchat.photoedit.applycrop": "Apply",
   "pmchat.photoedit.applytext": "Done",
-  "pmchat.photoedit.captionhint": "Caption below the photo",
+  "pmchat.photoedit.captionhint": "Text",
+  "pmchat.photoedit.texthint": "Click the photo where the text should go",
   "pmchat.photoedit.error": "Couldn't open the photo"
 }

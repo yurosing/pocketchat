@@ -23,8 +23,9 @@ import java.util.Deque;
 
 /**
  * Правка фото перед отправкой (поворот на 90°, зеркало, рисование от руки с
- * выбором цвета и толщины пера, обрезка кадра, подпись-текст под фото — как в
- * Телеграме). Открывается вместо немедленной загрузки, когда игрок выбирает
+ * выбором цвета и толщины пера, обрезка кадра, текст прямо на фото в любом
+ * месте по клику — как в Телеграме). Открывается вместо немедленной загрузки,
+ * когда игрок выбирает
  * скриншот в пикере или вставляет картинку из буфера (Ctrl+V); по кнопке
  * «Отправить» результат уходит в тот же {@link PmScreen#startUpload} без
  * изменений остального конвейера (хостинг/сервер, кэш, wire-формат).
@@ -66,8 +67,9 @@ public class PmPhotoEditScreen extends Screen {
     private double cropX1, cropY1, cropX2, cropY2;
     private boolean cropHasSelection;
 
-    // Подпись под фото
+    // Текст прямо на фото: точка клика (координаты картинки), -1 — не задана
     private TextFieldWidget captionField;
+    private float textAnchorX = -1f, textAnchorY = -1f;
 
     private Identifier textureId;
     private NativeImageBackedTexture texture;
@@ -127,6 +129,7 @@ public class PmPhotoEditScreen extends Screen {
                     textMode = !textMode;
                     drawMode = false;
                     cropMode = false;
+                    textAnchorX = textAnchorY = -1f;
                     init();
                 },
                 this::undo, this::reset};
@@ -138,8 +141,8 @@ public class PmPhotoEditScreen extends Screen {
             addDrawableChild(tool(tx + i * (toolW + gap), toolsY, toolW, toolH, toolKeys[i], toolActive[i], toolActions[i]));
         }
 
-        // Палитра + толщина пера — показываются только в режиме рисования
-        if (drawMode) {
+        // Палитра цвета — общая для пера и текста на фото
+        if (drawMode || textMode) {
             int swSize = 14, swGap = 3;
             int rowY = toolsY - 20;
             int totalW = PEN_PALETTE.length * (swSize + swGap) - swGap;
@@ -149,7 +152,12 @@ public class PmPhotoEditScreen extends Screen {
                 int x = sx + i * (swSize + swGap);
                 addDrawableChild(swatch(x, rowY, swSize, PEN_PALETTE[i], idx == penColorIdx, () -> penColorIdx = idx));
             }
-            int wRowY = rowY - 18;
+        }
+
+        // Толщина пера — только в режиме рисования
+        if (drawMode) {
+            int swGap = 3;
+            int wRowY = toolsY - 38;
             int wTotalW = PEN_WIDTHS.length * (36 + swGap) - swGap;
             int wx = (width - wTotalW) / 2;
             for (int i = 0; i < PEN_WIDTHS.length; i++) {
@@ -173,9 +181,9 @@ public class PmPhotoEditScreen extends Screen {
                     }));
         }
 
-        // Подпись под фото
+        // Текст прямо на фото: кликните по фото, наберите текст, выберите цвет выше
         if (textMode) {
-            int fy = toolsY - 24;
+            int fy = toolsY - 42;
             captionField = new TextFieldWidget(textRenderer, width / 2 - 140, fy, 220, 16,
                     Text.translatable("pmchat.photoedit.captionhint"));
             captionField.setMaxLength(200);
@@ -287,10 +295,15 @@ public class PmPhotoEditScreen extends Screen {
         if (current == null || captionField == null) return;
         String text = captionField.getText().trim();
         if (text.isEmpty()) return;
+        // Без клика по фото — по умолчанию ставим текст в верхний левый угол.
+        float ax = textAnchorX >= 0 ? textAnchorX : current.getWidth() * 0.05f;
+        float ay = textAnchorY >= 0 ? textAnchorY : current.getHeight() * 0.05f;
         pushUndo();
-        current = PmPhotoEdit.addCaption(current, text, 0xFFFFFFFF);
+        int color = PEN_PALETTE[Math.floorMod(penColorIdx, PEN_PALETTE.length)];
+        PmPhotoEdit.stampText(current, ax, ay, text, color);
         textureDirty = true;
         textMode = false;
+        textAnchorX = textAnchorY = -1f;
         init();
     }
 
@@ -312,7 +325,7 @@ public class PmPhotoEditScreen extends Screen {
     private int[] imageRect() {
         if (current == null) return null;
         int top = 24;
-        int bottom = height - (drawMode ? 96 : (textMode ? 82 : 60));
+        int bottom = height - (drawMode ? 114 : (textMode ? 120 : 60));
         int areaW = Math.max(1, width - 40), areaH = Math.max(1, bottom - top);
         float scale = Math.min(areaW / (float) current.getWidth(), areaH / (float) current.getHeight());
         scale = Math.min(scale, 4f);
@@ -327,6 +340,12 @@ public class PmPhotoEditScreen extends Screen {
         float ix = (float) ((screenX - r[0]) / (double) r[2] * current.getWidth());
         float iy = (float) ((screenY - r[1]) / (double) r[3] * current.getHeight());
         return new float[]{ix, iy};
+    }
+
+    private float[] toScreenSpace(float imgX, float imgY, int[] r) {
+        float sx = r[0] + imgX / current.getWidth() * r[2];
+        float sy = r[1] + imgY / current.getHeight() * r[3];
+        return new float[]{sx, sy};
     }
 
     private float penWidthInImageSpace(int[] r) {
@@ -380,6 +399,12 @@ public class PmPhotoEditScreen extends Screen {
                 cropHasSelection = true;
                 cropX1 = cropX2 = click.x();
                 cropY1 = cropY2 = click.y();
+                return true;
+            }
+            if (textMode) {
+                float[] p = toImageSpace(click.x(), click.y(), r);
+                textAnchorX = p[0];
+                textAnchorY = p[1];
                 return true;
             }
         }
@@ -459,6 +484,21 @@ public class PmPhotoEditScreen extends Screen {
                 String hint = Text.translatable("pmchat.photoedit.crophint").getString();
                 context.drawText(textRenderer, hint, width / 2 - textRenderer.getWidth(hint) / 2,
                         height - 92, LABEL, false);
+            }
+            if (textMode && r != null) {
+                if (textAnchorX >= 0) {
+                    float[] s = toScreenSpace(textAnchorX, textAnchorY, r);
+                    int color = PEN_PALETTE[Math.floorMod(penColorIdx, PEN_PALETTE.length)];
+                    context.drawText(textRenderer, "+", (int) s[0] - 2, (int) s[1] - 4, color, false);
+                    String preview = captionField != null ? captionField.getText() : "";
+                    if (!preview.isBlank()) {
+                        context.drawText(textRenderer, preview, (int) s[0] + 6, (int) s[1] - 4, color, true);
+                    }
+                } else {
+                    String hint = Text.translatable("pmchat.photoedit.texthint").getString();
+                    context.drawText(textRenderer, hint, width / 2 - textRenderer.getWidth(hint) / 2,
+                            height - 108, LABEL, false);
+                }
             }
         }
 

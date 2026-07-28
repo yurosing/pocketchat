@@ -242,6 +242,7 @@
   "pmchat.streams.empty": "Сейчас никто не стримит",
   "pmchat.streams.notitle": "Без названия",
   "pmchat.streams.needplugin": "Для списка стримов и донатов нужен серверный плагин PocketChat",
+  "pmchat.streams.noplugin_note": "Без серверного плагина стрим увидите только вы сами",
   "pmchat.whatsnew.title": "Что нового",
   "pmchat.whatsnew.version": "Версия %s",
   "pmchat.whatsnew.streams": "Стримы: список стримящих игроков + донат Vault-монетами прямо из мессенджера (донаты требуют серверный плагин).",
@@ -328,6 +329,7 @@
   "pmchat.photoedit.crophint": "Выделите область мышью, чтобы обрезать",
   "pmchat.photoedit.applycrop": "Применить",
   "pmchat.photoedit.applytext": "Готово",
-  "pmchat.photoedit.captionhint": "Подпись под фото",
+  "pmchat.photoedit.captionhint": "Текст",
+  "pmchat.photoedit.texthint": "Кликните по фото, куда поставить текст",
   "pmchat.photoedit.error": "Не удалось открыть фото"
 }

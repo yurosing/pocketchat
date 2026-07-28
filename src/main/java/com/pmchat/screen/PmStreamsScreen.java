@@ -19,8 +19,10 @@ import java.util.List;
  * «Стримы» — список игроков, которые сейчас стримят (внешний сервис,
  * Twitch/YouTube — мод только показывает статус+ссылку, видео сам не тянет),
  * кнопка «начать/закончить стрим» для себя и донат Vault-монетами стримеру.
- * Список стримов и донаты работают только при серверном плагине PocketChat —
- * без него показывается заглушка (как в разделе подарков профиля).
+ * Кнопки видны и без серверного плагина (иначе нечего было бы нажать) — но
+ * реально объявить стрим другим игрокам и задонатить можно только когда
+ * плагин установлен: без него при попытке показывается пояснение вместо
+ * молчаливого ничегонеделания.
  */
 @Environment(EnvType.CLIENT)
 public class PmStreamsScreen extends Screen {
@@ -34,7 +36,7 @@ public class PmStreamsScreen extends Screen {
     private final PmConfig config = PmChatClient.getConfig();
     private final PmServerMedia sm = PmServerMedia.get();
 
-    private int px, py, panelH;
+    private int px, py, panelH, headerH = 26;
     private int lastSeenVersion = -1;
     private boolean requested = false;
 
@@ -48,6 +50,10 @@ public class PmStreamsScreen extends Screen {
 
     /** {x,y,w,h,player} — кнопки доната в списке. */
     private final List<Object[]> donateRects = new ArrayList<>();
+
+    // Локальное сообщение (напр. «нужен плагин») — не путать с sm.lastDonateMsg
+    private String localMsg = null;
+    private long localMsgAt = 0L;
 
     public PmStreamsScreen(Screen parent) {
         super(Text.translatable("pmchat.streams.title"));
@@ -77,19 +83,24 @@ public class PmStreamsScreen extends Screen {
             sm.requestStreams();
         }
 
-        int listRows = pluginPresent() ? Math.max(1, sm.liveStreams().size()) : 1;
+        int listRows = Math.max(1, sm.liveStreams().size());
         int listH = Math.min(listRows, 6) * ROW_H + 6;
-        panelH = 26 + 24 + listH + 36;
+        headerH = pluginPresent() ? 26 : 34;
+        panelH = headerH + 24 + listH + 36;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
-        if (pluginPresent() && !startMode && donateTarget == null) {
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 70, py + 26, 140, 16,
+        if (!startMode && donateTarget == null) {
+            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 70, py + headerH, 140, 16,
                     Text.translatable(sm.isSelfStreaming() ? "pmchat.streams.stop" : "pmchat.streams.start"),
                     sm.isSelfStreaming() ? 0xFF5A2A22 : 0xFF2E5F46,
                     sm.isSelfStreaming() ? 0xFF6E332A : 0xFF376F52,
                     sm.isSelfStreaming() ? 0xFFA0463A : 0xFF4C8A66,
                     0xFFEDF3F0, btn -> {
+                        if (!pluginPresent()) {
+                            showLocalMsg(Text.translatable("pmchat.streams.needplugin").getString());
+                            return;
+                        }
                         if (sm.isSelfStreaming()) {
                             sm.stopStream();
                             reinit();
@@ -101,7 +112,7 @@ public class PmStreamsScreen extends Screen {
         }
 
         if (startMode) {
-            int fy = py + 48;
+            int fy = py + headerH + 22;
             titleField = new TextFieldWidget(textRenderer, px + 16, fy, PANEL_W - 32, 16,
                     Text.translatable("pmchat.streams.titlehint"));
             titleField.setMaxLength(64);
@@ -123,12 +134,18 @@ public class PmStreamsScreen extends Screen {
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 + 6, fy + 44, 84, 18,
                     Text.translatable("pmchat.streams.go"),
                     0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> {
+                        if (!pluginPresent()) {
+                            showLocalMsg(Text.translatable("pmchat.streams.needplugin").getString());
+                            startMode = false;
+                            reinit();
+                            return;
+                        }
                         sm.startStream(titleField.getText().trim(), urlField.getText().trim());
                         startMode = false;
                         reinit();
                     }));
         } else if (donateTarget != null) {
-            int fy = py + 48;
+            int fy = py + headerH + 22;
             amountField = new TextFieldWidget(textRenderer, px + 16, fy, PANEL_W - 32, 16,
                     Text.translatable("pmchat.streams.amounthint"));
             amountField.setMaxLength(12);
@@ -155,6 +172,11 @@ public class PmStreamsScreen extends Screen {
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
     }
 
+    private void showLocalMsg(String msg) {
+        localMsg = msg;
+        localMsgAt = System.currentTimeMillis();
+    }
+
     private static double parseAmount(String s) {
         try {
             double d = Double.parseDouble(s.trim().replace(',', '.'));
@@ -178,11 +200,13 @@ public class PmStreamsScreen extends Screen {
         context.drawText(textRenderer, title,
                 px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
 
-        if (!pluginPresent()) {
-            String msg = Text.translatable("pmchat.streams.needplugin").getString();
-            context.drawText(textRenderer, msg, px + (PANEL_W - textRenderer.getWidth(msg)) / 2,
-                    py + panelH / 2 - 4, SUBTLE, false);
-        } else if (!startMode && donateTarget == null) {
+        if (!pluginPresent() && !startMode && donateTarget == null) {
+            String note = Text.translatable("pmchat.streams.noplugin_note").getString();
+            context.drawText(textRenderer, trimTo(note, PANEL_W - 24),
+                    px + (PANEL_W - textRenderer.getWidth(trimTo(note, PANEL_W - 24))) / 2, py + 19, SUBTLE, false);
+        }
+
+        if (!startMode && donateTarget == null) {
             drawList(context, mouseX, mouseY);
         }
 
@@ -190,6 +214,9 @@ public class PmStreamsScreen extends Screen {
         if (rmsg != null && System.currentTimeMillis() - sm.lastDonateAt() < 4000) {
             context.drawText(textRenderer, trimTo(rmsg, PANEL_W - 24),
                     px + 12, py + panelH - 34, sm.lastDonateOk() ? 0xFF6FBF8B : 0xFFE0574C, false);
+        } else if (localMsg != null && System.currentTimeMillis() - localMsgAt < 4000) {
+            context.drawText(textRenderer, trimTo(localMsg, PANEL_W - 24),
+                    px + 12, py + panelH - 34, 0xFFE0574C, false);
         }
 
         super.render(context, mouseX, mouseY, delta);
@@ -198,7 +225,7 @@ public class PmStreamsScreen extends Screen {
     private void drawList(DrawContext context, int mouseX, int mouseY) {
         donateRects.clear();
         List<PmServerMedia.LiveStream> streams = sm.liveStreams();
-        int listTop = py + 48;
+        int listTop = py + headerH + 22;
         if (streams.isEmpty()) {
             context.drawText(textRenderer, Text.translatable("pmchat.streams.empty"),
                     px + 14, listTop + 4, SUBTLE, false);
