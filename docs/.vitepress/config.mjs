@@ -218,7 +218,7 @@ export default defineConfig({
           { text: 'Документация', link: '/guide/what-is' },
           { text: 'Настройка', link: '/config/' },
           { text: 'API', link: '/api/' },
-          { text: 'v1.13.0', items: [
+          { text: 'v1.13.1', items: [
             { text: 'Minecraft 1.21.11', link: '/guide/install' },
             { text: 'API 1.0.0', link: '/api/' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
@@ -249,7 +249,7 @@ export default defineConfig({
           { text: 'Docs', link: '/en/guide/what-is' },
           { text: 'Config', link: '/en/config/' },
           { text: 'API', link: '/en/api/' },
-          { text: 'v1.13.0', items: [
+          { text: 'v1.13.1', items: [
             { text: 'Minecraft 1.21.11', link: '/en/guide/install' },
             { text: 'API 1.0.0', link: '/en/api/' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
