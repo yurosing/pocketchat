@@ -563,6 +563,11 @@ public class PmScreen extends Screen {
     // компактная панель управления музыкой в оверлее.
     private int[] plPrevRect, plPlayRect, plNextRect, plSeekRect;
     private boolean plSeeking = false; // #4: перетаскивание полоски перемотки
+    // Свободный ресайз окна перетаскиванием уголка (как в Telegram). grabDX/DY —
+    // смещение точки захвата курсора относительно фактического угла панели в
+    // момент клика, чтобы в начале перетаскивания не было скачка размера.
+    private boolean resizingPanel = false;
+    private int grabDX, grabDY;
     // кнопки ↑/↓ переноса треков в очереди (x,y,w,h,dir,idx).
     private final List<int[]> playlistMoveRects = new ArrayList<>();
 
@@ -1119,6 +1124,15 @@ public class PmScreen extends Screen {
             PANEL_W = Math.max(SIZES[0][0], width - m * 2);
             PANEL_H = Math.max(SIZES[0][1], height - m * 2);
             LEFT_W = Math.max(SIZES[0][2], Math.min(240, PANEL_W / 4));
+        } else if (config.customPanelW > 0 && config.customPanelH > 0) {
+            // Размер, заданный перетаскиванием уголка (как в Telegram) — потолок тот
+            // же, что и у полноэкранного режима, пол — самый маленький пресет.
+            int m = 12;
+            int maxW = Math.max(SIZES[0][0], width - m * 2);
+            int maxH = Math.max(SIZES[0][1], height - m * 2);
+            PANEL_W = Math.max(SIZES[0][0], Math.min(config.customPanelW, maxW));
+            PANEL_H = Math.max(SIZES[0][1], Math.min(config.customPanelH, maxH));
+            LEFT_W = Math.max(SIZES[0][2], Math.min(240, PANEL_W / 4));
         } else {
             int scale = Math.max(0, Math.min(SIZES.length - 1, config.uiScale));
             PANEL_W = SIZES[scale][0];
@@ -1138,10 +1152,14 @@ public class PmScreen extends Screen {
                     config.save();
                     rebuild();
                 }));
-        // Смена размера окна (в фуллскрине не действует)
+        // Смена размера окна (в фуллскрине не действует). Сбрасывает кастомный
+        // размер, заданный перетаскиванием уголка — иначе кнопка молча перестанет
+        // на что-либо влиять, раз rebuild() отдаёт приоритет customPanelW/H.
         if (!config.fullscreen) {
             addDrawableChild(icon(px + LEFT_W - 22, py + 5, 16, 13, PmIcons.SIZE, WBTN_TEXT, "pmchat.tip.size", btn -> {
                 config.uiScale = (config.uiScale + 1) % SIZES.length;
+                config.customPanelW = 0;
+                config.customPanelH = 0;
                 config.save();
                 rebuild();
             }));
@@ -2071,6 +2089,14 @@ public class PmScreen extends Screen {
         context.fill(px, py + 2, px + LEFT_W, py + PANEL_H - 2, LEFT_BG);
         context.fill(px + LEFT_W, py + 2, px + LEFT_W + 1, py + PANEL_H - 2, DIVIDER);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, PANEL_BORDER);
+
+        // Уголок ресайза (как в Telegram) — три точки по диагонали в правом нижнем углу.
+        if (!config.fullscreen) {
+            int gx = px + PANEL_W - 2, gy = py + PANEL_H - 2;
+            context.fill(gx - 2, gy - 2, gx, gy, WBTN_TEXT);
+            context.fill(gx - 6, gy - 2, gx - 4, gy, WBTN_TEXT);
+            context.fill(gx - 2, gy - 6, gx, gy - 4, WBTN_TEXT);
+        }
 
         context.drawText(textRenderer, Text.literal("✉"), px + 8, py + 8, 0xFF6FBF8B, false);
         context.drawText(textRenderer, Text.translatable("screen.pmchat.title"), px + 20, py + 8, TITLE, false);
@@ -5000,6 +5026,17 @@ public class PmScreen extends Screen {
                 }
             }
         }
+        // Уголок ресайза окна (как в Telegram) — последним по приоритету, чтобы не
+        // перехватывать клики у оверлеев/меню, которые могли отрисоваться поверх угла.
+        if (!config.fullscreen) {
+            int gx = px + PANEL_W - 10, gy = py + PANEL_H - 10;
+            if (click.x() >= gx && click.x() < px + PANEL_W && click.y() >= gy && click.y() < py + PANEL_H) {
+                resizingPanel = true;
+                grabDX = (int) click.x() - (px + PANEL_W);
+                grabDY = (int) click.y() - (py + PANEL_H);
+                return true;
+            }
+        }
         return false;
     }
 
@@ -5188,6 +5225,26 @@ public class PmScreen extends Screen {
 
     @Override
     public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+        // Уголок ресайза: угол панели всегда центрирован (px/py пересчитываются как
+        // (width-PANEL_W)/2), поэтому размер выводим напрямую из позиции курсора
+        // относительно центра экрана — px+PANEL_W = (width+PANEL_W)/2 ⇒
+        // PANEL_W = 2*cursorX - width — а не из дельты клика, иначе угол «убегал»
+        // бы от курсора вдвое медленнее, чем тот двигается.
+        if (resizingPanel) {
+            // Клампим уже здесь, а не только в rebuild() при отрисовке — иначе при
+            // перетаскивании за границу курсор «отвязывается» от угла, и нужно
+            // тащить обратно мимо точки, откуда началось клампирование, прежде чем
+            // размер снова начнёт меняться («мёртвая зона»).
+            int m = 12;
+            int maxW = Math.max(SIZES[0][0], width - m * 2);
+            int maxH = Math.max(SIZES[0][1], height - m * 2);
+            int rawW = 2 * ((int) click.x() - grabDX) - width;
+            int rawH = 2 * ((int) click.y() - grabDY) - height;
+            config.customPanelW = Math.max(SIZES[0][0], Math.min(rawW, maxW));
+            config.customPanelH = Math.max(SIZES[0][1], Math.min(rawH, maxH));
+            rebuild();
+            return true;
+        }
         // #4: тянем полоску перемотки музыки зажатой кнопкой
         if (plSeeking && playlistOpen && plSeekRect != null) {
             com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
@@ -5202,6 +5259,10 @@ public class PmScreen extends Screen {
 
     @Override
     public boolean mouseReleased(Click click) {
+        if (resizingPanel) {
+            resizingPanel = false;
+            config.save();
+        }
         plSeeking = false;
         return super.mouseReleased(click);
     }

@@ -40,6 +40,13 @@ public class PmConfig {
     /** Полноэкранный режим мессенджера (на весь экран, как в Telegram Desktop). */
     public boolean fullscreen = false;
 
+    /**
+     * Размер окна, заданный перетаскиванием уголка (как в Telegram); 0 — не
+     * задан, действует пресет из {@code uiScale}.
+     */
+    public int customPanelW = 0;
+    public int customPanelH = 0;
+
     /** Прятать перехваченные строки ЛС из обычного чата. */
     public boolean hideChatLines = false;
 
