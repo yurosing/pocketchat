@@ -73,6 +73,8 @@ public class PmPhotoEditScreen extends Screen {
 
     private Identifier textureId;
     private NativeImageBackedTexture texture;
+    private NativeImage nativeImage;   // переиспользуемый буфер — пересоздаём только при смене размера
+    private int texW, texH;
     private boolean textureDirty = true;
     private boolean sending;
 
@@ -359,21 +361,41 @@ public class PmPhotoEditScreen extends Screen {
         return Math.max(2f, screenWidth * scale);
     }
 
+    /**
+     * Заливает текущий кадр в текстуру НАПРЯМУЮ (без PNG-кодирования/декодирования
+     * на каждый кадр рисования — раньше это душило FPS во время протяжки пером).
+     * Буфер и GL-текстуру пересоздаём только при смене размера картинки (поворот,
+     * обрезка); во время рисования просто перезаписываем те же пиксели и зовём
+     * upload() — тот же приём, что и в {@code PmVlc} для видео-кадров.
+     */
     private void refreshTexture() {
         if (current == null) return;
         try {
-            byte[] png = PmPhotoEdit.toPngBytes(current);
-            NativeImage img = NativeImage.read(png);
-            NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "pmchat-photoedit", img);
-            MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, tex);
-            NativeImageBackedTexture old = texture;
-            texture = tex;
-            if (old != null) {
-                try {
-                    old.close();
-                } catch (Exception ignored) {
+            int w = current.getWidth(), h = current.getHeight();
+            if (nativeImage == null || texW != w || texH != h) {
+                NativeImage img = new NativeImage(NativeImage.Format.RGBA, w, h, false);
+                NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "pmchat-photoedit", img);
+                MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, tex);
+                NativeImageBackedTexture old = texture;
+                texture = tex;
+                nativeImage = img;
+                texW = w;
+                texH = h;
+                if (old != null) {
+                    try {
+                        old.close();
+                    } catch (Exception ignored) {
+                    }
                 }
             }
+            int[] pixels = current.getRGB(0, 0, w, h, null, 0, w);
+            int i = 0;
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    nativeImage.setColorArgb(x, y, pixels[i++]);
+                }
+            }
+            texture.upload();
         } catch (Exception ignored) {
         }
         textureDirty = false;
