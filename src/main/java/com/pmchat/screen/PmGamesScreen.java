@@ -49,9 +49,22 @@ public class PmGamesScreen extends Screen {
 
     private final List<Object[]> coinAcceptRects = new ArrayList<>(); // x,y,w,h,opener
 
+    // Анимация подброса монетки/раскрытия КНБ: показывается один раз на свежий
+    // результат, пришедший, пока экран уже открыт (см. конструктор ниже).
+    private static final long COIN_ANIM_MS = 900;
+    private static final long RPS_ANIM_MS = 900;
+    private PmServerMedia.CoinResult shownCoinResult;
+    private long coinAnimStart = -1;
+    private PmServerMedia.RpsResult shownRpsResult;
+    private long rpsAnimStart = -1;
+
     public PmGamesScreen(Screen parent) {
         super(Text.translatable("pmchat.games.title"));
         this.parent = parent;
+        // Не проигрываем анимацию для результата, случившегося ещё до открытия
+        // экрана — только для того, что придёт, пока игрок смотрит на экран.
+        this.shownCoinResult = PmServerMedia.get().lastCoinResult();
+        this.shownRpsResult = PmServerMedia.get().lastRpsResult();
     }
 
     private void applyTheme() {
@@ -79,7 +92,8 @@ public class PmGamesScreen extends Screen {
         }
 
         int bets = Math.max(1, sm.coinBets().size());
-        panelH = tab == TAB_COIN ? (60 + Math.min(bets, 5) * 20 + 40) : 150;
+        boolean coinResultShown = isOwnCoinResult(sm.lastCoinResult());
+        panelH = tab == TAB_COIN ? (60 + Math.min(bets, 5) * 20 + 40 + (coinResultShown ? 34 : 0)) : 170;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
@@ -205,10 +219,28 @@ public class PmGamesScreen extends Screen {
         }
     }
 
+    private boolean isOwnCoinResult(PmServerMedia.CoinResult r) {
+        if (r == null) return false;
+        String self = PmChatClient.selfName();
+        return r.opener().equalsIgnoreCase(self) || r.accepter().equalsIgnoreCase(self);
+    }
+
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         if ((sm.coinVersion() != lastCoinVersion || sm.rpsVersion() != lastRpsVersion)) {
             init();
+        }
+
+        PmServerMedia.CoinResult cr = sm.lastCoinResult();
+        if (cr != shownCoinResult) {
+            shownCoinResult = cr;
+            coinAnimStart = System.currentTimeMillis();
+            init(); // свежий результат мог изменить нужную высоту панели (см. panelH)
+        }
+        PmServerMedia.RpsResult rr = sm.lastRpsResult();
+        if (rr != shownRpsResult) {
+            shownRpsResult = rr;
+            rpsAnimStart = System.currentTimeMillis();
         }
 
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
@@ -243,19 +275,19 @@ public class PmGamesScreen extends Screen {
         int listTop = py + (mine ? 72 : 70);
 
         PmServerMedia.CoinResult last = sm.lastCoinResult();
-        if (last != null) {
+        if (isOwnCoinResult(last)) {
             boolean won = last.winner().equalsIgnoreCase(PmChatClient.selfName());
-            boolean mine2 = last.opener().equalsIgnoreCase(PmChatClient.selfName())
-                    || last.accepter().equalsIgnoreCase(PmChatClient.selfName());
-            if (mine2) {
+            drawCoinFlipAnim(context, px + PANEL_W / 2, listTop + 10);
+            long elapsed = System.currentTimeMillis() - coinAnimStart;
+            if (elapsed >= COIN_ANIM_MS) {
                 String side = Text.translatable(last.resultSide() == 0 ? "pmchat.games.heads" : "pmchat.games.tails").getString();
                 String line = side + " — " + (won
                         ? Text.translatable("pmchat.games.youwon", fmt(last.amount() * 2)).getString()
                         : Text.translatable("pmchat.games.youlost", fmt(last.amount())).getString());
                 context.drawText(textRenderer, line, px + (PANEL_W - textRenderer.getWidth(line)) / 2,
-                        listTop, won ? 0xFF6FBF8B : 0xFFE0574C, false);
-                listTop += 12;
+                        listTop + 22, won ? 0xFF6FBF8B : 0xFFE0574C, false);
             }
+            listTop += 34;
         }
 
         List<PmServerMedia.CoinBet> bets = sm.coinBets();
@@ -302,19 +334,62 @@ public class PmGamesScreen extends Screen {
         } else {
             PmServerMedia.RpsResult last = sm.lastRpsResult();
             if (last != null) {
-                boolean won = last.winner().equalsIgnoreCase(PmChatClient.selfName());
-                boolean tie = last.winner().isEmpty();
-                String you = Text.translatable(RPS_LABELS[last.yourChoice()]).getString();
-                String opp = Text.translatable(RPS_LABELS[last.oppChoice()]).getString();
-                String outcome = tie ? Text.translatable("pmchat.games.rps.tie").getString()
-                        : (won ? Text.translatable("pmchat.games.youwon", fmt(last.amount() * 2)).getString()
-                        : Text.translatable("pmchat.games.youlost", fmt(last.amount())).getString());
-                drawWrapped(context, you + " vs " + opp + " — " + outcome, y,
-                        tie ? SUBTLE : (won ? 0xFF6FBF8B : 0xFFE0574C));
+                drawRpsRevealAnim(context, y + 22, last);
             } else {
                 context.drawText(textRenderer, Text.translatable("pmchat.games.rps.hint"), px + 12, y - 12, SUBTLE, false);
             }
         }
+    }
+
+    /** Подброс монетки: монета «крутится» (пульсирует по ширине, меняя грань),
+     *  затем останавливается на выпавшей стороне — вызывается каждый кадр,
+     *  скорость гасится по мере приближения к концу COIN_ANIM_MS. */
+    private void drawCoinFlipAnim(DrawContext context, int cx, int cy) {
+        long elapsed = System.currentTimeMillis() - coinAnimStart;
+        boolean spinning = coinAnimStart >= 0 && elapsed < COIN_ANIM_MS;
+        int resultSide = shownCoinResult != null ? shownCoinResult.resultSide() : 0;
+        double t = spinning ? elapsed / (double) COIN_ANIM_MS : 1.0;
+        int face = spinning ? (int) ((elapsed / 70) % 2) : resultSide;
+        double phase = elapsed / 55.0 * (1.25 - 0.85 * t);
+        int halfW = spinning ? Math.max(2, (int) (9 * Math.abs(Math.cos(phase)))) : 9;
+        int r = 9;
+        int color = face == 0 ? 0xFFF0C34E : 0xFFC8D2DC;
+        int edge = face == 0 ? 0xFFB8892E : 0xFF8B96A0;
+        context.fill(cx - halfW, cy - r, cx + halfW, cy + r, color);
+        context.drawStrokedRectangle(cx - halfW, cy - r, Math.max(1, halfW * 2), r * 2, edge);
+        if (halfW > 5) {
+            String glyph = Text.translatable(face == 0 ? "pmchat.games.heads" : "pmchat.games.tails")
+                    .getString().substring(0, 1).toUpperCase(java.util.Locale.ROOT);
+            context.drawText(textRenderer, glyph, cx - textRenderer.getWidth(glyph) / 2, cy - 4, 0xFF2A2010, false);
+        }
+    }
+
+    /** «Камень-ножницы-бумага-раз»: обе руки быстро перебирают ходы вразнобой,
+     *  затем останавливаются на настоящих выборах игроков и показывают исход. */
+    private void drawRpsRevealAnim(DrawContext context, int y, PmServerMedia.RpsResult last) {
+        long elapsed = System.currentTimeMillis() - rpsAnimStart;
+        boolean spinning = rpsAnimStart >= 0 && elapsed < RPS_ANIM_MS;
+        int youChoice = spinning ? (int) ((elapsed / 90) % 3) : last.yourChoice();
+        int oppChoice = spinning ? (int) ((elapsed / 110 + 2) % 3) : last.oppChoice();
+        int cx = px + PANEL_W / 2, gap = 42;
+        drawHandIcon(context, cx - gap, y, youChoice);
+        drawHandIcon(context, cx + gap, y, oppChoice);
+        String vs = "vs";
+        context.drawText(textRenderer, vs, cx - textRenderer.getWidth(vs) / 2, y - 4, SUBTLE, false);
+
+        if (!spinning) {
+            boolean won = last.winner().equalsIgnoreCase(PmChatClient.selfName());
+            boolean tie = last.winner().isEmpty();
+            String outcome = tie ? Text.translatable("pmchat.games.rps.tie").getString()
+                    : (won ? Text.translatable("pmchat.games.youwon", fmt(last.amount() * 2)).getString()
+                    : Text.translatable("pmchat.games.youlost", fmt(last.amount())).getString());
+            drawWrapped(context, outcome, y + 26, tie ? SUBTLE : (won ? 0xFF6FBF8B : 0xFFE0574C));
+        }
+    }
+
+    private void drawHandIcon(DrawContext context, int cx, int y, int choice) {
+        String[] bmp = choice == 0 ? PmIcons.ROCK : choice == 1 ? PmIcons.PAPER : PmIcons.SCISSORS;
+        PmIcons.draw(context, bmp, cx - 9, y - 9, 18, 18, VALUE);
     }
 
     private void drawWrapped(DrawContext context, String line, int y) {
