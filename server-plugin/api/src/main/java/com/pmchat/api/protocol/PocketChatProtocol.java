@@ -69,6 +69,22 @@ public final class PocketChatProtocol {
     public static final byte STREAM_LIST_REQ = 0x52;
     /** {@code [UTF target][double amount]} — donate coins to a live streamer (requires Vault). */
     public static final byte STREAM_DONATE = 0x54;
+    /** {@code [double amount][byte side]} — open a coin-flip bet (side: 0 heads, 1 tails). */
+    public static final byte COIN_OPEN = 0x60;
+    /** <i>(no payload)</i> — cancel your own open coin-flip bet. */
+    public static final byte COIN_CANCEL = 0x61;
+    /** {@code [UTF opener]} — accept someone's open coin-flip bet (opposite side, same amount). */
+    public static final byte COIN_ACCEPT = 0x62;
+    /** <i>(no payload)</i> — ask for the current list of open coin-flip bets. */
+    public static final byte COIN_LIST_REQ = 0x63;
+    /** {@code [UTF target][double amount]} — challenge a player to rock-paper-scissors for a wager. */
+    public static final byte RPS_CHALLENGE = 0x64;
+    /** {@code [UTF challenger]} — accept an incoming RPS challenge. */
+    public static final byte RPS_ACCEPT = 0x65;
+    /** {@code [UTF challenger]} — decline an incoming RPS challenge. */
+    public static final byte RPS_DECLINE = 0x66;
+    /** {@code [UTF opponent][byte choice]} — submit rock(0)/paper(1)/scissors(2) for an active match. */
+    public static final byte RPS_CHOICE = 0x67;
 
     // ---------- server -> client ----------
 
@@ -104,6 +120,28 @@ public final class PocketChatProtocol {
     public static final byte STREAM_DONATE_RESULT = 0x55;
     /** {@code [UTF from][double amount]} — somebody donated coins to your stream. */
     public static final byte STREAM_DONATE_RECV = 0x56;
+    /** {@code [int n]{[UTF opener][double amount][byte side]}} — currently open coin-flip bets. */
+    public static final byte COIN_LIST = 0x68;
+    /**
+     * {@code [UTF opener][UTF accepter][byte resultSide][UTF winner][double amount][double newBalance]}
+     * — a flip resolved; sent individually to each participant ({@code newBalance} is THEIRS.)
+     */
+    public static final byte COIN_RESULT = 0x69;
+    /** {@code [UTF reason]} — your {@link #COIN_OPEN} or {@link #COIN_ACCEPT} was refused. */
+    public static final byte COIN_ERR = 0x6A;
+    /** {@code [UTF challenger][double amount]} — somebody challenged you to rock-paper-scissors. */
+    public static final byte RPS_CHALLENGED = 0x6B;
+    /** {@code [UTF opponent][double amount]} — a challenge was accepted; submit your {@link #RPS_CHOICE}. */
+    public static final byte RPS_STARTED = 0x6C;
+    /** {@code [UTF opponent]} — your challenge was declined, or the opponent went offline. */
+    public static final byte RPS_ENDED = 0x6D;
+    /**
+     * {@code [UTF opponent][byte yourChoice][byte oppChoice][UTF winner][double amount][double newBalance]}
+     * — RPS result, sent individually to each participant ({@code newBalance} is THEIRS).
+     */
+    public static final byte RPS_RESULT = 0x6E;
+    /** {@code [UTF reason]} — your {@link #RPS_CHALLENGE} or {@link #RPS_ACCEPT} was refused. */
+    public static final byte RPS_ERR = 0x6F;
 
     /**
      * A human-readable name for an opcode, for logging and debugging.
@@ -142,6 +180,22 @@ public final class PocketChatProtocol {
             case STREAM_LIST -> "STREAM_LIST";
             case STREAM_DONATE_RESULT -> "STREAM_DONATE_RESULT";
             case STREAM_DONATE_RECV -> "STREAM_DONATE_RECV";
+            case COIN_OPEN -> "COIN_OPEN";
+            case COIN_CANCEL -> "COIN_CANCEL";
+            case COIN_ACCEPT -> "COIN_ACCEPT";
+            case COIN_LIST_REQ -> "COIN_LIST_REQ";
+            case RPS_CHALLENGE -> "RPS_CHALLENGE";
+            case RPS_ACCEPT -> "RPS_ACCEPT";
+            case RPS_DECLINE -> "RPS_DECLINE";
+            case RPS_CHOICE -> "RPS_CHOICE";
+            case COIN_LIST -> "COIN_LIST";
+            case COIN_RESULT -> "COIN_RESULT";
+            case COIN_ERR -> "COIN_ERR";
+            case RPS_CHALLENGED -> "RPS_CHALLENGED";
+            case RPS_STARTED -> "RPS_STARTED";
+            case RPS_ENDED -> "RPS_ENDED";
+            case RPS_RESULT -> "RPS_RESULT";
+            case RPS_ERR -> "RPS_ERR";
             default -> String.format("UNKNOWN(0x%02X)", opcode);
         };
     }

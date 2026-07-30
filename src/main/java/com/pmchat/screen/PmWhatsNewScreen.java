@@ -39,6 +39,7 @@ public class PmWhatsNewScreen extends Screen {
             "pmchat.whatsnew.views_fix",
             "pmchat.whatsnew.video_title",
             "pmchat.whatsnew.photo_preview",
+            "pmchat.whatsnew.minigames",
     };
 
     private int BG, BORDER, LABEL, TITLE, SUBTLE, BTN_BG, BTN_HOVER, BTN_BORDER;

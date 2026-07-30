@@ -64,6 +64,9 @@ final class MediaChannel implements PluginMessageListener {
     // Streams (announcement + Vault donations)
     private final StreamManager streams;
 
+    // Minigames (coin flip, rock-paper-scissors) wagered on Vault
+    private final MinigameManager games;
+
     /** In-flight uploads, keyed by player then client-chosen transfer id. */
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<Long, Upload>> uploads = new ConcurrentHashMap<>();
     /** Active download streams per player, to cap concurrency. */
@@ -71,7 +74,7 @@ final class MediaChannel implements PluginMessageListener {
 
     MediaChannel(Plugin plugin, PocketChatApiImpl api, MediaStore store, int maxFileBytes,
                  String tellCommand, boolean pro, boolean giftsEnabled, GiftStore gifts,
-                 StreamManager streams) {
+                 StreamManager streams, MinigameManager games) {
         this.plugin = plugin;
         this.api = api;
         this.store = store;
@@ -81,6 +84,7 @@ final class MediaChannel implements PluginMessageListener {
         this.giftsEnabled = giftsEnabled;
         this.gifts = gifts;
         this.streams = streams;
+        this.games = games;
     }
 
     private static final class Upload {
@@ -116,6 +120,33 @@ final class MediaChannel implements PluginMessageListener {
         }
         activeDownloads.remove(player);
         if (streams.stop(player)) broadcastStreams();
+        forgetGames(player);
+    }
+
+    /** Refunds and drops any open bet / pending challenge / active match a leaving player had. */
+    private void forgetGames(UUID uuid) {
+        Economy eco = api.economy();
+        MinigameManager.CoinBet bet = games.coinCancel(uuid);
+        if (bet != null && eco != null) eco.depositPlayer(offlinePlayer(uuid, bet.openerName()), bet.amount());
+
+        MinigameManager.RpsChallenge challenge = games.rpsTakeChallenge(uuid);
+        // Только если СЕЙЧАС уходящий был ЦЕЛЬЮ вызова — деньги вызывающего лежат
+        // в эскроу с момента RPS_CHALLENGE, возвращаем их.
+        if (challenge != null && eco != null) {
+            eco.depositPlayer(offlinePlayer(challenge.challenger(), challenge.challengerName()), challenge.amount());
+        }
+
+        for (MinigameManager.RpsMatch m : games.rpsMatchesOf(uuid)) {
+            games.rpsRemove(m);
+            if (eco == null) continue;
+            eco.depositPlayer(offlinePlayer(m.a, m.aName), m.amount);
+            eco.depositPlayer(offlinePlayer(m.b, m.bName), m.amount);
+        }
+    }
+
+    private org.bukkit.OfflinePlayer offlinePlayer(UUID uuid, String name) {
+        Player online = plugin.getServer().getPlayer(uuid);
+        return online != null ? online : plugin.getServer().getOfflinePlayer(uuid);
     }
 
     @Override
@@ -137,6 +168,14 @@ final class MediaChannel implements PluginMessageListener {
                 case PocketChatProtocol.STREAM_STOP -> handleStreamStop(player);
                 case PocketChatProtocol.STREAM_LIST_REQ -> send(player, streamList());
                 case PocketChatProtocol.STREAM_DONATE -> handleStreamDonate(player, in);
+                case PocketChatProtocol.COIN_OPEN -> handleCoinOpen(player, in);
+                case PocketChatProtocol.COIN_CANCEL -> handleCoinCancel(player);
+                case PocketChatProtocol.COIN_ACCEPT -> handleCoinAccept(player, in);
+                case PocketChatProtocol.COIN_LIST_REQ -> send(player, coinList());
+                case PocketChatProtocol.RPS_CHALLENGE -> handleRpsChallenge(player, in);
+                case PocketChatProtocol.RPS_ACCEPT -> handleRpsAccept(player, in);
+                case PocketChatProtocol.RPS_DECLINE -> handleRpsDecline(player, in);
+                case PocketChatProtocol.RPS_CHOICE -> handleRpsChoice(player, in);
                 default -> { /* unknown opcode — ignore for forward-compat */ }
             }
         } catch (IOException e) {
@@ -619,6 +658,268 @@ final class MediaChannel implements PluginMessageListener {
     private static String fmtCoins(double d) {
         long l = (long) d;
         return d == l ? Long.toString(l) : String.format(java.util.Locale.ROOT, "%.2f", d);
+    }
+
+    // ---------- coin flip (Vault) ----------
+
+    private boolean validWager(Player player, double amount, byte errOpcode) throws IOException {
+        if (!(amount > 0d) || !Double.isFinite(amount)) {
+            send(player, wagerErr(errOpcode, "Некорректная сумма"));
+            return false;
+        }
+        Economy eco = api.economy();
+        if (eco == null) {
+            send(player, wagerErr(errOpcode, "Экономика (Vault) недоступна"));
+            return false;
+        }
+        if (eco.getBalance(player) < amount) {
+            send(player, wagerErr(errOpcode, "Недостаточно монет"));
+            return false;
+        }
+        return true;
+    }
+
+    private byte[] wagerErr(byte errOpcode, String reason) {
+        return build(errOpcode, dos -> dos.writeUTF(reason));
+    }
+
+    private void handleCoinOpen(Player player, DataInputStream in) throws IOException {
+        double amount = in.readDouble();
+        int side = in.readByte();
+        if (!validWager(player, amount, PocketChatProtocol.COIN_ERR)) return;
+        Economy eco = api.economy();
+        EconomyResponse resp = eco.withdrawPlayer(player, amount);
+        if (resp == null || !resp.transactionSuccess()) {
+            send(player, wagerErr(PocketChatProtocol.COIN_ERR,
+                    resp == null || resp.errorMessage == null ? "Ошибка оплаты" : resp.errorMessage));
+            return;
+        }
+        MinigameManager.CoinBet old = games.coinOpen(player.getUniqueId(), player.getName(), amount, side & 1);
+        if (old != null) eco.depositPlayer(player, old.amount()); // заменили свою прежнюю открытую ставку — вернули её деньги
+        broadcastCoinList();
+    }
+
+    private void handleCoinCancel(Player player) {
+        MinigameManager.CoinBet bet = games.coinCancel(player.getUniqueId());
+        if (bet == null) return;
+        Economy eco = api.economy();
+        if (eco != null) eco.depositPlayer(player, bet.amount());
+        broadcastCoinList();
+    }
+
+    private void handleCoinAccept(Player accepter, DataInputStream in) throws IOException {
+        String openerName = in.readUTF();
+        Player opener = plugin.getServer().getPlayerExact(openerName);
+        if (opener == null || opener.getUniqueId().equals(accepter.getUniqueId())) {
+            send(accepter, wagerErr(PocketChatProtocol.COIN_ERR, "Ставка недоступна"));
+            return;
+        }
+        MinigameManager.CoinBet bet = games.coinTake(opener.getUniqueId());
+        if (bet == null) {
+            send(accepter, wagerErr(PocketChatProtocol.COIN_ERR, "Ставка уже занята или отменена"));
+            broadcastCoinList();
+            return;
+        }
+        Economy eco = api.economy();
+        if (eco == null) {
+            games.coinOpen(opener.getUniqueId(), opener.getName(), bet.amount(), bet.side()); // возвращаем в список
+            send(accepter, wagerErr(PocketChatProtocol.COIN_ERR, "Экономика (Vault) недоступна"));
+            return;
+        }
+        if (eco.getBalance(accepter) < bet.amount()) {
+            games.coinOpen(opener.getUniqueId(), opener.getName(), bet.amount(), bet.side());
+            send(accepter, wagerErr(PocketChatProtocol.COIN_ERR, "Недостаточно монет"));
+            return;
+        }
+        EconomyResponse resp = eco.withdrawPlayer(accepter, bet.amount());
+        if (resp == null || !resp.transactionSuccess()) {
+            games.coinOpen(opener.getUniqueId(), opener.getName(), bet.amount(), bet.side());
+            send(accepter, wagerErr(PocketChatProtocol.COIN_ERR,
+                    resp == null || resp.errorMessage == null ? "Ошибка оплаты" : resp.errorMessage));
+            return;
+        }
+        // Оба вклада уже списаны — разыгрываем и отдаём выигрыш целиком.
+        int resultSide = java.util.concurrent.ThreadLocalRandom.current().nextInt(2);
+        boolean openerWins = resultSide == bet.side();
+        Player winner = openerWins ? opener : accepter;
+        double pot = bet.amount() * 2;
+        eco.depositPlayer(winner, pot);
+        double openerBal = eco.getBalance(opener), accepterBal = eco.getBalance(accepter);
+        send(opener, build(PocketChatProtocol.COIN_RESULT, dos -> {
+            dos.writeUTF(opener.getName());
+            dos.writeUTF(accepter.getName());
+            dos.writeByte(resultSide);
+            dos.writeUTF(winner.getName());
+            dos.writeDouble(bet.amount());
+            dos.writeDouble(openerBal);
+        }));
+        send(accepter, build(PocketChatProtocol.COIN_RESULT, dos -> {
+            dos.writeUTF(opener.getName());
+            dos.writeUTF(accepter.getName());
+            dos.writeByte(resultSide);
+            dos.writeUTF(winner.getName());
+            dos.writeDouble(bet.amount());
+            dos.writeDouble(accepterBal);
+        }));
+        broadcastCoinList();
+    }
+
+    private byte[] coinList() {
+        List<MinigameManager.CoinBet> list = games.coinList();
+        return build(PocketChatProtocol.COIN_LIST, dos -> {
+            dos.writeInt(list.size());
+            for (MinigameManager.CoinBet b : list) {
+                dos.writeUTF(b.openerName());
+                dos.writeDouble(b.amount());
+                dos.writeByte(b.side());
+            }
+        });
+    }
+
+    private void broadcastCoinList() {
+        byte[] msg = coinList();
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
+            if (p.getListeningPluginChannels().contains(PocketChat.CHANNEL)) send(p, msg);
+        }
+    }
+
+    // ---------- rock-paper-scissors (Vault) ----------
+
+    private void handleRpsChallenge(Player challenger, DataInputStream in) throws IOException {
+        String targetName = in.readUTF();
+        double amount = in.readDouble();
+        Player target = plugin.getServer().getPlayerExact(targetName);
+        if (target == null || target.getUniqueId().equals(challenger.getUniqueId())) {
+            send(challenger, wagerErr(PocketChatProtocol.RPS_ERR, "Игрок недоступен"));
+            return;
+        }
+        if (!validWager(challenger, amount, PocketChatProtocol.RPS_ERR)) return;
+        Economy eco = api.economy();
+        EconomyResponse resp = eco.withdrawPlayer(challenger, amount);
+        if (resp == null || !resp.transactionSuccess()) {
+            send(challenger, wagerErr(PocketChatProtocol.RPS_ERR,
+                    resp == null || resp.errorMessage == null ? "Ошибка оплаты" : resp.errorMessage));
+            return;
+        }
+        MinigameManager.RpsChallenge old = games.rpsChallenge(target.getUniqueId(),
+                challenger.getUniqueId(), challenger.getName(), amount);
+        if (old != null) {
+            // У цели уже был другой непринятый вызов — возвращаем деньги ЕГО автору.
+            eco.depositPlayer(offlinePlayer(old.challenger(), old.challengerName()), old.amount());
+        }
+        if (target.getListeningPluginChannels().contains(PocketChat.CHANNEL)) {
+            send(target, build(PocketChatProtocol.RPS_CHALLENGED, dos -> {
+                dos.writeUTF(challenger.getName());
+                dos.writeDouble(amount);
+            }));
+        }
+    }
+
+    private void handleRpsAccept(Player target, DataInputStream in) throws IOException {
+        String challengerName = in.readUTF();
+        Player challenger = plugin.getServer().getPlayerExact(challengerName);
+        MinigameManager.RpsChallenge ch = games.rpsTakeChallenge(target.getUniqueId());
+        if (challenger == null || ch == null || !ch.challenger().equals(challenger.getUniqueId())) {
+            send(target, wagerErr(PocketChatProtocol.RPS_ERR, "Вызов уже недействителен"));
+            return;
+        }
+        Economy eco = api.economy();
+        if (eco == null) {
+            send(target, wagerErr(PocketChatProtocol.RPS_ERR, "Экономика (Vault) недоступна"));
+            return;
+        }
+        if (eco.getBalance(target) < ch.amount()) {
+            eco.depositPlayer(challenger, ch.amount());
+            send(target, wagerErr(PocketChatProtocol.RPS_ERR, "Недостаточно монет"));
+            return;
+        }
+        EconomyResponse resp = eco.withdrawPlayer(target, ch.amount());
+        if (resp == null || !resp.transactionSuccess()) {
+            eco.depositPlayer(challenger, ch.amount());
+            send(target, wagerErr(PocketChatProtocol.RPS_ERR,
+                    resp == null || resp.errorMessage == null ? "Ошибка оплаты" : resp.errorMessage));
+            return;
+        }
+        games.rpsStart(challenger.getUniqueId(), challenger.getName(), target.getUniqueId(), target.getName(), ch.amount());
+        sendRpsStarted(challenger, target.getName(), ch.amount());
+        sendRpsStarted(target, challenger.getName(), ch.amount());
+    }
+
+    private void sendRpsStarted(Player to, String opponentName, double amount) {
+        if (!to.getListeningPluginChannels().contains(PocketChat.CHANNEL)) return;
+        send(to, build(PocketChatProtocol.RPS_STARTED, dos -> {
+            dos.writeUTF(opponentName);
+            dos.writeDouble(amount);
+        }));
+    }
+
+    private void handleRpsDecline(Player target, DataInputStream in) throws IOException {
+        String challengerName = in.readUTF();
+        MinigameManager.RpsChallenge ch = games.rpsTakeChallenge(target.getUniqueId());
+        if (ch == null || !ch.challengerName().equalsIgnoreCase(challengerName)) return;
+        Economy eco = api.economy();
+        if (eco != null) eco.depositPlayer(offlinePlayer(ch.challenger(), ch.challengerName()), ch.amount());
+        Player challenger = plugin.getServer().getPlayer(ch.challenger());
+        if (challenger != null && challenger.getListeningPluginChannels().contains(PocketChat.CHANNEL)) {
+            send(challenger, build(PocketChatProtocol.RPS_ENDED, dos -> dos.writeUTF(target.getName())));
+        }
+    }
+
+    private void handleRpsChoice(Player player, DataInputStream in) throws IOException {
+        String opponentName = in.readUTF();
+        int choice = Math.floorMod((int) in.readByte(), 3);
+        Player opponent = plugin.getServer().getPlayerExact(opponentName);
+        if (opponent == null) return;
+        MinigameManager.RpsMatch m = games.rpsMatchOf(player.getUniqueId(), opponent.getUniqueId());
+        if (m == null) return;
+        if (player.getUniqueId().equals(m.a)) m.aChoice = choice;
+        else m.bChoice = choice;
+        if (m.aChoice == null || m.bChoice == null) return; // ждём второго игрока
+
+        games.rpsEnd(m.a, m.b);
+        // (a-b+3)%3: 0 — ничья, 1 — a бьёт b (a победил), 2 — b бьёт a
+        int rel = (m.aChoice - m.bChoice + 3) % 3;
+        Economy eco = api.economy();
+        Player pa = plugin.getServer().getPlayer(m.a);
+        Player pb = plugin.getServer().getPlayer(m.b);
+        String winnerName;
+        if (rel == 0) {
+            winnerName = "";
+            if (eco != null) {
+                eco.depositPlayer(offlinePlayer(m.a, m.aName), m.amount);
+                eco.depositPlayer(offlinePlayer(m.b, m.bName), m.amount);
+            }
+        } else if (rel == 1) {
+            winnerName = m.aName;
+            if (eco != null) eco.depositPlayer(offlinePlayer(m.a, m.aName), m.amount * 2);
+        } else {
+            winnerName = m.bName;
+            if (eco != null) eco.depositPlayer(offlinePlayer(m.b, m.bName), m.amount * 2);
+        }
+        if (pa != null && pa.getListeningPluginChannels().contains(PocketChat.CHANNEL)) {
+            int fa = m.aChoice, fb = m.bChoice;
+            double bal = eco == null ? 0d : eco.getBalance(pa);
+            send(pa, build(PocketChatProtocol.RPS_RESULT, dos -> {
+                dos.writeUTF(m.bName);
+                dos.writeByte(fa);
+                dos.writeByte(fb);
+                dos.writeUTF(winnerName);
+                dos.writeDouble(m.amount);
+                dos.writeDouble(bal);
+            }));
+        }
+        if (pb != null && pb.getListeningPluginChannels().contains(PocketChat.CHANNEL)) {
+            int fa = m.aChoice, fb = m.bChoice;
+            double bal = eco == null ? 0d : eco.getBalance(pb);
+            send(pb, build(PocketChatProtocol.RPS_RESULT, dos -> {
+                dos.writeUTF(m.aName);
+                dos.writeByte(fb);
+                dos.writeByte(fa);
+                dos.writeUTF(winnerName);
+                dos.writeDouble(m.amount);
+                dos.writeDouble(bal);
+            }));
+        }
     }
 
     private static String clip(String s, int max) {

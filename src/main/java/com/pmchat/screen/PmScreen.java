@@ -1204,9 +1204,13 @@ public class PmScreen extends Screen {
                 com.pmchat.client.PmServerMedia.get().isSelfStreaming() ? 0xFFE07A6A : 0xFF9CC4DC,
                 "pmchat.tip.streams", btn ->
                         MinecraftClient.getInstance().setScreen(new PmStreamsScreen(this))));
+        // Игры: подброс монетки + камень-ножницы-бумага на монеты Vault
+        addDrawableChild(icon(px + 106, py + PANEL_H - 19, 16, 13, PmIcons.DICE, 0xFFE0B040,
+                "pmchat.tip.games", btn ->
+                        MinecraftClient.getInstance().setScreen(new PmGamesScreen(this))));
         // Discord сервера — открыть приглашение, если задано в pmchat.json (discordUrl)
         if (config.discordUrl != null && !config.discordUrl.isBlank()) {
-            addDrawableChild(icon(px + 106, py + PANEL_H - 19, 16, 13, PmIcons.DISCORD, 0xFF8FA7E0,
+            addDrawableChild(icon(px + 126, py + PANEL_H - 19, 16, 13, PmIcons.DISCORD, 0xFF8FA7E0,
                     "pmchat.tip.discord", btn -> PmChatClient.openDiscord()));
         }
 
