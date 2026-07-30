@@ -49,7 +49,7 @@ public class PmSettingsScreen extends Screen {
         applyTheme();
         optionLabels.clear();
         clearChildren();
-        int rows = 23;
+        int rows = 24;
         panelH = 26 + rows * ROW_H + 28;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
@@ -196,6 +196,11 @@ public class PmSettingsScreen extends Screen {
                 () -> Text.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),
                 () -> PmPalettes.BADGE[Math.floorMod(config.badgeColor, PmPalettes.BADGE.length)],
                 () -> config.badgeColor = (config.badgeColor + 1) % PmPalettes.BADGE.length);
+
+        y = addOption(y, "pmchat.set.contactstar",
+                () -> Text.literal("★ " + (config.contactStarColor % PmPalettes.CONTACT_STAR.length + 1)),
+                () -> PmPalettes.CONTACT_STAR[Math.floorMod(config.contactStarColor, PmPalettes.CONTACT_STAR.length)],
+                () -> config.contactStarColor = (config.contactStarColor + 1) % PmPalettes.CONTACT_STAR.length);
 
         // Отдельный экран фильтров чата («No Global Chat»)
         y = addOption(y, "pmchat.filters.open",

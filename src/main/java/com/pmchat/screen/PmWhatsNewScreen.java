@@ -28,6 +28,10 @@ public class PmWhatsNewScreen extends Screen {
 
     /** Ключи пунктов «что нового» этого релиза (порядок = порядок показа). */
     private static final String[] ITEMS = {
+            "pmchat.whatsnew.no_discord_sound",
+            "pmchat.whatsnew.video_preview",
+            "pmchat.whatsnew.broadcast_author",
+            "pmchat.whatsnew.contact_star",
             "pmchat.whatsnew.streams",
             "pmchat.whatsnew.photoedit_pro",
             "pmchat.whatsnew.discord_btn",

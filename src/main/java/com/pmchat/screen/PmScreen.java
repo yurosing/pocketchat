@@ -504,6 +504,7 @@ public class PmScreen extends Screen {
     private final List<Object[]> shotRects = new ArrayList<>(); // x,y,w,h,path,isSticker
     private final List<Object[]> bubbleRects = new ArrayList<>(); // x,y,w,h,msg
     private final List<Object[]> linkPreviewRects = new ArrayList<>(); // x,y,w,h,entry — превью фото по ссылке
+    private final List<Object[]> videoPreviewRects = new ArrayList<>(); // x,y,w,h,youtubeUrl — превью видео по ссылке
     private final List<Object[]> spoilerRects = new ArrayList<>(); // x,y,w,h,msg — клик открывает спойлер
     private final List<Object[]> warnBtnRects = new ArrayList<>(); // x,y,w,h,nick (6.8 кнопка преда)
     private final List<Object[]> pollOptRects = new ArrayList<>(); // x,y,w,h,msg,optIndex
@@ -530,6 +531,9 @@ public class PmScreen extends Screen {
     private boolean videoNeedsCookies = false;      // провал из-за требования входа YouTube
     private int videoSeq = 0;           // защита от «просроченных» фоновых резолвов
     private int[] videoFallbackRect; // «Открыть в браузере», если VLC не смог показать
+    private boolean videoDescOpen = false;   // показана ли панель описания ролика
+    private boolean videoDescLoading = false; // идёт ли сейчас фоновая подгрузка описания
+    private int[] videoDescBtnRect;  // кнопка «ⓘ описание»
     private boolean videoDragSeek = false;
     private boolean videoDragVolume = false;
     private static final float[] VIDEO_RATES = {0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f};
@@ -1372,11 +1376,13 @@ public class PmScreen extends Screen {
             // В контакты / из контактов (личный диалог)
             if (selected != null && !isFeedTab()) {
                 boolean isC = config.isContact(selected);
+                int starColor = com.pmchat.client.PmPalettes.CONTACT_STAR[
+                        Math.floorMod(config.contactStarColor, com.pmchat.client.PmPalettes.CONTACT_STAR.length)];
                 addDrawableChild(FlatButton.centered(textRenderer,
                         px + LEFT_W + 10, py + PANEL_H - 44, PANEL_W - LEFT_W - 20, 16,
                         Text.translatable(isC ? "pmchat.contact.remove" : "pmchat.contact.add"),
                         isC ? 0xFF5A4A1A : WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
-                        0xFFF0C34E, btn -> {
+                        starColor, btn -> {
                             config.toggleContact(selected);
                             rebuild();
                         }));
@@ -2285,6 +2291,8 @@ public class PmScreen extends Screen {
         videoUrl = null;
         videoFallbackRect = null;
         videoBrowserRect = null;
+        videoDescOpen = false;
+        videoDescLoading = false;
     }
 
     /**
@@ -2327,6 +2335,21 @@ public class PmScreen extends Screen {
                 : (url != null ? url.replaceFirst("^https?://(www\\.)?", "") : "");
         if (title.length() > 64) title = title.substring(0, 61) + "…";
         context.drawText(textRenderer, "▶ " + title, 14, 13, 0xFF9CC4DC, false);
+
+        // Описание ролика (YouTube) — значок рядом с заголовком, подгружаем лениво
+        videoDescBtnRect = null;
+        boolean isYt = url != null && com.pmchat.client.PmYouTube.isYouTube(url);
+        if (isYt) {
+            int dbx = 14 + textRenderer.getWidth("▶ " + title) + 6;
+            int dby = 6;
+            videoDescBtnRect = new int[]{dbx, dby, 14, 14};
+            boolean hovDesc = inRect(mouseX, mouseY, videoDescBtnRect);
+            PmIcons.draw(context, PmIcons.INFO, dbx, dby, 14, 14,
+                    videoDescOpen ? 0xFFF0C34E : (hovDesc ? 0xFFEDF3F0 : 0xFF8FA6B4));
+        }
+        if (videoDescOpen) {
+            renderVideoDescription(context, url);
+        }
 
         int closeSz = 20;
         int closeX = width - 12 - closeSz, closeY = 9;
@@ -2514,6 +2537,42 @@ public class PmScreen extends Screen {
                 context.fill(tx, cy - 22, tx + tw, cy - 10, 0xF0223530);
                 context.drawText(textRenderer, tip, tx + 4, cy - 20, 0xFFEDF3F0, false);
             }
+        }
+    }
+
+    /** Панель описания ролика поверх плеера — открывается значком «ⓘ» у заголовка. */
+    private void renderVideoDescription(DrawContext context, String url) {
+        com.pmchat.client.PmMedia media = com.pmchat.client.PmMedia.get();
+        String desc = media.description();
+        int pw = Math.min(420, width - 40);
+        int px0 = (width - pw) / 2;
+        int py0 = 34;
+
+        String body;
+        if (videoDescLoading) {
+            body = Text.translatable("pmchat.video.desc.loading").getString();
+        } else if (desc == null) {
+            body = Text.translatable("pmchat.video.desc.loading").getString();
+        } else if (desc.isBlank()) {
+            body = Text.translatable("pmchat.video.desc.empty").getString();
+        } else {
+            body = desc;
+        }
+        List<String> lines = wrapText(body, pw - 16);
+        int maxLines = 12;
+        boolean truncated = lines.size() > maxLines;
+        if (truncated) lines = new ArrayList<>(lines.subList(0, maxLines));
+        int ph = 10 + lines.size() * 11 + (truncated ? 10 : 0) + 6;
+
+        context.fill(px0, py0, px0 + pw, py0 + ph, 0xE8101A16);
+        context.drawStrokedRectangle(px0, py0, pw, ph, 0xFF2A4A5C);
+        int ty = py0 + 6;
+        for (String line : lines) {
+            context.drawText(textRenderer, line, px0 + 8, ty, 0xFFCFE0DA, false);
+            ty += 11;
+        }
+        if (truncated) {
+            context.drawText(textRenderer, "…", px0 + 8, ty, 0xFF8FA6B4, false);
         }
     }
 
@@ -3159,7 +3218,9 @@ public class PmScreen extends Screen {
             List<PmMessage> feed = PmChatClient.getBroadcastFeed(b.id);
             if (!feed.isEmpty()) {
                 PmMessage last = feed.get(feed.size() - 1);
-                context.drawText(textRenderer, trim(PmChatClient.previewOf(last.text != null ? last.text : ""), LEFT_W - 14),
+                String preview = (!last.out && last.sender != null ? last.sender + ": " : "")
+                        + PmChatClient.previewOf(last.text != null ? last.text : "");
+                context.drawText(textRenderer, trim(preview, LEFT_W - 14),
                         px + 7, y + 14, PREVIEW_TEXT, false);
             } else {
                 int subs = (b.owner != null && b.owner.equalsIgnoreCase(PmChatClient.selfNamePublic()))
@@ -3219,7 +3280,9 @@ public class PmScreen extends Screen {
             boolean contact = config.isContact(name);
             int nameX = px + 23;
             if (contact) {
-                context.drawText(textRenderer, "★", nameX, y + 3, 0xFFF0C34E, false);
+                int starColor = com.pmchat.client.PmPalettes.CONTACT_STAR[
+                        Math.floorMod(config.contactStarColor, com.pmchat.client.PmPalettes.CONTACT_STAR.length)];
+                context.drawText(textRenderer, "★", nameX, y + 3, starColor, false);
                 nameX += 8;
             }
             int nameMax = LEFT_W - (nameX - px) - 7 - (unread > 0 ? 16 : 0);
@@ -3466,6 +3529,7 @@ public class PmScreen extends Screen {
         // Пузыри снизу вверх (со scissor — ничего не вылезает за область чата)
         bubbleRects.clear();
         linkPreviewRects.clear();
+        videoPreviewRects.clear();
         spoilerRects.clear();
         warnBtnRects.clear();
         pinOffsets.clear();
@@ -3489,6 +3553,13 @@ public class PmScreen extends Screen {
             PmImages.Entry preview = previewUrl != null ? PmImages.getUrl(previewUrl) : null;
             boolean previewReady = preview != null && preview.state == PmImages.State.READY
                     && preview.currentTexture() != null && preview.width > 0;
+            // Превью видео по YouTube-ссылке — та же идея: ссылка в тексте
+            // сверху, миниатюра снизу; клик открывает встроенный плеер.
+            String youtubeUrl = previewUrl == null ? youtubeUrlOf(msg) : null;
+            String ytThumbUrl = youtubeUrl != null ? com.pmchat.client.PmYouTube.thumbnailUrl(youtubeUrl) : null;
+            PmImages.Entry ytPreview = ytThumbUrl != null ? PmImages.getUrl(ytThumbUrl) : null;
+            boolean ytPreviewReady = ytPreview != null && ytPreview.state == PmImages.State.READY
+                    && ytPreview.currentTexture() != null && ytPreview.width > 0;
 
             List<String> lines;
             int textW;
@@ -3550,6 +3621,13 @@ public class PmScreen extends Screen {
                 previewDims = previewSize(preview);
                 bh += previewDims[1] + 4;
                 textW = Math.max(textW, previewDims[0]);
+            }
+            // Резервируем место под миниатюру YouTube-видео (под текстом)
+            int[] ytPreviewDims = null;
+            if (ytPreviewReady) {
+                ytPreviewDims = previewSize(ytPreview);
+                bh += ytPreviewDims[1] + 4;
+                textW = Math.max(textW, ytPreviewDims[0]);
             }
             // Галочки прочтения у исходящих (в общем чате не показываем)
             if (msg.out && !isGlobal) textW += 12;
@@ -3791,6 +3869,25 @@ public class PmScreen extends Screen {
                     context.drawStrokedRectangle(ix, iy, previewDims[0], previewDims[1],
                             applyAlpha(0xFF2A4A5C, alpha));
                     linkPreviewRects.add(new Object[]{ix, iy, previewDims[0], previewDims[1], preview});
+                }
+                // Миниатюра YouTube-видео — под текстом, ссылка (сама строка) сверху;
+                // клик открывает встроенный плеер, как по клику на ссылку.
+                if (ytPreviewReady && ytPreviewDims != null) {
+                    int ix = bx + dx + 6, iy = ty + 2;
+                    context.drawTexture(RenderPipelines.GUI_TEXTURED, ytPreview.currentTexture(), ix, iy,
+                            0f, 0f, ytPreviewDims[0], ytPreviewDims[1], ytPreview.width, ytPreview.height,
+                            ytPreview.width, ytPreview.height);
+                    context.drawStrokedRectangle(ix, iy, ytPreviewDims[0], ytPreviewDims[1],
+                            applyAlpha(0xFF2A4A5C, alpha));
+                    int playSz = Math.min(20, Math.min(ytPreviewDims[0], ytPreviewDims[1]) - 4);
+                    if (playSz > 6) {
+                        int pcx = ix + ytPreviewDims[0] / 2 - playSz / 2, pcy = iy + ytPreviewDims[1] / 2 - playSz / 2;
+                        context.fill(pcx - 2, pcy - 2, pcx + playSz + 2, pcy + playSz + 2,
+                                applyAlpha(0x99000000, alpha));
+                        PmIcons.draw(context, PmIcons.PLAY, pcx, pcy, playSz, playSz,
+                                applyAlpha(0xFFEDF3F0, alpha));
+                    }
+                    videoPreviewRects.add(new Object[]{ix, iy, ytPreviewDims[0], ytPreviewDims[1], youtubeUrl});
                 }
             }
 
@@ -4184,6 +4281,23 @@ public class PmScreen extends Screen {
         return m.find() ? m.group() : null;
     }
 
+    private static final Pattern LINK_PATTERN = Pattern.compile("https?://\\S+");
+
+    /**
+     * Первая ссылка на YouTube-видео в тексте обычного сообщения — её
+     * миниатюру показываем предпросмотром под текстом (ссылка сверху, как
+     * саму строку сообщения, превью снизу — так же, как с картинками).
+     */
+    static String youtubeUrlOf(PmMessage msg) {
+        if (msg.text == null || msg.money > 0) return null;
+        if (imageIdOf(msg) != null || com.pmchat.client.PmWire.isStructured(msg.text)) return null;
+        Matcher m = LINK_PATTERN.matcher(msg.text);
+        while (m.find()) {
+            if (com.pmchat.client.PmYouTube.isYouTube(m.group())) return m.group();
+        }
+        return null;
+    }
+
     /** Размер превью фото по ссылке: вписываем в 150×100. */
     private int[] previewSize(PmImages.Entry img) {
         if (img.state != PmImages.State.READY || img.width <= 0 || img.height <= 0) {
@@ -4551,6 +4665,26 @@ public class PmScreen extends Screen {
             }
             if (inRect(mx, my, videoMinRect)) {
                 media.setMinimized(true);
+                return true;
+            }
+            if (inRect(mx, my, videoDescBtnRect)) {
+                videoDescOpen = !videoDescOpen;
+                if (videoDescOpen && media.description() == null && !videoDescLoading
+                        && link != null && com.pmchat.client.PmYouTube.isYouTube(link)) {
+                    videoDescLoading = true;
+                    int seq = videoSeq;
+                    Thread t = new Thread(() -> {
+                        String desc = com.pmchat.client.PmYtDlp.fetchDescription(link);
+                        MinecraftClient.getInstance().execute(() -> {
+                            if (seq == videoSeq) {
+                                media.setDescription(desc != null ? desc : "");
+                                videoDescLoading = false;
+                            }
+                        });
+                    }, "pmchat-ytdesc");
+                    t.setDaemon(true);
+                    t.start();
+                }
                 return true;
             }
             if (vsession != null) {
@@ -4957,6 +5091,13 @@ public class PmScreen extends Screen {
                 int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
                 if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
                     fullscreenImg = (PmImages.Entry) r[4];
+                    return true;
+                }
+            }
+            for (Object[] r : videoPreviewRects) {
+                int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
+                if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
+                    openVideoPlayer((String) r[4]);
                     return true;
                 }
             }

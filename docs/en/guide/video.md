@@ -25,8 +25,14 @@ back to the old behavior — opening the video externally, nothing breaks.
 ## A YouTube link
 
 Just paste a video link (`youtube.com/...` or `youtu.be/...`) as a regular
-message and send it. Clicking the link in the chat opens it in the built-in
-player, same as your own video.
+message and send it. A thumbnail shows up below the message text (just like
+the photo-link preview) — clicking it, or the link itself, opens the video in
+the built-in player.
+
+Next to the title in the player there's a description icon: it opens a panel
+with the video's full description, fetched on demand through `yt-dlp` (YouTube
+doesn't include the description in the quick oEmbed request the mod uses for
+the title).
 
 ::: tip How it works
 You can't hand a YouTube link straight to VLC anymore — YouTube locks its

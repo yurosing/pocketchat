@@ -477,8 +477,11 @@ public class PmChatClient implements ClientModInitializer {
         if (handleChannelLine(plain)) {
             return 0; // строку в ванильном чате не прячем
         }
-        // Общий чат: копим у себя, но строку из ванильного чата никогда не прячем
-        if (global != null) {
+        // Общий чат: копим у себя, но строку из ванильного чата никогда не прячем.
+        // Discord-строки исключаем — иначе они попадали и в общий чат мода, а
+        // значит озвучивались TTS и пинговали упоминания звуком наравне с игроками.
+        boolean isDiscordLine = discord != null && discord.matcher(plain).find();
+        if (global != null && !isDiscordLine) {
             Matcher m = global.matcher(plain);
             if (m.find()) {
                 addGlobal(m.group(1), m.group(2).trim());
@@ -1084,7 +1087,7 @@ public class PmChatClient implements ClientModInitializer {
         } else {
             broadcastUnread.merge(id, 1, Integer::sum);
             if (!config.dnd && !config.isMutedThread(BCAST_PREFIX + id)) {
-                client.getToastManager().add(new PmToast("◈ " + b.name, previewOf(text)));
+                client.getToastManager().add(new PmToast("◈ " + b.name + " · " + sender, previewOf(text)));
                 playNotifySound(client);
             }
         }

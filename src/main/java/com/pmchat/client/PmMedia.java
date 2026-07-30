@@ -37,6 +37,7 @@ public final class PmMedia {
 
     private PmVlc.Session session;
     private String title = "";
+    private String description;          // описание ролика (YouTube), подгружается лениво по запросу
     private String sourceUrl;            // для видео — исходная ссылка (кнопка «в браузере»)
     private boolean music;               // true — играет плейлист mp3
     private boolean minimized;           // окошко свёрнуто (видео); музыка всегда «в окошке»
@@ -66,6 +67,7 @@ public final class PmMedia {
         this.audioFile = audioFile;
         this.sourceUrl = sourceUrl;
         this.title = title != null ? title : "";
+        this.description = null;
         this.music = false;
         this.minimized = false;
         applyVolume();
@@ -237,6 +239,7 @@ public final class PmMedia {
         trackIndex = -1;
         playlistName = "";
         title = "";
+        description = null;
         sourceUrl = null;
         music = false;
         minimized = false;
@@ -268,6 +271,16 @@ public final class PmMedia {
 
     public String title() {
         return title;
+    }
+
+    /** Описание ролика (YouTube) — null, пока не подгружено или недоступно. */
+    public String description() {
+        return description;
+    }
+
+    /** Задать описание после ленивой подгрузки (звать на клиентском потоке). */
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public String sourceUrl() {

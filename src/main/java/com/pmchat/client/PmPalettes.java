@@ -38,6 +38,12 @@ public final class PmPalettes {
             0xFF4C8A66, 0xFFC0453A, 0xFF3A6FB0, 0xFFC08A2D, 0xFF7A5AB0, 0xFF5A6A74
     };
 
+    /** Цвета звёздочки контакта в списке диалогов (по умолчанию — золотая). */
+    public static final int[] CONTACT_STAR = {
+            0xFFF0C34E, 0xFFE07A6A, 0xFF6FBF8B, 0xFF8FC8F0,
+            0xFFD0A8E8, 0xFFEDF3F0, 0xFFF0908A, 0xFFA0D8E8
+    };
+
     private PmPalettes() {
     }
 

@@ -100,6 +100,9 @@ public class PmConfig {
     /** Индекс цвета бейджа непрочитанных. */
     public int badgeColor = 0;
 
+    /** Индекс цвета звёздочки контакта в списке диалогов. */
+    public int contactStarColor = 0;
+
     /** Звук уведомления: 0 опыт, 1 колокольчик, 2 предмет, 3 выкл. */
     public int notifySound = 0;
 

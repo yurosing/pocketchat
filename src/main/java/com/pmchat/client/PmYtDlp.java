@@ -279,6 +279,51 @@ public final class PmYtDlp {
         return lastNeededSignIn;
     }
 
+    private static final Pattern DESCRIPTION_FIELD = Pattern.compile(
+            "\"description\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+
+    /**
+     * Описание ролика через yt-dlp (метаданные, без скачивания видео) — YouTube
+     * не отдаёт описание через oEmbed, только заголовок. Звать с фонового
+     * потока — блокирует; null, если не удалось (нет yt-dlp / ролик недоступен).
+     */
+    public static String fetchDescription(String youtubeUrl) {
+        File bin = ensureBinary(st -> {
+        });
+        if (bin == null) return null;
+        List<String> cmd = new ArrayList<>();
+        cmd.add(bin.getAbsolutePath());
+        cmd.add("--no-playlist");
+        cmd.add("--skip-download");
+        cmd.add("-j");
+        cmd.add("--extractor-args");
+        cmd.add(EXTRACTOR_ARGS);
+        cmd.add(youtubeUrl);
+        try {
+            ProcessBuilder pb = new ProcessBuilder(cmd);
+            pb.redirectErrorStream(false);
+            Process proc = pb.start();
+            StringBuilder out = new StringBuilder();
+            try (BufferedReader r = new BufferedReader(
+                    new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = r.readLine()) != null) out.append(line).append('\n');
+            }
+            boolean done = proc.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
+            if (!done) {
+                proc.destroyForcibly();
+                return null;
+            }
+            Matcher m = DESCRIPTION_FIELD.matcher(out);
+            if (!m.find()) return null;
+            String desc = PmYouTube.unescapeJson(m.group(1)).trim();
+            return desc.isEmpty() ? null : desc;
+        } catch (Exception e) {
+            LOGGER.debug("yt-dlp description fetch failed: {}", e.toString());
+            return null;
+        }
+    }
+
     /** Находит файл вида {@code <prefix>.<ext>} (напр. yt-<id>-v.mp4) в папке. */
     private static File findProduced(String prefix) {
         File[] files = binDir().listFiles((d, name) ->

@@ -38,6 +38,16 @@ public final class PmYouTube {
     }
 
     /**
+     * Прямая ссылка на превью-картинку ролика (стабильный публичный URL, без
+     * ключей и запросов) — используем для предпросмотра под сообщением, как
+     * в Телеграме. null, если это не YouTube-ссылка.
+     */
+    public static String thumbnailUrl(String url) {
+        String id = videoId(url);
+        return id == null ? null : "https://img.youtube.com/vi/" + id + "/hqdefault.jpg";
+    }
+
+    /**
      * Название ролика через публичный oEmbed-эндпоинт YouTube (быстрый HTTP-запрос,
      * без ключа и без входа). Звать с фонового потока — блокирует. null, если не
      * удалось (нет сети / ролик приватный).
@@ -68,7 +78,7 @@ public final class PmYouTube {
     }
 
     /** Минимальная распаковка экранирования в JSON-строке (кавычки, слэши, переводы строк, unicode). */
-    private static String unescapeJson(String s) {
+    static String unescapeJson(String s) {
         StringBuilder sb = new StringBuilder(s.length());
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
