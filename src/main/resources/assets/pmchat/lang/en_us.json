@@ -284,6 +284,7 @@
   "pmchat.whatsnew.video_title": "The video's title is now shown at the top of the player while watching.",
   "pmchat.whatsnew.photo_preview": "Photos behind a link can be viewed right in the chat — as a preview under the message, like Telegram.",
   "pmchat.whatsnew.minigames": "New Games tab: coin flip (heads/tails) and rock-paper-scissors wagers against other players — requires the server plugin.",
+  "pmchat.whatsnew.minigames_anim": "The coin now spins before showing the result, and rock-paper-scissors reveals both players' moves through an icon-based animation.",
   "pmchat.whatsnew.secret_removed": "Secret chats have been removed entirely.",
   "pmchat.call.incoming.toast": "Calling you — the voice chat invite is on its way",
   "pmchat.call.title": "Call",
