@@ -269,7 +269,6 @@
   "pmchat.games.rps.playing": "Игра с %s на ставку %s",
   "pmchat.games.rps.waiting": "Ждём выбор соперника…",
   "pmchat.games.rps.tie": "Ничья, ставки возвращены",
-  "pmchat.games.rps.hint": "Последний результат",
   "pmchat.whatsnew.title": "Что нового",
   "pmchat.whatsnew.version": "Версия %s",
   "pmchat.whatsnew.no_discord_sound": "Discord-сообщения больше не дублируются в общий чат мода — без лишней озвучки TTS и звуковых пингов.",

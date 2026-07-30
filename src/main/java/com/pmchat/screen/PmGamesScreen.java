@@ -335,8 +335,6 @@ public class PmGamesScreen extends Screen {
             PmServerMedia.RpsResult last = sm.lastRpsResult();
             if (last != null) {
                 drawRpsRevealAnim(context, y + 22, last);
-            } else {
-                context.drawText(textRenderer, Text.translatable("pmchat.games.rps.hint"), px + 12, y - 12, SUBTLE, false);
             }
         }
     }

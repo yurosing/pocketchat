@@ -43,6 +43,12 @@ public class PmChatClient implements ClientModInitializer {
     private static Pattern global;
     private static Pattern discord;
     private static float lastHealth = 20f;
+    // Гасим гонку: буква "J", напечатанная в конце сообщения перед Enter,
+    // регистрируется как нажатие хоткея ещё ДО того, как ChatScreen закроется
+    // в этом же тике — без окна подавления мессенджер открывался бы сразу
+    // после отправки сообщения, если оно оканчивалось на "j".
+    private static boolean chatScreenOpenLastTick = false;
+    private static long chatScreenClosedAt = 0;
 
     /** Сентинел «диалога» общего чата. */
     public static final String GLOBAL = "§global";
@@ -172,10 +178,20 @@ public class PmChatClient implements ClientModInitializer {
                 (handler, client) -> PmUpdate.resetSession());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            boolean chatScreenOpenNow = client.currentScreen instanceof net.minecraft.client.gui.screen.ChatScreen;
+            if (chatScreenOpenLastTick && !chatScreenOpenNow) {
+                chatScreenClosedAt = System.currentTimeMillis();
+            }
+            chatScreenOpenLastTick = chatScreenOpenNow;
+
             // Только ОТКРЫВАЕМ по клавише (закрытие — Esc/крестик), иначе на русской
             // раскладке клавиша J = «о» закрывала бы меню при вводе текста.
+            // Дополнительно игнорируем короткое окно сразу после закрытия чата
+            // (Enter), чтобы буква "j" в конце отправленного сообщения не
+            // открывала мессенджер следом.
             while (openKey.wasPressed()) {
-                if (client.currentScreen == null) {
+                boolean justClosedChat = System.currentTimeMillis() - chatScreenClosedAt < 300;
+                if (client.currentScreen == null && !justClosedChat) {
                     client.setScreen(new PmScreen());
                 }
             }

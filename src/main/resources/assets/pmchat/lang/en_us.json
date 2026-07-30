@@ -269,7 +269,6 @@
   "pmchat.games.rps.playing": "Playing %s for %s",
   "pmchat.games.rps.waiting": "Waiting for the opponent's choice…",
   "pmchat.games.rps.tie": "Tie, bets refunded",
-  "pmchat.games.rps.hint": "Last result",
   "pmchat.whatsnew.title": "What's new",
   "pmchat.whatsnew.version": "Version %s",
   "pmchat.whatsnew.no_discord_sound": "Discord bridge messages no longer duplicate into the mod's global chat — no more stray TTS reads or mention pings for them.",
