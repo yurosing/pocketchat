@@ -310,6 +310,9 @@ public class PmSettingsScreen extends Screen {
                     btn -> {
                         String url = backendUrlField.getText().trim();
                         if (!url.isEmpty()) {
+                            if (!url.matches("(?i)^[a-z][a-z0-9+.-]*://.*")) {
+                                url = "http://" + url;
+                            }
                             config.backendUrl = url;
                             config.save();
                             editBackendUrl = false;
