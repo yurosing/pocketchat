@@ -22,7 +22,7 @@ import net.minecraft.text.Text;
 public class PmAdminScreen extends Screen {
 
     private static final int PANEL_W = 260;
-    private static final int PANEL_H = 210;
+    private static final int PANEL_H = 216;
 
     private final Screen parent;
     private final PmConfig config = PmChatClient.getConfig();
@@ -47,33 +47,48 @@ public class PmAdminScreen extends Screen {
         BTN_BG = t.btnBg; BTN_HOVER = t.btnHover; BTN_BORDER = t.btnBorder; VALUE = t.value;
     }
 
+    private final java.util.List<Object[]> fieldLabels = new java.util.ArrayList<>();
+
+    private static void placeholder(TextFieldWidget field, String labelKey) {
+        String hint = Text.translatable(labelKey).getString();
+        field.setSuggestion(hint);
+        field.setChangedListener(s -> field.setSuggestion(s.isEmpty() ? hint : null));
+    }
+
     @Override
     protected void init() {
         applyTheme();
         clearChildren();
+        fieldLabels.clear();
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 
         int fx = px + 16;
         int fw = PANEL_W - 32;
-        int y = py + 26;
+        int y = py + 30;
 
+        fieldLabels.add(new Object[]{"pmchat.admin.broadcast.label", fx, y - 10});
         broadcastField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.admin.broadcast.hint"));
         broadcastField.setMaxLength(500);
+        placeholder(broadcastField, "pmchat.admin.broadcast.hint");
         addDrawableChild(broadcastField);
         y += 20;
         addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
                 Text.translatable("pmchat.admin.broadcast.send"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                 btn -> doBroadcast()));
-        y += 28;
+        y += 30;
 
+        fieldLabels.add(new Object[]{"pmchat.admin.target.label", fx, y - 10});
         targetField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.admin.target.hint"));
         targetField.setMaxLength(32);
+        placeholder(targetField, "pmchat.admin.target.hint");
         addDrawableChild(targetField);
-        y += 20;
+        y += 24;
 
+        fieldLabels.add(new Object[]{"pmchat.admin.amount.label", fx, y - 10});
         amountField = new TextFieldWidget(textRenderer, fx, y, (fw - 6) / 2, 16, Text.translatable("pmchat.admin.amount.hint"));
         amountField.setMaxLength(10);
+        placeholder(amountField, "pmchat.admin.amount.hint");
         addDrawableChild(amountField);
         addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 16,
                 Text.translatable("pmchat.admin.grant"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
@@ -155,6 +170,10 @@ public class PmAdminScreen extends Screen {
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
 
         context.drawText(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+
+        for (Object[] entry : fieldLabels) {
+            context.drawText(textRenderer, Text.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
+        }
 
         if (!status.getString().isEmpty()) {
             context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 40, statusColor, false);

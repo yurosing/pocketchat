@@ -21,7 +21,7 @@ import net.minecraft.text.Text;
 public class PmLoginScreen extends Screen {
 
     private static final int PANEL_W = 240;
-    private static final int PANEL_H = 150;
+    private static final int PANEL_H = 172;
 
     private final Screen parent;
     private final PmConfig config = PmChatClient.getConfig();
@@ -46,25 +46,37 @@ public class PmLoginScreen extends Screen {
         BTN_BG = t.btnBg; BTN_HOVER = t.btnHover; BTN_BORDER = t.btnBorder; VALUE = t.value;
     }
 
+    private final java.util.List<Object[]> fieldLabels = new java.util.ArrayList<>();
+
     @Override
     protected void init() {
         applyTheme();
         clearChildren();
+        fieldLabels.clear();
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 
         int fx = px + 16;
         int fw = PANEL_W - 32;
-        int y = py + 30;
+        int y = py + 34;
 
+        fieldLabels.add(new Object[]{"pmchat.login.username", fx, y - 10});
         userField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.login.username"));
         userField.setMaxLength(32);
-        userField.setText(config.backendToken.isBlank() ? PmChatClient.selfName() : "");
+        String prefillUser = config.backendToken.isBlank() ? PmChatClient.selfName() : "";
+        userField.setText(prefillUser);
+        userField.setSuggestion(prefillUser.isEmpty() ? Text.translatable("pmchat.login.username").getString() : null);
+        userField.setChangedListener(s -> userField.setSuggestion(
+                s.isEmpty() ? Text.translatable("pmchat.login.username").getString() : null));
         addDrawableChild(userField);
-        y += 24;
+        y += 30;
 
+        fieldLabels.add(new Object[]{"pmchat.login.password", fx, y - 10});
         passField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.login.password"));
         passField.setMaxLength(64);
+        passField.setSuggestion(Text.translatable("pmchat.login.password").getString());
+        passField.setChangedListener(s -> passField.setSuggestion(
+                s.isEmpty() ? Text.translatable("pmchat.login.password").getString() : null));
         addDrawableChild(passField);
         y += 30;
 
@@ -144,6 +156,10 @@ public class PmLoginScreen extends Screen {
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
 
         context.drawText(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+
+        for (Object[] entry : fieldLabels) {
+            context.drawText(textRenderer, Text.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
+        }
 
         if (!status.getString().isEmpty()) {
             context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 40, statusColor, false);
