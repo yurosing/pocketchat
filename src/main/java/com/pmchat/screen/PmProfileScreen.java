@@ -61,6 +61,15 @@ public class PmProfileScreen extends Screen {
         return com.pmchat.client.PmServerMedia.get().isAvailable();
     }
 
+    /** Альтернативный путь подарков/баланса через server-pocketchat, без Paper-плагина. */
+    private boolean backendGiftsAvailable() {
+        return com.pmchat.client.PmBackend.isConfigured() && com.pmchat.client.PmBackend.hasAccount();
+    }
+
+    private String backendResultMsg;
+    private boolean backendResultOk;
+    private long backendResultAt;
+
     @Override
     protected void init() {
         applyTheme();
@@ -271,20 +280,29 @@ public class PmProfileScreen extends Screen {
         context.fill(px + 8, top, px + PANEL_W - 8, top + 1, BORDER);
         context.drawText(textRenderer, Text.translatable("pmchat.profile.gifts"),
                 px + 12, top + 5, TITLE, false);
-        // Подсказка «нажми, чтобы подарить» — только на чужом профиле с плагином
-        if (!self && pluginPresent()) {
+
+        boolean plugin = pluginPresent();
+        boolean backend = !plugin && backendGiftsAvailable();
+
+        // Подсказка «нажми, чтобы подарить» — только на чужом профиле, когда есть чем дарить
+        if (!self && (plugin || backend)) {
             String hint = Text.translatable("pmchat.profile.gifts.buyhint").getString();
             context.drawText(textRenderer, hint,
                     px + PANEL_W - 12 - textRenderer.getWidth(hint), top + 5, SUBTLE, false);
         }
 
-        if (!pluginPresent()) {
+        if (plugin) {
+            renderGiftsViaPlugin(context, mouseX, mouseY, top);
+        } else if (backend) {
+            renderGiftsViaBackend(context, mouseX, mouseY, top);
+        } else {
             context.drawText(textRenderer, trimTo(
                             Text.translatable("pmchat.profile.gifts.needplugin").getString(), PANEL_W - 24),
                     px + 12, top + 17, SUBTLE, false);
-            return;
         }
+    }
 
+    private void renderGiftsViaPlugin(DrawContext context, int mouseX, int mouseY, int top) {
         com.pmchat.client.PmServerMedia sm = com.pmchat.client.PmServerMedia.get();
 
         // Полученные подарки текущего игрока — ряд иконок
@@ -325,7 +343,7 @@ public class PmProfileScreen extends Screen {
                 String label = g.icon() + " " + fmt(g.price());
                 context.drawText(textRenderer, trimTo(label, cellW - 6), cx + 4, cy + 4,
                         afford ? 0xFFE0B040 : 0xFF9A6A6A, false);
-                giftRects.add(new Object[]{cx, cy, cellW, cellH, g.id()});
+                giftRects.add(new Object[]{cx, cy, cellW, cellH, g.id(), false});
                 cx += cellW + gap;
             }
         }
@@ -335,6 +353,55 @@ public class PmProfileScreen extends Screen {
         if (rmsg != null && System.currentTimeMillis() - sm.lastResultAt() < 4000) {
             context.drawText(textRenderer, trimTo(rmsg, PANEL_W - 24),
                     px + 12, py + panelH - 38, sm.lastResultOk() ? 0xFF6FBF8B : 0xFFE0574C, false);
+        }
+    }
+
+    private void renderGiftsViaBackend(DrawContext context, int mouseX, int mouseY, int top) {
+        java.util.List<com.pmchat.client.PmBackend.ReceivedGift> got = com.pmchat.client.PmBackend.cachedGiftInbox(player);
+        int iy = top + 16;
+        if (got.isEmpty()) {
+            context.drawText(textRenderer, Text.translatable("pmchat.profile.gifts.empty"),
+                    px + 12, iy, SUBTLE, false);
+        } else {
+            int gx = px + 12;
+            int shown = 0;
+            for (int i = got.size() - 1; i >= 0 && shown < 14; i--, shown++) {
+                com.pmchat.client.PmBackend.ReceivedGift g = got.get(i);
+                String ic = g.giftId == null || g.giftId.isEmpty() ? "•" : g.giftId;
+                context.drawText(textRenderer, ic, gx, iy, 0xFFE0A0E0, false);
+                gx += textRenderer.getWidth(ic) + 4;
+            }
+            if (got.size() > 14) {
+                context.drawText(textRenderer, "+" + (got.size() - 14), gx, iy, SUBTLE, false);
+            }
+        }
+
+        if (!self) {
+            java.util.List<com.pmchat.client.PmBackend.Gift> cat = com.pmchat.client.PmBackend.cachedCatalog();
+            Long selfBal = com.pmchat.client.PmBackend.cachedSelfBalance();
+            int cy = top + 30;
+            int cx = px + 12;
+            int cellW = 55, cellH = 16, gap = 3;
+            for (com.pmchat.client.PmBackend.Gift g : cat) {
+                if (cx + cellW > px + PANEL_W - 8) {
+                    cx = px + 12;
+                    cy += cellH + gap;
+                }
+                boolean hover = mouseX >= cx && mouseX < cx + cellW && mouseY >= cy && mouseY < cy + cellH;
+                boolean afford = selfBal != null && selfBal >= g.price;
+                context.fill(cx, cy, cx + cellW, cy + cellH, hover ? BTN_HOVER : BTN_BG);
+                context.drawStrokedRectangle(cx, cy, cellW, cellH, BTN_BORDER);
+                String label = g.icon + " " + g.price;
+                context.drawText(textRenderer, trimTo(label, cellW - 6), cx + 4, cy + 4,
+                        afford ? 0xFFE0B040 : 0xFF9A6A6A, false);
+                giftRects.add(new Object[]{cx, cy, cellW, cellH, g.id, true});
+                cx += cellW + gap;
+            }
+        }
+
+        if (backendResultMsg != null && System.currentTimeMillis() - backendResultAt < 4000) {
+            context.drawText(textRenderer, trimTo(backendResultMsg, PANEL_W - 24),
+                    px + 12, py + panelH - 38, backendResultOk ? 0xFF6FBF8B : 0xFFE0574C, false);
         }
     }
 
@@ -349,7 +416,19 @@ public class PmProfileScreen extends Screen {
         for (Object[] r : giftRects) {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
             if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
-                com.pmchat.client.PmServerMedia.get().buyGift(player, (String) r[4]);
+                String giftId = (String) r[4];
+                boolean viaBackend = (boolean) r[5];
+                if (viaBackend) {
+                    com.pmchat.client.PmBackend.sendGift(player, giftId, (ok, v, err) -> {
+                        backendResultOk = ok;
+                        backendResultMsg = ok
+                                ? Text.translatable("pmchat.profile.gifts.sent").getString()
+                                : Text.translatable("pmchat.profile.gifts.fail", String.valueOf(err)).getString();
+                        backendResultAt = System.currentTimeMillis();
+                    });
+                } else {
+                    com.pmchat.client.PmServerMedia.get().buyGift(player, giftId);
+                }
                 return true;
             }
         }

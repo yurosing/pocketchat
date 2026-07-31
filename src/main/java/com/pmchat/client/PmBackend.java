@@ -178,6 +178,109 @@ public final class PmBackend {
         });
     }
 
+    // ---------- подарки (каталог/инвентарь) ----------
+
+    public static final class Gift {
+        public final String id;
+        public final String name;
+        public final String icon;
+        public final long price;
+
+        Gift(String id, String name, String icon, long price) {
+            this.id = id;
+            this.name = name;
+            this.icon = icon;
+            this.price = price;
+        }
+    }
+
+    public static final class ReceivedGift {
+        public final String giftId;
+        public final String from;
+
+        ReceivedGift(String giftId, String from) {
+            this.giftId = giftId;
+            this.from = from;
+        }
+    }
+
+    private static volatile java.util.List<Gift> cachedCatalog = null;
+    private static volatile boolean catalogInFlight = false;
+
+    /** Каталог подарков — кэшируется один раз (цены не меняются на лету). */
+    public static java.util.List<Gift> cachedCatalog() {
+        if (!isConfigured()) return java.util.List.of();
+        if (cachedCatalog == null && !catalogInFlight) {
+            catalogInFlight = true;
+            getJson("/v1/catalog", json -> {
+                catalogInFlight = false;
+                if (json == null || !json.has("gifts")) return;
+                java.util.List<Gift> list = new java.util.ArrayList<>();
+                for (var el : json.getAsJsonArray("gifts")) {
+                    JsonObject g = el.getAsJsonObject();
+                    list.add(new Gift(
+                            g.get("id").getAsString(),
+                            g.has("name") ? g.get("name").getAsString() : g.get("id").getAsString(),
+                            g.has("icon") ? g.get("icon").getAsString() : "*",
+                            g.get("price").getAsLong()));
+                }
+                cachedCatalog = list;
+            });
+        }
+        return cachedCatalog != null ? cachedCatalog : java.util.List.of();
+    }
+
+    private static final class InboxEntry {
+        final java.util.List<ReceivedGift> gifts;
+        final long at;
+
+        InboxEntry(java.util.List<ReceivedGift> gifts, long at) {
+            this.gifts = gifts;
+            this.at = at;
+        }
+    }
+
+    private static final java.util.Map<String, InboxEntry> INBOX_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Set<String> INBOX_IN_FLIGHT = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private static final long INBOX_TTL_MS = 15_000L;
+
+    /** Полученные подарки игрока (для витрины в профиле), с фоновым обновлением по TTL. */
+    public static java.util.List<ReceivedGift> cachedGiftInbox(String username) {
+        if (!isConfigured() || !hasAccount() || username == null || username.isBlank()) return java.util.List.of();
+        String key = username.toLowerCase(java.util.Locale.ROOT);
+        InboxEntry e = INBOX_CACHE.get(key);
+        boolean stale = e == null || System.currentTimeMillis() - e.at > INBOX_TTL_MS;
+        if (stale && INBOX_IN_FLIGHT.add(key)) {
+            String path = "/v1/gift/inbox?token=" + enc(PmChatClient.getConfig().backendToken) + "&username=" + enc(username);
+            getJson(path, json -> {
+                INBOX_IN_FLIGHT.remove(key);
+                if (json == null || !json.has("gifts")) return;
+                java.util.List<ReceivedGift> list = new java.util.ArrayList<>();
+                for (var el : json.getAsJsonArray("gifts")) {
+                    JsonObject g = el.getAsJsonObject();
+                    list.add(new ReceivedGift(g.get("giftId").getAsString(), g.get("from").getAsString()));
+                }
+                INBOX_CACHE.put(key, new InboxEntry(list, System.currentTimeMillis()));
+            });
+        }
+        return e != null ? e.gifts : java.util.List.of();
+    }
+
+    /** Купить подарок {@code giftId} и отправить игроку {@code target}. */
+    public static void sendGift(String target, String giftId, Callback<Long> cb) {
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("targetUsername", target);
+        body.addProperty("giftId", giftId);
+        postJson("/v1/gift/send", body, resp -> {
+            // баланс мог измениться — забудем кэш, следующий cachedSelfBalance() перечитает
+            cachedSelfBalance = null;
+        }, (ok, v, err) -> {
+            if (ok) INBOX_CACHE.remove(target == null ? "" : target.toLowerCase(java.util.Locale.ROOT));
+            if (cb != null) cb.onResult(ok, null, err);
+        });
+    }
+
     // ---------- публичный профиль: галочка верификации + официальный аккаунт ----------
 
     public static void accountInfo(String username, Callback<AccountInfo> cb) {
