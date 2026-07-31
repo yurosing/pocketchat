@@ -213,6 +213,8 @@ public class PmChatClient implements ClientModInitializer {
             PmMedia.get().tick();
             // Отправка/докачка медиа через серверный плагин (пейсинг по тикам)
             PmServerMedia.get().tick();
+            // Опрос своего бэкенда на новые подарки (без плагина — REST, не пуш)
+            PmBackend.tick();
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
                 float hp = client.player.getHealth();

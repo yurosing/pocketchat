@@ -75,6 +75,15 @@ public class PmConfig {
     /** Переопределение URL скачивания по коду хоста. */
     public Map<String, String> hostOverrides = new HashMap<>();
 
+    /**
+     * Собственный бэкенд игрока на Railway (см. репозиторий pocketchat-backend):
+     * медиа, кошелёк и подарки без серверного плагина. Пусто — фича выключена.
+     * Пример: https://my-project.up.railway.app
+     */
+    public String backendUrl = "";
+    /** Токен установки мода на этом бэкенде (выдаётся сервером, не секрет). */
+    public String backendToken = "";
+
     /** Тема интерфейса: 0 — тёмная, 1 — светлая. */
     public int theme = 0;
 
@@ -616,6 +625,8 @@ public class PmConfig {
                             || cfg.uploadOrder.equals("x,q,c")) {
                         cfg.uploadOrder = "k,x,q,c"; // миграция со старого порядка
                     }
+                    if (cfg.backendUrl == null) cfg.backendUrl = "";
+                    if (cfg.backendToken == null) cfg.backendToken = "";
                     if (cfg.channels == null || cfg.channels.isEmpty()) cfg.channels = defaultChannels();
                     if (cfg.groups == null) cfg.groups = new ArrayList<>();
                     for (PmGroup g : cfg.groups) {

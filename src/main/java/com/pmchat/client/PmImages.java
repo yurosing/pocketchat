@@ -116,6 +116,17 @@ public final class PmImages {
                         PmChatClient.LOGGER.warn("Server relay upload failed, falling back to hosts: {}", e.toString());
                     }
                 }
+                // Собственный бэкенд на Railway — грузим туда, если настроен, без
+                // необходимости в серверном плагине вообще.
+                if (PmBackend.isConfigured()) {
+                    try {
+                        String fileId = PmBackend.uploadFile(fileBytes, filename);
+                        PmChatClient.LOGGER.info("Uploaded via backend: {}", fileId);
+                        return new String[]{"r", fileId};
+                    } catch (Exception e) {
+                        PmChatClient.LOGGER.warn("Backend upload failed, falling back to hosts: {}", e.toString());
+                    }
+                }
                 return PmHosts.upload(fileBytes, filename);
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -292,6 +303,8 @@ public final class PmImages {
             // Медиа с сервера (код хоста "s") тянем по каналу плагина, а не по HTTP.
             if ("s".equals(hostCode)) {
                 bytes = PmServerMedia.get().download(id).get(60, TimeUnit.SECONDS);
+            } else if ("r".equals(hostCode)) {
+                bytes = PmBackend.downloadFile(id);
             } else {
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(PmHosts.baseUrl(hostCode) + id))

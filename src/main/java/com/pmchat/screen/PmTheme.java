@@ -11,7 +11,7 @@ public final class PmTheme {
     }
 
     /** Всего тем интерфейса. Индекс config.theme приводится по модулю к этому числу. */
-    public static final int COUNT = 7;
+    public static final int COUNT = 8;
 
     /** Ключи локализации названий тем (совпадают по индексу с config.theme). */
     public static final String[] NAME_KEYS = {
@@ -22,12 +22,13 @@ public final class PmTheme {
             "pmchat.set.theme.nord",     // 4
             "pmchat.set.theme.rose",     // 5
             "pmchat.set.theme.sand",     // 6
+            "pmchat.set.theme.aurora",   // 7
     };
 
     /** Светлая ли тема (для выбора направления теней/оверлеев). */
     public static boolean isLight(int theme) {
         int t = Math.floorMod(theme, COUNT);
-        return t != 0 && t != 3 && t != 4;
+        return t != 0 && t != 3 && t != 4 && t != 7;
     }
 
     public static String nameKey(int theme) {
@@ -64,6 +65,10 @@ public final class PmTheme {
             case 6 -> { // Sand Light (тёплая кремовая)
                 t.bg = 0xFFF7F3EA; t.border = 0xFFDED6C4; t.title = 0xFF2A251B; t.label = 0xFF8A7A45;
                 t.btnBg = 0xFFEFE9DA; t.btnHover = 0xFFEAE2D0; t.btnBorder = 0xFFDED6C4; t.value = 0xFF2A251B;
+            }
+            case 7 -> { // Aurora (тёмная фиолетово-бирюзовая)
+                t.bg = 0xFF161225; t.border = 0xFF0B0918; t.title = 0xFFE8E4FF; t.label = 0xFFB9AEE0;
+                t.btnBg = 0xFF221A3A; t.btnHover = 0xFF1B1430; t.btnBorder = 0xFF3A3060; t.value = 0xFFE8E4FF;
             }
             default -> { // Cool Dark
                 t.bg = 0xFF141C21; t.border = 0xFF0B1116; t.title = 0xFFDFE6EB; t.label = 0xFF9FB6C4;

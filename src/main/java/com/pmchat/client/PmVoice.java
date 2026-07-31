@@ -173,6 +173,8 @@ public final class PmVoice {
             // Голосовое с сервера (код хоста "s") тянем по каналу плагина, а не по HTTP.
             if ("s".equals(hostCode)) {
                 bytes = PmServerMedia.get().download(id).get(60, java.util.concurrent.TimeUnit.SECONDS);
+            } else if ("r".equals(hostCode)) {
+                bytes = PmBackend.downloadFile(id);
             } else {
                 HttpResponse<byte[]> response = HTTP.send(HttpRequest.newBuilder()
                                 .uri(URI.create(PmHosts.baseUrl(hostCode) + id))
@@ -217,6 +219,8 @@ public final class PmVoice {
                     if ("s".equals(hostCode)) {
                         // Голосовое с сервера — по каналу плагина, а не по HTTP.
                         bytes = PmServerMedia.get().download(id).get(60, java.util.concurrent.TimeUnit.SECONDS);
+                    } else if ("r".equals(hostCode)) {
+                        bytes = PmBackend.downloadFile(id);
                     } else {
                         HttpResponse<byte[]> response = HTTP.send(HttpRequest.newBuilder()
                                         .uri(URI.create(PmHosts.baseUrl(hostCode) + id))

@@ -27,3 +27,23 @@ one of them works better for you than the others). The default order is:
 
 If, say, only one site reliably works for you, put it first in the list in
 settings.
+
+## Your own backend (Railway) instead of anonymous sites
+
+For full control over file storage — and to get your own currency and gifts
+without a server plugin (see [Gifts and currency](/en/guide/profiles)) —
+you can deploy your own backend:
+
+1. Fork or deploy the [`pocketchat-backend`](https://github.com/yurosing/server-pocketchat)
+   repository to [Railway](https://railway.app) — follow the README in that
+   repo (Postgres + a Volume for files).
+2. Put the Railway URL it gives you into `pmchat.json`:
+   ```json
+   "backendUrl": "https://my-project.up.railway.app"
+   ```
+3. Rejoin the server — photos/videos/voice notes/stickers now upload there
+   first (before the external sites above), and your profile gets a wallet
+   and gift shop section.
+
+Your own backend works whether or not the PocketChat server plugin is
+installed — it's the way to get gifts and currency with no plugin at all.

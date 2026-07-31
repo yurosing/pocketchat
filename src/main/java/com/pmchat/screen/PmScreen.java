@@ -195,6 +195,28 @@ public class PmScreen extends Screen {
             EMOJI_BG = 0xF2FFFDF6;
             CHIP_BG = 0xFFEFE9DA;
             ROW_ALT = 0xFFEFE9DA;
+        } else if (config.theme == 7) {
+            // Aurora — тёмная фиолетово-бирюзовая (редизайн)
+            PANEL_BG = 0xFF161225;
+            PANEL_BORDER = 0xFF0B0918;
+            LEFT_BG = 0xFF120E1F;
+            DIVIDER = 0xFF2E2550;
+            TITLE = 0xFFE8E4FF;
+            SUBTLE = 0xFF8B84B0;
+            NAME_TEXT = 0xFFE8E4FF;
+            PREVIEW_TEXT = 0xFF8B84B0;
+            ROW_HOVER = 0xFF221A3A;
+            ROW_SELECTED = 0xFF2A2048;
+            IN_BG = 0xFF241C3E;
+            IN_TEXT = 0xFFE8E4FF;
+            WBTN_BG = 0xFF221A3A;
+            WBTN_BG_HOVER = 0xFF1B1430;
+            WBTN_BORDER = 0xFF3A3060;
+            WBTN_TEXT = 0xFFB9AEE0;
+            SEP_LINE = 0x3340C7C0;
+            EMOJI_BG = 0xF2161225;
+            CHIP_BG = 0xFF221A3A;
+            ROW_ALT = 0xFF1B1430;
         } else {
             // Cool Dark (редизайн 1B) — глубокая прохладная тёмная
             PANEL_BG = 0xFF141C21;
@@ -350,6 +372,34 @@ public class PmScreen extends Screen {
     /** Скруглённый прямоугольник с одинаковым радиусом по всем углам. */
     public static void fillRound(DrawContext c, int x, int y, int w, int h, int r, int color) {
         fillRound(c, x, y, w, h, r, r, r, r, color);
+    }
+
+    /**
+     * Вертикальный градиент узкими горизонтальными полосами (нет реального
+     * blend-шейдера — движок рисует только плоские {@code fill()}, поэтому
+     * градиент имитируется построчным лерпом цвета сверху вниз).
+     */
+    public static void fillGradientV(DrawContext c, int x, int y, int w, int h, int topColor, int bottomColor) {
+        if (h <= 0) return;
+        for (int row = 0; row < h; row++) {
+            float t = h <= 1 ? 0 : (float) row / (h - 1);
+            c.fill(x, y + row, x + w, y + row + 1, tintTowards(topColor, bottomColor, t));
+        }
+    }
+
+    /**
+     * Мягкая «тень» под приподнятым элементом — несколько всё более широких
+     * полупрозрачных скруглённых прямоугольников со смещением вниз (имитация
+     * blur без реального шейдера, тем же приёмом, что и {@link #fillRound}).
+     */
+    public static void fillSoftShadow(DrawContext c, int x, int y, int w, int h, int r, int shadowColor) {
+        int layers = 3;
+        for (int i = layers; i >= 1; i--) {
+            int spread = i * 2;
+            int alpha = (shadowColor >>> 24) / (i + 1);
+            int color = (alpha << 24) | (shadowColor & 0xFFFFFF);
+            fillRound(c, x - spread, y - spread + 2, w + spread * 2, h + spread * 2, r + spread, color);
+        }
     }
 
     // Геометрия: три размера окна (⤢), выбор хранится в конфиге
@@ -2103,10 +2153,13 @@ public class PmScreen extends Screen {
             rebuild();
         }
 
-        // Панель
-        context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, PANEL_BG);
-        context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, PANEL_BG);
-        context.fill(px, py + 2, px + LEFT_W, py + PANEL_H - 2, LEFT_BG);
+        // Панель — лёгкий вертикальный градиент вместо плоской заливки (заметнее
+        // на крупных окнах, не трогает хит-тесты — те же прямоугольники).
+        int panelBgBottom = tintTowards(PANEL_BG, 0xFF000000, 0.05f);
+        int leftBgBottom = tintTowards(LEFT_BG, 0xFF000000, 0.07f);
+        context.fill(px + 2, py, px + PANEL_W - 2, py + 2, PANEL_BG);
+        fillGradientV(context, px + 2, py + 2, PANEL_W - 4, PANEL_H - 2, PANEL_BG, panelBgBottom);
+        fillGradientV(context, px, py + 2, LEFT_W, PANEL_H - 4, LEFT_BG, leftBgBottom);
         context.fill(px + LEFT_W, py + 2, px + LEFT_W + 1, py + PANEL_H - 2, DIVIDER);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, PANEL_BORDER);
 

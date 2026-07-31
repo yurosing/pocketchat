@@ -61,16 +61,36 @@ public class PmProfileScreen extends Screen {
         return com.pmchat.client.PmServerMedia.get().isAvailable();
     }
 
+    /** Новый путь подарков/кошелька — свой бэкенд на Railway, не требует плагина. */
+    private boolean backendConfigured() {
+        return com.pmchat.client.PmBackend.isConfigured();
+    }
+
+    private static int rarityColor(String rarity) {
+        return switch (rarity == null ? "" : rarity) {
+            case "rare" -> 0xFF4FA8E0;
+            case "epic" -> 0xFFB064E0;
+            case "legendary" -> 0xFFE0A030;
+            default -> 0xFFA0A8B0; // common
+        };
+    }
+
     @Override
     protected void init() {
         applyTheme();
         clearChildren();
-        panelH = self ? 214 : 291;
+        // Каталог бэкенда сейчас в разы больше старого (16 подарков вместо ~6) —
+        // на чужом профиле ему нужно больше рядов, отсюда добавочная высота.
+        panelH = self ? 214 : (backendConfigured() ? 291 + 80 : 291);
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
         // Подтягиваем каталог/баланс и полученные подарки текущего игрока
-        if (pluginPresent()) {
+        if (backendConfigured()) {
+            com.pmchat.client.PmBackend.cachedBalance();
+            com.pmchat.client.PmBackend.cachedCatalog();
+            com.pmchat.client.PmBackend.cachedInbox(player);
+        } else if (pluginPresent()) {
             com.pmchat.client.PmServerMedia sm = com.pmchat.client.PmServerMedia.get();
             sm.requestGifts();
             sm.requestGiftInventory(player);
@@ -205,12 +225,30 @@ public class PmProfileScreen extends Screen {
         context.drawText(textRenderer, Text.translatable(online ? "pmchat.profile.online" : "pmchat.profile.offline"),
                 tx, py + 44, online ? 0xFF6FBF8B : SUBTLE, false);
 
+        bonusRect = null;
         if (self) {
-            // Баланс рядом — только свой (4.5). Значение доступно с плагином/Vault.
-            String bal = PmChatClient.knownBalance();
-            String balText = Text.translatable("pmchat.profile.balance").getString() + ": "
-                    + (bal == null ? Text.translatable("pmchat.profile.balance.unknown").getString() : bal);
+            // Баланс рядом — только свой (4.5).
+            String balText;
+            if (backendConfigured()) {
+                double bal = com.pmchat.client.PmBackend.cachedBalance();
+                balText = Text.translatable("pmchat.profile.balance").getString() + ": "
+                        + (bal < 0 ? "…" : fmt(bal));
+            } else {
+                String bal = PmChatClient.knownBalance();
+                balText = Text.translatable("pmchat.profile.balance").getString() + ": "
+                        + (bal == null ? Text.translatable("pmchat.profile.balance.unknown").getString() : bal);
+            }
             context.drawText(textRenderer, balText, tx, py + 56, 0xFFE0B040, false);
+
+            if (backendConfigured()) {
+                String bonus = Text.translatable("pmchat.profile.bonus").getString();
+                int bw = textRenderer.getWidth(bonus) + 8;
+                int bx = px + PANEL_W - 12 - bw, by = py + 54;
+                boolean hover = mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + 12;
+                PmScreen.fillRound(context, bx, by, bw, 12, 3, hover ? BTN_HOVER : BTN_BG);
+                context.drawText(textRenderer, bonus, bx + 4, by + 2, 0xFF6FBF8B, false);
+                bonusRect = new int[]{bx, by, bw, 12};
+            }
         }
 
         // ---- Подписи полей ----
@@ -248,24 +286,119 @@ public class PmProfileScreen extends Screen {
     }
 
     private final java.util.List<Object[]> giftRects = new java.util.ArrayList<>(); // x,y,w,h,giftId
+    private int[] bonusRect; // x,y,w,h — «забрать ежедневный бонус» (только свой профиль, бэкенд)
 
     private void renderGifts(DrawContext context, int mouseX, int mouseY, int top) {
         giftRects.clear();
         context.fill(px + 8, top, px + PANEL_W - 8, top + 1, BORDER);
         context.drawText(textRenderer, Text.translatable("pmchat.profile.gifts"),
                 px + 12, top + 5, TITLE, false);
-        // Подсказка «нажми, чтобы подарить» — только на чужом профиле с плагином
-        if (!self && pluginPresent()) {
+
+        if (backendConfigured()) {
+            renderGiftsBackend(context, mouseX, mouseY, top);
+        } else if (pluginPresent()) {
+            renderGiftsLegacy(context, mouseX, mouseY, top);
+        } else {
+            context.drawText(textRenderer, trimTo(
+                            Text.translatable("pmchat.profile.gifts.needplugin").getString(), PANEL_W - 24),
+                    px + 12, top + 17, SUBTLE, false);
+        }
+    }
+
+    private void renderGiftsBackend(DrawContext context, int mouseX, int mouseY, int top) {
+        // Подсказка «нажми, чтобы подарить» — только на чужом профиле
+        if (!self) {
             String hint = Text.translatable("pmchat.profile.gifts.buyhint").getString();
             context.drawText(textRenderer, hint,
                     px + PANEL_W - 12 - textRenderer.getWidth(hint), top + 5, SUBTLE, false);
         }
 
-        if (!pluginPresent()) {
-            context.drawText(textRenderer, trimTo(
-                            Text.translatable("pmchat.profile.gifts.needplugin").getString(), PANEL_W - 24),
-                    px + 12, top + 17, SUBTLE, false);
-            return;
+        java.util.List<com.pmchat.client.PmBackend.ReceivedGift> got = com.pmchat.client.PmBackend.cachedInbox(player);
+        int iy = top + 16;
+        if (got.isEmpty()) {
+            context.drawText(textRenderer, Text.translatable("pmchat.profile.gifts.empty"),
+                    px + 12, iy, SUBTLE, false);
+        } else {
+            java.util.List<com.pmchat.client.PmBackend.Gift> catForIcons = com.pmchat.client.PmBackend.cachedCatalog();
+            int gx = px + 12;
+            int shown = 0;
+            for (int i = got.size() - 1; i >= 0 && shown < 14; i--, shown++) {
+                com.pmchat.client.PmBackend.ReceivedGift g = got.get(i);
+                String ic = giftIcon(catForIcons, g.giftId());
+                context.drawText(textRenderer, ic, gx, iy, 0xFFE0A0E0, false);
+                gx += textRenderer.getWidth(ic) + 4;
+            }
+            if (got.size() > 14) {
+                context.drawText(textRenderer, "+" + (got.size() - 14), gx, iy, SUBTLE, false);
+            }
+        }
+
+        if (!self) {
+            java.util.List<com.pmchat.client.PmBackend.Gift> cat = com.pmchat.client.PmBackend.cachedCatalog();
+            double balance = com.pmchat.client.PmBackend.cachedBalance();
+            int cy = top + 30;
+            int cx = px + 12;
+            int cellW = 55, cellH = 16, gap = 3;
+            if (cat != null) {
+                for (com.pmchat.client.PmBackend.Gift g : cat) {
+                    if (cx + cellW > px + PANEL_W - 8) {
+                        cx = px + 12;
+                        cy += cellH + gap;
+                    }
+                    boolean hover = mouseX >= cx && mouseX < cx + cellW && mouseY >= cy && mouseY < cy + cellH;
+                    boolean afford = balance >= g.price();
+                    int rarity = rarityColor(g.rarity());
+                    // Легендарки лёгким пульсом рамки — выделяются в каталоге
+                    boolean pulse = "legendary".equals(g.rarity());
+                    int borderColor = pulse
+                            ? blend(rarity, 0xFFFFFFFF, (float) (0.15 + 0.15 * Math.sin(System.currentTimeMillis() / 260.0)))
+                            : rarity;
+                    PmScreen.fillRound(context, cx, cy, cellW, cellH, 3, hover ? BTN_HOVER : BTN_BG);
+                    context.drawStrokedRectangle(cx, cy, cellW, cellH, borderColor);
+                    String label = g.icon() + " " + fmt(g.price());
+                    context.drawText(textRenderer, trimTo(label, cellW - 6), cx + 4, cy + 4,
+                            afford ? 0xFFE0B040 : 0xFF9A6A6A, false);
+                    giftRects.add(new Object[]{cx, cy, cellW, cellH, g.id()});
+                    cx += cellW + gap;
+                }
+            } else {
+                context.drawText(textRenderer, "…", px + 12, cy, SUBTLE, false);
+            }
+        }
+
+        String rmsg = com.pmchat.client.PmBackend.lastResultMsg();
+        if (rmsg != null && System.currentTimeMillis() - com.pmchat.client.PmBackend.lastResultAt() < 4000) {
+            boolean ok = com.pmchat.client.PmBackend.lastResultOk();
+            String shown = ok ? Text.translatable("pmchat.profile.gifts.sent").getString() : rmsg;
+            context.drawText(textRenderer, trimTo(shown, PANEL_W - 24),
+                    px + 12, py + panelH - 38, ok ? 0xFF6FBF8B : 0xFFE0574C, false);
+        }
+    }
+
+    private static String giftIcon(java.util.List<com.pmchat.client.PmBackend.Gift> catalog, String giftId) {
+        if (catalog != null) {
+            for (com.pmchat.client.PmBackend.Gift g : catalog) {
+                if (g.id().equals(giftId)) return g.icon();
+            }
+        }
+        return "•";
+    }
+
+    /** Линейная интерполяция цвета (для лёгкого пульса рамки легендарных подарков). */
+    private static int blend(int a, int b, float t) {
+        t = Math.max(0f, Math.min(1f, t));
+        int ar = (a >> 16) & 0xFF, ag = (a >> 8) & 0xFF, ab = a & 0xFF;
+        int br = (b >> 16) & 0xFF, bg = (b >> 8) & 0xFF, bb = b & 0xFF;
+        int r = (int) (ar + (br - ar) * t), g = (int) (ag + (bg - ag) * t), bl = (int) (ab + (bb - ab) * t);
+        return 0xFF000000 | (r << 16) | (g << 8) | bl;
+    }
+
+    private void renderGiftsLegacy(DrawContext context, int mouseX, int mouseY, int top) {
+        // Подсказка «нажми, чтобы подарить» — только на чужом профиле с плагином
+        if (!self) {
+            String hint = Text.translatable("pmchat.profile.gifts.buyhint").getString();
+            context.drawText(textRenderer, hint,
+                    px + PANEL_W - 12 - textRenderer.getWidth(hint), top + 5, SUBTLE, false);
         }
 
         com.pmchat.client.PmServerMedia sm = com.pmchat.client.PmServerMedia.get();
@@ -329,10 +462,20 @@ public class PmProfileScreen extends Screen {
     @Override
     public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
+        if (bonusRect != null && mx >= bonusRect[0] && mx < bonusRect[0] + bonusRect[2]
+                && my >= bonusRect[1] && my < bonusRect[1] + bonusRect[3]) {
+            com.pmchat.client.PmBackend.claimDailyBonusAsync();
+            return true;
+        }
         for (Object[] r : giftRects) {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
             if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
-                com.pmchat.client.PmServerMedia.get().buyGift(player, (String) r[4]);
+                String giftId = (String) r[4];
+                if (backendConfigured()) {
+                    com.pmchat.client.PmBackend.buyGiftAsync(player, giftId);
+                } else {
+                    com.pmchat.client.PmServerMedia.get().buyGift(player, giftId);
+                }
                 return true;
             }
         }

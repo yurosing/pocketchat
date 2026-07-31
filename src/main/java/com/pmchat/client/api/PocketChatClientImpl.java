@@ -178,6 +178,10 @@ public final class PocketChatClientImpl implements PocketChatClientApi {
 
     @Override
     public String knownBalance() {
+        if (com.pmchat.client.PmBackend.isConfigured()) {
+            double bal = com.pmchat.client.PmBackend.cachedBalance();
+            return bal < 0 ? "" : String.valueOf(bal);
+        }
         String bal = PmChatClient.knownBalance();
         return bal == null ? "" : bal;
     }

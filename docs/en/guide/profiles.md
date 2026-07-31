@@ -76,17 +76,24 @@ A player's profile has a **“Blacklist”** button:
 
 Remove from the blacklist with the same button.
 
-## Gifts for coins (Vault)
+## Gifts and your own currency
 
-The **“Gifts”** section works when the server runs the **PocketChat** plugin +
-**Vault** and an economy (e.g. EssentialsX).
+The **“Gifts”** section works two independent ways:
 
-- Open **another** player's profile → the “Gifts” section → **click a gift**.
-- The price is withdrawn from your Vault balance; the recipient is notified.
-- Received gifts show up on the player's profile.
-- The gift catalog is configured in the plugin's `config.yml` (`gifts:` section).
+- **Your own backend (Railway)** — if `backendUrl` is set in `pmchat.json`
+  (see [Where files get uploaded](/en/config/hosts)), gifts and balance go
+  through it and no server plugin is needed at all. Its own currency, a daily
+  bonus (the "Bonus" button next to your balance), and a catalog of 16 gifts
+  across 4 rarity tiers (common/rare/epic/legendary).
+- **Server plugin + Vault** — if no backend is configured but the server runs
+  the **PocketChat** plugin + **Vault**/an economy, gifts are withdrawn from
+  your Vault balance (as before). The catalog is configured in the plugin's
+  `config.yml` (`gifts:` section).
 
-Without the plugin the section shows “requires the plugin”.
+Either way: open **another** player's profile → the "Gifts" section →
+**click a gift**, the recipient is notified, and received gifts show up on
+their profile. If neither is set up, the section shows a hint about what to
+configure.
 
 ## Streams + donations (Vault)
 
