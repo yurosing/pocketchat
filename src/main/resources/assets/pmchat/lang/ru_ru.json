@@ -365,6 +365,7 @@
   "pmchat.profile.save": "Сохранить",
   "pmchat.profile.done": "Готово",
   "pmchat.tip.profile": "Открыть профиль",
+  "pmchat.tip.myprofile": "Мой профиль",
   "pmchat.tip.groupavatar": "Аватарка группы (файлы из config/pmchat-avatars)",
 
   "pmchat.photoedit.title": "Правка фото",

@@ -365,6 +365,7 @@
   "pmchat.profile.save": "Save",
   "pmchat.profile.done": "Done",
   "pmchat.tip.profile": "Open profile",
+  "pmchat.tip.myprofile": "My profile",
   "pmchat.tip.groupavatar": "Group avatar (files from config/pmchat-avatars)",
 
   "pmchat.photoedit.title": "Edit photo",
