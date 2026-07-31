@@ -48,6 +48,8 @@ public class PmChatClient implements ClientModInitializer {
     // в этом же тике — без окна подавления мессенджер открывался бы сразу
     // после отправки сообщения, если оно оканчивалось на "j".
     private static boolean chatScreenOpenLastTick = false;
+    /** Следующий момент опроса рассылок официального аккаунта (см. server-pocketchat). */
+    private static long nextBroadcastPollAt = 0;
     private static long chatScreenClosedAt = 0;
 
     /** Сентинел «диалога» общего чата. */
@@ -213,6 +215,13 @@ public class PmChatClient implements ClientModInitializer {
             PmMedia.get().tick();
             // Отправка/докачка медиа через серверный плагин (пейсинг по тикам)
             PmServerMedia.get().tick();
+            // Рассылки официального аккаунта PocketChat — раз в 30 секунд, только
+            // если задан backendUrl и есть свой аккаунт (см. server-pocketchat)
+            if (client.world != null && System.currentTimeMillis() >= nextBroadcastPollAt
+                    && PmBackend.isConfigured() && PmBackend.hasAccount()) {
+                nextBroadcastPollAt = System.currentTimeMillis() + 30_000L;
+                PmBackend.pollBroadcastsOnce(PmChatClient::broadcastToast);
+            }
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
                 float hp = client.player.getHealth();
@@ -2020,6 +2029,18 @@ public class PmChatClient implements ClientModInitializer {
         client.execute(() -> client.getToastManager().add(
                 new PmToast((icon == null ? "🎁" : icon) + " " + from, giftName)));
         com.pmchat.client.api.PocketChatClientImpl.fireGift(from, giftName, icon);
+    }
+
+    /** Рассылка официального аккаунта PocketChat (зелёная галочка) — см. {@link PmBackend}. */
+    public static void broadcastToast(String from, String message) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.getToastManager().add(new PmToast("✅ " + from, message));
+        if (client.inGameHud != null) {
+            net.minecraft.text.MutableText msg = Text.literal("✅ " + from + ": ")
+                    .formatted(net.minecraft.util.Formatting.GREEN)
+                    .append(Text.literal(message).formatted(net.minecraft.util.Formatting.WHITE));
+            client.inGameHud.getChatHud().addMessage(msg);
+        }
     }
 
     public static String selfName() {

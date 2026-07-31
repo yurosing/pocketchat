@@ -62,6 +62,23 @@ public class PmConfig {
      */
     public String discordUrl = "";
 
+    /**
+     * URL бэкенда PocketChat (server-pocketchat): медиа, своя валюта, логин/
+     * пароль, верификация, официальный аккаунт и админ-панель. Пусто — фичи
+     * бэкенда выключены, мод работает как раньше, чисто через чат-строки.
+     */
+    public String backendUrl = "";
+    /** Токен установки/аккаунта, выданный бэкендом при /v1/register или /v1/login. */
+    public String backendToken = "";
+    /**
+     * Секрет админ-панели (см. server-pocketchat README, ADMIN_SECRET). Имеет
+     * смысл только на аккаунте, который бэкенд знает как ADMIN_USERNAME
+     * (по умолчанию tyurvib) — у остальных игроков просто не будет доступа.
+     */
+    public String backendAdminSecret = "";
+    /** Последний увиденный id рассылки официального аккаунта — чтобы не показывать повторно. */
+    public long lastBroadcastId = 0;
+
     /** Хостинг картинок: куда грузим и откуда качаем по id. */
     public String uploadUrl = "https://catbox.moe/user/api.php";
     public String imageHost = "https://files.catbox.moe/";
@@ -652,6 +669,9 @@ public class PmConfig {
                         cfg.sttModelUrlEn = new PmConfig().sttModelUrlEn;
                     }
                     if (cfg.discordUrl == null) cfg.discordUrl = "";
+                    if (cfg.backendUrl == null) cfg.backendUrl = "";
+                    if (cfg.backendToken == null) cfg.backendToken = "";
+                    if (cfg.backendAdminSecret == null) cfg.backendAdminSecret = "";
                     if (cfg.textScalePct < 60 || cfg.textScalePct > 150) cfg.textScalePct = 100;
                     if (cfg.notifyVolume < 5 || cfg.notifyVolume > 100) cfg.notifyVolume = 100;
                     return cfg;

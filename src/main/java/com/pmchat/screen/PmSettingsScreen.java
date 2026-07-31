@@ -49,7 +49,7 @@ public class PmSettingsScreen extends Screen {
         applyTheme();
         optionLabels.clear();
         clearChildren();
-        int rows = 24;
+        int rows = 26; // +2 за pmchat.login.open/pmchat.admin.open (условные, см. ниже)
         panelH = 26 + rows * ROW_H + 28;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
@@ -207,6 +207,21 @@ public class PmSettingsScreen extends Screen {
                 () -> Text.literal("▸"),
                 () -> 0xFF8FD8A8,
                 () -> MinecraftClient.getInstance().setScreen(new PmFiltersScreen(this)));
+
+        // Свой логин/пароль к бэкенду PocketChat (валюта, верификация) — только если backendUrl задан
+        if (config.backendUrl != null && !config.backendUrl.isBlank()) {
+            y = addOption(y, "pmchat.login.open",
+                    () -> Text.literal("▸"),
+                    () -> 0xFF8FD8A8,
+                    () -> MinecraftClient.getInstance().setScreen(new PmLoginScreen(this)));
+
+            if ("tyurvib".equalsIgnoreCase(PmChatClient.selfName())) {
+                y = addOption(y, "pmchat.admin.open",
+                        () -> Text.literal("▸"),
+                        () -> 0xFFF0C34E,
+                        () -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));
+            }
+        }
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Text.translatable("pmchat.settings.done"),
