@@ -167,7 +167,7 @@ export default defineConfig({
 
   // Репозиторий называется pocketchat → сайт будет на
   // https://yurosing.github.io/pocketchat/
-  base: '/pocketchat/',
+  base: '/',
 
   cleanUrls: true,
   lastUpdated: true,
@@ -178,7 +178,7 @@ export default defineConfig({
   },
 
   head: [
-    ['link', { rel: 'icon', type: 'image/png', href: '/pocketchat/img/logo.png' }],
+    ['link', { rel: 'icon', type: 'image/png', href: '/img/logo.png' }],
     ['meta', { name: 'theme-color', content: '#6fbf8b' }],
     ['meta', { property: 'og:title', content: 'PocketChat — документация' }],
     ['meta', { property: 'og:description', content: 'Клиентский Minecraft-мессенджер поверх /m.' }],
