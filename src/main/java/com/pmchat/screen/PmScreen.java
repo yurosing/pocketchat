@@ -1643,6 +1643,13 @@ public class PmScreen extends Screen {
             rebuild();
             return;
         }
+        // Официальному аккаунту PocketChat отвечать нельзя (см. PmBackend/server-pocketchat)
+        if (isPlayerTab(selected) && com.pmchat.client.PmBackend.isConfigured()) {
+            com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);
+            if (acc != null && acc.official) {
+                return;
+            }
+        }
         String replyHash = replyTarget != null ? PmHistory.msgHash(replyTarget.text) : null;
         PmChatClient.sendMessage(selected, text, replyHash, replyFragStart, replyFragLen, replyFragText);
         clearReply();
@@ -3367,6 +3374,14 @@ public class PmScreen extends Screen {
         }
         context.drawText(textRenderer, header, headerX, py + 8, TITLE, false);
         int afterHeaderX = headerX + textRenderer.getWidth(header) + 4;
+        // Галочка верификации / официальный аккаунт PocketChat (см. PmBackend, server-pocketchat)
+        if (isPlayerTab(selected) && com.pmchat.client.PmBackend.isConfigured()) {
+            com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);
+            if (acc != null && (acc.verified || acc.official)) {
+                context.drawText(textRenderer, "✓", afterHeaderX, py + 8, 0xFF4CC26A, false);
+                afterHeaderX += textRenderer.getWidth("✓") + 4;
+            }
+        }
         // Значок ЧС (5.5): блокировавший видит, что собеседник в чёрном списке
         if (!isGlobal && !localChat && !isFeedTab() && config.isBlocked(selected)) {
             String cs = Text.translatable("pmchat.block.badge").getString();

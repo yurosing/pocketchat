@@ -62,6 +62,41 @@ public final class PmBackend {
         }
     }
 
+    // ---------- кэш публичного профиля для отрисовки галочки в UI (без блокировки рендера) ----------
+
+    private static final class CacheEntry {
+        final AccountInfo info;
+        final long at;
+
+        CacheEntry(AccountInfo info, long at) {
+            this.info = info;
+            this.at = at;
+        }
+    }
+
+    private static final java.util.Map<String, CacheEntry> ACCOUNT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Set<String> ACCOUNT_IN_FLIGHT = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private static final long ACCOUNT_CACHE_TTL_MS = 60_000L;
+
+    /**
+     * Синхронно отдаёт последний известный публичный профиль игрока (для отрисовки
+     * галочки/официального статуса в рендере), фоново обновляя его, если устарел
+     * или ещё не запрашивался. Возвращает null, пока ответ не пришёл.
+     */
+    public static AccountInfo cachedAccountInfo(String username) {
+        if (!isConfigured() || username == null || username.isBlank()) return null;
+        String key = username.toLowerCase(java.util.Locale.ROOT);
+        CacheEntry e = ACCOUNT_CACHE.get(key);
+        boolean stale = e == null || System.currentTimeMillis() - e.at > ACCOUNT_CACHE_TTL_MS;
+        if (stale && ACCOUNT_IN_FLIGHT.add(key)) {
+            accountInfo(username, (ok, info, err) -> {
+                ACCOUNT_IN_FLIGHT.remove(key);
+                if (ok && info != null) ACCOUNT_CACHE.put(key, new CacheEntry(info, System.currentTimeMillis()));
+            });
+        }
+        return e != null ? e.info : null;
+    }
+
     // ---------- логин/пароль (своя система, не Mojang) ----------
 
     public static void register(String username, String password, Callback<Void> cb) {
