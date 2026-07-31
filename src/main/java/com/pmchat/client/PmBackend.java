@@ -218,6 +218,68 @@ public final class PmBackend {
         return body;
     }
 
+    public static final class AdminAccount {
+        public final String username;
+        public final long balance;
+        public final boolean verified;
+        public final boolean official;
+
+        AdminAccount(String username, long balance, boolean verified, boolean official) {
+            this.username = username;
+            this.balance = balance;
+            this.verified = verified;
+            this.official = official;
+        }
+    }
+
+    /** Список зарегистрированных аккаунтов для админ-панели (см. GET /v1/admin/accounts). */
+    public static void adminListAccounts(String query, Callback<java.util.List<AdminAccount>> cb) {
+        if (!isConfigured()) {
+            run(cb, false, null, "backend not configured");
+            return;
+        }
+        String q = query == null ? "" : query.trim();
+        String path = "/v1/admin/accounts?token=" + enc(PmChatClient.getConfig().backendToken)
+                + "&adminSecret=" + enc(PmChatClient.getConfig().backendAdminSecret)
+                + (q.isEmpty() ? "" : "&q=" + enc(q));
+        Thread t = new Thread(() -> {
+            java.util.List<AdminAccount> list = null;
+            String error = null;
+            try {
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(base() + path))
+                        .timeout(Duration.ofSeconds(10))
+                        .GET().build();
+                HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() / 100 == 2) {
+                    JsonObject json = JsonParser.parseString(resp.body()).getAsJsonObject();
+                    list = new java.util.ArrayList<>();
+                    if (json.has("accounts")) {
+                        for (var el : json.getAsJsonArray("accounts")) {
+                            JsonObject a = el.getAsJsonObject();
+                            list.add(new AdminAccount(
+                                    a.get("username").getAsString(),
+                                    a.get("balance").getAsLong(),
+                                    a.has("verified") && a.get("verified").getAsBoolean(),
+                                    a.has("official") && a.get("official").getAsBoolean()));
+                        }
+                    }
+                } else {
+                    JsonObject json = resp.body().isBlank() ? null : JsonParser.parseString(resp.body()).getAsJsonObject();
+                    error = json != null && json.has("error") ? json.get("error").getAsString() : ("HTTP " + resp.statusCode());
+                }
+            } catch (Exception e) {
+                error = e.toString();
+                PmChatClient.LOGGER.debug("PmBackend admin/accounts failed: {}", e.toString());
+            }
+            java.util.List<AdminAccount> finalList = list;
+            String finalError = error;
+            run(cb, finalList != null, finalList, finalError);
+        }, "pmchat-backend-admin-accounts");
+        t.setDaemon(true);
+        t.start();
+    }
+
     // ---------- HTTP-обвязка ----------
 
     private static String enc(String s) {

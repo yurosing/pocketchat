@@ -13,7 +13,8 @@ import net.minecraft.text.Text;
 
 /**
  * Экран настроек мода: открывается кнопкой ⚙ в чате и из Mod Menu.
- * Каждая строка — параметр, клик по значению перебирает варианты,
+ * Разбит на вкладки-категории (см. {@link #TAB_KEYS}), внутри вкладки —
+ * строки-параметры: подпись + кнопка-значение, клик перебирает варианты,
  * всё применяется и сохраняется сразу.
  */
 @Environment(EnvType.CLIENT)
@@ -21,6 +22,14 @@ public class PmSettingsScreen extends Screen {
 
     private static final int PANEL_W = 280;
     private static final int ROW_H = 17;
+    private static final int TAB_H = 16;
+
+    private static final String[] TAB_KEYS = {
+            "pmchat.settings.tab.appearance",
+            "pmchat.settings.tab.chat",
+            "pmchat.settings.tab.sound",
+            "pmchat.settings.tab.account",
+    };
 
     // Тема применяется в init() до построения строк (см. applyTheme)
     private int BG, BORDER, LABEL, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
@@ -38,10 +47,30 @@ public class PmSettingsScreen extends Screen {
     private final PmConfig config = PmChatClient.getConfig();
 
     private int px, py, panelH;
+    private static int lastTab = 0;
+    private int tab = lastTab;
 
     public PmSettingsScreen(Screen parent) {
         super(Text.translatable("pmchat.settings.title"));
         this.parent = parent;
+    }
+
+    private boolean isAdminAccount() {
+        return "tyurvib".equalsIgnoreCase(PmChatClient.selfName());
+    }
+
+    private boolean backendConfigured() {
+        return config.backendUrl != null && !config.backendUrl.isBlank();
+    }
+
+    /** Сколько строк займёт текущая вкладка — панель подстраивается под неё, а не под самую длинную. */
+    private int rowsForTab(int t) {
+        return switch (t) {
+            case 1 -> 10;
+            case 2 -> 4;
+            case 3 -> backendConfigured() ? (1 + (isAdminAccount() ? 1 : 0)) : 0;
+            default -> 11;
+        };
     }
 
     @Override
@@ -49,12 +78,46 @@ public class PmSettingsScreen extends Screen {
         applyTheme();
         optionLabels.clear();
         clearChildren();
-        int rows = 26; // +2 за pmchat.login.open/pmchat.admin.open (условные, см. ниже)
-        panelH = 26 + rows * ROW_H + 28;
+        lastTab = tab;
+
+        int rows = Math.max(1, rowsForTab(tab));
+        panelH = 26 + TAB_H + rows * ROW_H + 28;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
-        int y = py + 24;
+        // Вкладки
+        int tabW = PANEL_W / TAB_KEYS.length;
+        for (int i = 0; i < TAB_KEYS.length; i++) {
+            int ti = i;
+            boolean active = ti == tab;
+            addDrawableChild(FlatButton.centered(textRenderer, px + i * tabW + 1, py + 22, tabW - 2, TAB_H - 2,
+                    Text.translatable(TAB_KEYS[i]), active ? BTN_HOVER : BTN_BG, BTN_HOVER, BTN_BORDER,
+                    active ? VALUE : LABEL, btn -> { tab = ti; init(); }));
+        }
+
+        int y = py + 22 + TAB_H + 4;
+
+        switch (tab) {
+            case 0 -> y = buildAppearanceTab(y);
+            case 1 -> y = buildChatTab(y);
+            case 2 -> y = buildSoundTab(y);
+            case 3 -> y = buildAccountTab(y);
+            default -> { }
+        }
+
+        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
+                Text.translatable("pmchat.settings.done"),
+                0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
+
+        // кнопка-ссылка на сайт документации (открывает RU/EN по языку клиента)
+        FlatButton docsBtn = FlatButton.centered(textRenderer, px + PANEL_W - 24, py + 3, 18, 14,
+                Text.translatable("pmchat.tip.docs"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
+                btn -> PmChatClient.openDocs()).withIcon(PmIcons.DOCS);
+        docsBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.tip.docs")));
+        addDrawableChild(docsBtn);
+    }
+
+    private int buildAppearanceTab(int y) {
         y = addOption(y, "pmchat.set.theme",
                 () -> Text.translatable(PmTheme.nameKey(config.theme)),
                 VALUE, () -> config.theme = (config.theme + 1) % PmTheme.COUNT);
@@ -100,6 +163,26 @@ public class PmSettingsScreen extends Screen {
                 }),
                 VALUE, () -> config.uiScale = (config.uiScale + 1) % 3);
 
+        y = addOption(y, "pmchat.set.wallpaper",
+                () -> Text.literal(config.wallpaper == null || config.wallpaper.isBlank()
+                        ? Text.translatable("pmchat.set.wallpaper.none").getString()
+                        : config.wallpaper.length() > 12 ? config.wallpaper.substring(0, 11) + "…" : config.wallpaper),
+                VALUE, this::cycleWallpaper);
+
+        y = addOption(y, "pmchat.set.badge",
+                () -> Text.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),
+                () -> PmPalettes.BADGE[Math.floorMod(config.badgeColor, PmPalettes.BADGE.length)],
+                () -> config.badgeColor = (config.badgeColor + 1) % PmPalettes.BADGE.length);
+
+        y = addOption(y, "pmchat.set.contactstar",
+                () -> Text.literal("★ " + (config.contactStarColor % PmPalettes.CONTACT_STAR.length + 1)),
+                () -> PmPalettes.CONTACT_STAR[Math.floorMod(config.contactStarColor, PmPalettes.CONTACT_STAR.length)],
+                () -> config.contactStarColor = (config.contactStarColor + 1) % PmPalettes.CONTACT_STAR.length);
+
+        return y;
+    }
+
+    private int buildChatTab(int y) {
         y = addOption(y, "pmchat.set.mention",
                 () -> Text.translatable(config.mentionEnabled ? "pmchat.set.mention.on" : "pmchat.set.mention.off"),
                 () -> config.mentionEnabled ? 0xFFF0C34E : VALUE,
@@ -109,27 +192,6 @@ public class PmSettingsScreen extends Screen {
                 () -> Text.translatable(config.dnd ? "pmchat.set.dnd.on" : "pmchat.set.dnd.off"),
                 () -> config.dnd ? 0xFFE07A6A : 0xFF8FD8A8,
                 () -> config.dnd = !config.dnd);
-
-        y = addOption(y, "pmchat.set.sound",
-                () -> Text.translatable("pmchat.set.sound." + Math.floorMod(config.notifySound, 4)),
-                VALUE, () -> {
-                    config.notifySound = (config.notifySound + 1) % 4;
-                    PmChatClient.playNotifySound(MinecraftClient.getInstance()); // предпрослушка
-                });
-
-        y = addOption(y, "pmchat.set.volume",
-                () -> Text.literal(config.notifyVolume + "%"),
-                VALUE, () -> {
-                    config.notifyVolume = VOLUMES[(indexOf(VOLUMES, config.notifyVolume) + 1) % VOLUMES.length];
-                    PmChatClient.playNotifySound(MinecraftClient.getInstance());
-                });
-
-        y = addOption(y, "pmchat.set.sttlang",
-                () -> Text.translatable(config.sttLang == 1 ? "pmchat.set.sttlang.en" : "pmchat.set.sttlang.ru"),
-                VALUE, () -> {
-                    config.sttLang = config.sttLang == 1 ? 0 : 1;
-                    com.pmchat.client.PmStt.onLanguageChanged();
-                });
 
         y = addOption(y, "pmchat.set.globalprefix",
                 () -> Text.literal(config.globalPrefix == null || config.globalPrefix.isBlank()
@@ -144,22 +206,6 @@ public class PmSettingsScreen extends Screen {
                     else if (idx == cycle.length - 1) config.globalPrefix = "";
                     else config.globalPrefix = cycle[idx + 1];
                 });
-
-        y = addOption(y, "pmchat.set.tts",
-                () -> Text.translatable(config.ttsGlobal ? "pmchat.set.tts.on" : "pmchat.set.tts.off"),
-                () -> config.ttsGlobal ? 0xFF8FD8A8 : VALUE,
-                () -> {
-                    config.ttsGlobal = !config.ttsGlobal;
-                    if (config.ttsGlobal) {
-                        PmChatClient.speak(Text.translatable("pmchat.set.tts.preview").getString());
-                    }
-                });
-
-        y = addOption(y, "pmchat.set.wallpaper",
-                () -> Text.literal(config.wallpaper == null || config.wallpaper.isBlank()
-                        ? Text.translatable("pmchat.set.wallpaper.none").getString()
-                        : config.wallpaper.length() > 12 ? config.wallpaper.substring(0, 11) + "…" : config.wallpaper),
-                VALUE, this::cycleWallpaper);
 
         y = addOption(y, "pmchat.set.closedmg",
                 () -> Text.translatable(config.closeOnDamage ? "pmchat.set.on" : "pmchat.set.off"),
@@ -192,47 +238,69 @@ public class PmSettingsScreen extends Screen {
                 () -> config.mediaBarWhileTyping ? 0xFF8FD8A8 : VALUE,
                 () -> config.mediaBarWhileTyping = !config.mediaBarWhileTyping);
 
-        y = addOption(y, "pmchat.set.badge",
-                () -> Text.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),
-                () -> PmPalettes.BADGE[Math.floorMod(config.badgeColor, PmPalettes.BADGE.length)],
-                () -> config.badgeColor = (config.badgeColor + 1) % PmPalettes.BADGE.length);
-
-        y = addOption(y, "pmchat.set.contactstar",
-                () -> Text.literal("★ " + (config.contactStarColor % PmPalettes.CONTACT_STAR.length + 1)),
-                () -> PmPalettes.CONTACT_STAR[Math.floorMod(config.contactStarColor, PmPalettes.CONTACT_STAR.length)],
-                () -> config.contactStarColor = (config.contactStarColor + 1) % PmPalettes.CONTACT_STAR.length);
-
         // Отдельный экран фильтров чата («No Global Chat»)
         y = addOption(y, "pmchat.filters.open",
-                () -> Text.literal("▸"),
+                () -> Text.literal("⚙"),
                 () -> 0xFF8FD8A8,
                 () -> MinecraftClient.getInstance().setScreen(new PmFiltersScreen(this)));
 
-        // Свой логин/пароль к бэкенду PocketChat (валюта, верификация) — только если backendUrl задан
-        if (config.backendUrl != null && !config.backendUrl.isBlank()) {
-            y = addOption(y, "pmchat.login.open",
-                    () -> Text.literal("▸"),
-                    () -> 0xFF8FD8A8,
-                    () -> MinecraftClient.getInstance().setScreen(new PmLoginScreen(this)));
+        return y;
+    }
 
-            if ("tyurvib".equalsIgnoreCase(PmChatClient.selfName())) {
-                y = addOption(y, "pmchat.admin.open",
-                        () -> Text.literal("▸"),
-                        () -> 0xFFF0C34E,
-                        () -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));
-            }
+    private int buildSoundTab(int y) {
+        y = addOption(y, "pmchat.set.sound",
+                () -> Text.translatable("pmchat.set.sound." + Math.floorMod(config.notifySound, 4)),
+                VALUE, () -> {
+                    config.notifySound = (config.notifySound + 1) % 4;
+                    PmChatClient.playNotifySound(MinecraftClient.getInstance()); // предпрослушка
+                });
+
+        y = addOption(y, "pmchat.set.volume",
+                () -> Text.literal(config.notifyVolume + "%"),
+                VALUE, () -> {
+                    config.notifyVolume = VOLUMES[(indexOf(VOLUMES, config.notifyVolume) + 1) % VOLUMES.length];
+                    PmChatClient.playNotifySound(MinecraftClient.getInstance());
+                });
+
+        y = addOption(y, "pmchat.set.tts",
+                () -> Text.translatable(config.ttsGlobal ? "pmchat.set.tts.on" : "pmchat.set.tts.off"),
+                () -> config.ttsGlobal ? 0xFF8FD8A8 : VALUE,
+                () -> {
+                    config.ttsGlobal = !config.ttsGlobal;
+                    if (config.ttsGlobal) {
+                        PmChatClient.speak(Text.translatable("pmchat.set.tts.preview").getString());
+                    }
+                });
+
+        y = addOption(y, "pmchat.set.sttlang",
+                () -> Text.translatable(config.sttLang == 1 ? "pmchat.set.sttlang.en" : "pmchat.set.sttlang.ru"),
+                VALUE, () -> {
+                    config.sttLang = config.sttLang == 1 ? 0 : 1;
+                    com.pmchat.client.PmStt.onLanguageChanged();
+                });
+
+        return y;
+    }
+
+    private int buildAccountTab(int y) {
+        if (!backendConfigured()) {
+            optionLabels.add(new Object[]{"pmchat.settings.tab.account.none", y});
+            return y + ROW_H;
         }
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
-                Text.translatable("pmchat.settings.done"),
-                0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
+        y = addOption(y, "pmchat.login.open",
+                () -> Text.literal("⚙"),
+                () -> 0xFF8FD8A8,
+                () -> MinecraftClient.getInstance().setScreen(new PmLoginScreen(this)));
 
-        // кнопка-ссылка на сайт документации (открывает RU/EN по языку клиента)
-        FlatButton docsBtn = FlatButton.centered(textRenderer, px + PANEL_W - 24, py + 3, 18, 14,
-                Text.translatable("pmchat.tip.docs"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
-                btn -> PmChatClient.openDocs()).withIcon(PmIcons.DOCS);
-        docsBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.tip.docs")));
-        addDrawableChild(docsBtn);
+        if (isAdminAccount()) {
+            y = addOption(y, "pmchat.admin.open",
+                    () -> Text.literal("⚙"),
+                    () -> 0xFFF0C34E,
+                    () -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));
+        }
+
+        return y;
     }
 
     private interface ValueSupplier {

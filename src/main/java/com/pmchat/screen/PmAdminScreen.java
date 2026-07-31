@@ -79,10 +79,17 @@ public class PmAdminScreen extends Screen {
         y += 30;
 
         fieldLabels.add(new Object[]{"pmchat.admin.target.label", fx, y - 10});
-        targetField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.admin.target.hint"));
+        int targetFieldW = fw - 22;
+        targetField = new TextFieldWidget(textRenderer, fx, y, targetFieldW, 16, Text.translatable("pmchat.admin.target.hint"));
         targetField.setMaxLength(32);
         placeholder(targetField, "pmchat.admin.target.hint");
         addDrawableChild(targetField);
+        FlatButton accountsBtn = FlatButton.centered(textRenderer, fx + targetFieldW + 4, y, 18, 16,
+                Text.literal("☰"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
+                btn -> MinecraftClient.getInstance().setScreen(
+                        new PmAdminAccountsScreen(this, name -> targetField.setText(name))));
+        accountsBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.admin.accounts.open")));
+        addDrawableChild(accountsBtn);
         y += 24;
 
         fieldLabels.add(new Object[]{"pmchat.admin.amount.label", fx, y - 10});
