@@ -81,6 +81,7 @@
   "pmchat.settings.tab.account.none": "Введи адрес сервера PocketChat:",
   "pmchat.settings.backendurl.hint": "http://адрес:порт/",
   "pmchat.settings.backendurl.connect": "Подключить",
+  "pmchat.settings.backendurl.change": "Сменить адрес сервера",
   "pmchat.settings.done": "Готово",
   "pmchat.set.theme": "Тема",
   "pmchat.set.theme.dark": "Тёмная",

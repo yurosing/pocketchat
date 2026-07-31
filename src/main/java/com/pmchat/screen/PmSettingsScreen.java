@@ -69,12 +69,13 @@ public class PmSettingsScreen extends Screen {
         return switch (t) {
             case 1 -> 10;
             case 2 -> 4;
-            case 3 -> backendConfigured() ? (1 + (isAdminAccount() ? 1 : 0)) : 4;
+            case 3 -> backendConfigured() && !editBackendUrl ? (2 + (isAdminAccount() ? 1 : 0)) : 4;
             default -> 11;
         };
     }
 
     private TextFieldWidget backendUrlField;
+    private boolean editBackendUrl = false;
 
     @Override
     protected void init() {
@@ -286,7 +287,7 @@ public class PmSettingsScreen extends Screen {
     }
 
     private int buildAccountTab(int y) {
-        if (!backendConfigured()) {
+        if (!backendConfigured() || editBackendUrl) {
             int fx = px + 16;
             int fw = PANEL_W - 32;
             optionLabels.add(new Object[]{"pmchat.settings.tab.account.none", y});
@@ -295,8 +296,12 @@ public class PmSettingsScreen extends Screen {
             String hint = Text.translatable("pmchat.settings.backendurl.hint").getString();
             backendUrlField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.settings.backendurl.hint"));
             backendUrlField.setMaxLength(200);
-            backendUrlField.setSuggestion(hint);
-            backendUrlField.setChangedListener(s -> backendUrlField.setSuggestion(s.isEmpty() ? hint : null));
+            if (backendConfigured()) {
+                backendUrlField.setText(config.backendUrl);
+            } else {
+                backendUrlField.setSuggestion(hint);
+                backendUrlField.setChangedListener(s -> backendUrlField.setSuggestion(s.isEmpty() ? hint : null));
+            }
             addDrawableChild(backendUrlField);
             y += 20;
 
@@ -307,6 +312,7 @@ public class PmSettingsScreen extends Screen {
                         if (!url.isEmpty()) {
                             config.backendUrl = url;
                             config.save();
+                            editBackendUrl = false;
                             reinit();
                         }
                     }));
@@ -325,6 +331,11 @@ public class PmSettingsScreen extends Screen {
                     () -> 0xFFF0C34E,
                     () -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));
         }
+
+        y = addOption(y, "pmchat.settings.backendurl.change",
+                () -> Text.literal("⚙"),
+                () -> LABEL,
+                () -> editBackendUrl = true);
 
         return y;
     }
