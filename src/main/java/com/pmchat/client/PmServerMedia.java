@@ -57,22 +57,6 @@ public final class PmServerMedia {
     private static final byte STREAM_DONATE = 0x54;
     private static final byte STREAM_DONATE_RESULT = 0x55;
     private static final byte STREAM_DONATE_RECV = 0x56;
-    private static final byte COIN_OPEN = 0x60;
-    private static final byte COIN_CANCEL = 0x61;
-    private static final byte COIN_ACCEPT = 0x62;
-    private static final byte COIN_LIST_REQ = 0x63;
-    private static final byte RPS_CHALLENGE = 0x64;
-    private static final byte RPS_ACCEPT = 0x65;
-    private static final byte RPS_DECLINE = 0x66;
-    private static final byte RPS_CHOICE = 0x67;
-    private static final byte COIN_LIST = 0x68;
-    private static final byte COIN_RESULT = 0x69;
-    private static final byte COIN_ERR = 0x6A;
-    private static final byte RPS_CHALLENGED = 0x6B;
-    private static final byte RPS_STARTED = 0x6C;
-    private static final byte RPS_ENDED = 0x6D;
-    private static final byte RPS_RESULT = 0x6E;
-    private static final byte RPS_ERR = 0x6F;
 
     private static final int DEFAULT_CHUNK_BYTES = 24_000;
     private static final int MESSAGES_PER_TICK = 8;
@@ -129,39 +113,6 @@ public final class PmServerMedia {
     private volatile boolean lastDonateOk = false;
     private volatile long lastDonateAt = 0L;
     private final java.util.concurrent.atomic.AtomicInteger streamVersion = new java.util.concurrent.atomic.AtomicInteger();
-
-    // ---------- Мини-игры: подброс монетки + камень-ножницы-бумага (Vault) ----------
-
-    /** Открытая ставка на орла/решку: автор, сумма, сторона (0 орёл, 1 решка). */
-    public record CoinBet(String opener, double amount, int side) {
-    }
-
-    /** Итог сыгранного подброса. */
-    public record CoinResult(String opener, String accepter, int resultSide, String winner, double amount) {
-    }
-
-    /** Итог сыгранного раунда КНБ: соперник, твой выбор, его выбор, победитель ("" — ничья), сумма. */
-    public record RpsResult(String opponent, int yourChoice, int oppChoice, String winner, double amount) {
-    }
-
-    /** Входящий вызов на КНБ от другого игрока, ждущий ответа. */
-    public record RpsChallenge(String challenger, double amount) {
-    }
-
-    private volatile java.util.List<CoinBet> coinBets = java.util.List.of();
-    private volatile CoinResult lastCoinResult;
-    private volatile String lastGameErr;
-    private volatile long lastGameErrAt;
-    private final java.util.concurrent.atomic.AtomicInteger coinVersion = new java.util.concurrent.atomic.AtomicInteger();
-
-    /** Входящий вызов на КНБ, ждущий ответа ({@code null} — нет вызова). */
-    private volatile RpsChallenge rpsIncoming;
-    /** Активный матч, ждущий выбора ({@code null} — нет активного матча). */
-    private volatile String rpsOpponent;
-    private volatile double rpsAmount;
-    private volatile boolean rpsChoiceSent;
-    private volatile RpsResult lastRpsResult;
-    private final java.util.concurrent.atomic.AtomicInteger rpsVersion = new java.util.concurrent.atomic.AtomicInteger();
 
     private PmServerMedia() {
     }
@@ -322,109 +273,6 @@ public final class PmServerMedia {
         return d == l ? Long.toString(l) : String.format(java.util.Locale.ROOT, "%.2f", d);
     }
 
-    // ---------- coin flip API ----------
-
-    public java.util.List<CoinBet> coinBets() {
-        return coinBets;
-    }
-
-    public CoinResult lastCoinResult() {
-        return lastCoinResult;
-    }
-
-    public String lastGameErr() {
-        return lastGameErr;
-    }
-
-    public long lastGameErrAt() {
-        return lastGameErrAt;
-    }
-
-    /** Счётчик изменений списка ставок/результата — экран игр перечитывает по нему. */
-    public int coinVersion() {
-        return coinVersion.get();
-    }
-
-    /** Открыть ставку (0 — орёл, 1 — решка) на сумму {@code amount}. Списывает монеты сразу. */
-    public void coinOpen(double amount, int side) {
-        if (!serverHasPlugin) return;
-        enqueue(build(COIN_OPEN, dos -> {
-            dos.writeDouble(amount);
-            dos.writeByte(side & 1);
-        }));
-    }
-
-    public void coinCancel() {
-        if (serverHasPlugin) enqueue(build(COIN_CANCEL, dos -> {
-        }));
-    }
-
-    public void coinAccept(String opener) {
-        if (serverHasPlugin && opener != null) enqueue(build(COIN_ACCEPT, dos -> dos.writeUTF(opener)));
-    }
-
-    public void requestCoinBets() {
-        if (serverHasPlugin) enqueue(build(COIN_LIST_REQ, dos -> {
-        }));
-    }
-
-    // ---------- rock-paper-scissors API ----------
-
-    public RpsChallenge rpsIncoming() {
-        return rpsIncoming;
-    }
-
-    /** Соперник в активном матче ({@code null} — матча нет). */
-    public String rpsOpponent() {
-        return rpsOpponent;
-    }
-
-    public double rpsAmount() {
-        return rpsAmount;
-    }
-
-    public boolean rpsChoiceSent() {
-        return rpsChoiceSent;
-    }
-
-    public RpsResult lastRpsResult() {
-        return lastRpsResult;
-    }
-
-    public int rpsVersion() {
-        return rpsVersion.get();
-    }
-
-    public void rpsChallenge(String target, double amount) {
-        if (serverHasPlugin && target != null) enqueue(build(RPS_CHALLENGE, dos -> {
-            dos.writeUTF(target);
-            dos.writeDouble(amount);
-        }));
-    }
-
-    public void rpsAccept(String challenger) {
-        if (!serverHasPlugin || challenger == null) return;
-        rpsIncoming = null;
-        enqueue(build(RPS_ACCEPT, dos -> dos.writeUTF(challenger)));
-    }
-
-    public void rpsDecline(String challenger) {
-        if (!serverHasPlugin || challenger == null) return;
-        rpsIncoming = null;
-        enqueue(build(RPS_DECLINE, dos -> dos.writeUTF(challenger)));
-    }
-
-    /** Отправить выбор (0 камень/1 бумага/2 ножницы) в активном матче. */
-    public void rpsChoose(int choice) {
-        if (!serverHasPlugin || rpsOpponent == null || rpsChoiceSent) return;
-        String opponent = rpsOpponent;
-        rpsChoiceSent = true;
-        enqueue(build(RPS_CHOICE, dos -> {
-            dos.writeUTF(opponent);
-            dos.writeByte(choice & 3);
-        }));
-    }
-
     /** Called on disconnect — drop state and fail anything in flight. */
     public void reset() {
         serverHasPlugin = false;
@@ -435,14 +283,6 @@ public final class PmServerMedia {
         selfBalance = 0d;
         liveStreams = java.util.List.of();
         selfStreaming = false;
-        coinBets = java.util.List.of();
-        lastCoinResult = null;
-        lastGameErr = null;
-        rpsIncoming = null;
-        rpsOpponent = null;
-        rpsAmount = 0d;
-        rpsChoiceSent = false;
-        lastRpsResult = null;
         outbound.clear();
         uploads.values().forEach(p -> p.future.completeExceptionally(new IllegalStateException("disconnected")));
         uploads.clear();
@@ -714,77 +554,6 @@ public final class PmServerMedia {
                     double amount = in.readDouble();
                     PmChatClient.giftToast(from, "+" + formatCoins(amount), "$");
                     streamVersion.incrementAndGet();
-                }
-                case COIN_LIST -> {
-                    int n = in.readInt();
-                    java.util.List<CoinBet> list = new java.util.ArrayList<>();
-                    for (int i = 0; i < n; i++) {
-                        String opener = in.readUTF();
-                        double amount = in.readDouble();
-                        int side = in.readByte();
-                        list.add(new CoinBet(opener, amount, side));
-                    }
-                    coinBets = list;
-                    coinVersion.incrementAndGet();
-                }
-                case COIN_RESULT -> {
-                    String opener = in.readUTF();
-                    String accepter = in.readUTF();
-                    int resultSide = in.readByte();
-                    String winner = in.readUTF();
-                    double amount = in.readDouble();
-                    double nb = in.readDouble();
-                    lastCoinResult = new CoinResult(opener, accepter, resultSide, winner, amount);
-                    selfBalance = nb;
-                    hasBalance = true;
-                    PmChatClient.setKnownBalance(formatCoins(nb));
-                    coinVersion.incrementAndGet();
-                }
-                case COIN_ERR -> {
-                    lastGameErr = in.readUTF();
-                    lastGameErrAt = System.currentTimeMillis();
-                    coinVersion.incrementAndGet();
-                }
-                case RPS_CHALLENGED -> {
-                    String challenger = in.readUTF();
-                    double amount = in.readDouble();
-                    rpsIncoming = new RpsChallenge(challenger, amount);
-                    rpsVersion.incrementAndGet();
-                }
-                case RPS_STARTED -> {
-                    rpsOpponent = in.readUTF();
-                    rpsAmount = in.readDouble();
-                    rpsChoiceSent = false;
-                    rpsVersion.incrementAndGet();
-                }
-                case RPS_ENDED -> {
-                    in.readUTF(); // opponent — экран и так закрывает активный матч/вызов
-                    rpsIncoming = null;
-                    rpsOpponent = null;
-                    rpsChoiceSent = false;
-                    rpsVersion.incrementAndGet();
-                }
-                case RPS_RESULT -> {
-                    String opponent = in.readUTF();
-                    int yourChoice = in.readByte();
-                    int oppChoice = in.readByte();
-                    String winner = in.readUTF();
-                    double amount = in.readDouble();
-                    double nb = in.readDouble();
-                    lastRpsResult = new RpsResult(opponent, yourChoice, oppChoice, winner, amount);
-                    selfBalance = nb;
-                    hasBalance = true;
-                    PmChatClient.setKnownBalance(formatCoins(nb));
-                    rpsOpponent = null;
-                    rpsChoiceSent = false;
-                    rpsVersion.incrementAndGet();
-                }
-                case RPS_ERR -> {
-                    lastGameErr = in.readUTF();
-                    lastGameErrAt = System.currentTimeMillis();
-                    rpsOpponent = null;
-                    rpsChoiceSent = false;
-                    rpsVersion.incrementAndGet();
                 }
                 default -> { /* unknown — ignore */ }
             }

@@ -107,7 +107,22 @@ public final class PmBackend {
             if (resp == null) return;
             if (resp.has("token")) PmChatClient.getConfig().backendToken = resp.get("token").getAsString();
             PmChatClient.getConfig().save();
+            // Свежий аккаунт не должен разом получить всю историю прошлых рассылок —
+            // стартуем опрос с текущего "последнего" id, а не с нуля.
+            skipBroadcastHistory();
         }, cb);
+    }
+
+    /** Ставит lastBroadcastId на текущий максимум, чтобы не присылать старые рассылки. */
+    private static void skipBroadcastHistory() {
+        getJson("/v1/broadcast/latest", json -> {
+            if (json == null || !json.has("id")) return;
+            long id = json.get("id").getAsLong();
+            MinecraftClient.getInstance().execute(() -> {
+                PmChatClient.getConfig().lastBroadcastId = id;
+                PmChatClient.getConfig().save();
+            });
+        });
     }
 
     public static void login(String username, String password, Callback<Void> cb) {
@@ -129,6 +144,32 @@ public final class PmBackend {
     }
 
     // ---------- кошелёк ----------
+
+    private static volatile Long cachedSelfBalance = null;
+    private static volatile long selfBalanceFetchedAt = 0;
+    private static volatile boolean selfBalanceInFlight = false;
+    private static final long SELF_BALANCE_TTL_MS = 20_000L;
+
+    /**
+     * Синхронно отдаёт последний известный баланс своей валюты (для отрисовки в
+     * профиле без блокировки рендера), фоново обновляя, если устарел. Возвращает
+     * null, пока ответ ещё не пришёл или если аккаунт не настроен.
+     */
+    public static Long cachedSelfBalance() {
+        if (!isConfigured() || !hasAccount()) return null;
+        long now = System.currentTimeMillis();
+        if ((cachedSelfBalance == null || now - selfBalanceFetchedAt > SELF_BALANCE_TTL_MS) && !selfBalanceInFlight) {
+            selfBalanceInFlight = true;
+            wallet((ok, bal, err) -> {
+                selfBalanceInFlight = false;
+                if (ok) {
+                    cachedSelfBalance = bal;
+                    selfBalanceFetchedAt = System.currentTimeMillis();
+                }
+            });
+        }
+        return cachedSelfBalance;
+    }
 
     public static void wallet(Callback<Long> cb) {
         getJson("/v1/wallet?token=" + enc(PmChatClient.getConfig().backendToken), json -> {

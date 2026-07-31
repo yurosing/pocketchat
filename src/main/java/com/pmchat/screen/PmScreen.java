@@ -423,6 +423,15 @@ public class PmScreen extends Screen {
     private TextFieldWidget searchField;
     private TextFieldWidget inputField;
     private TextFieldWidget amountField;
+    /** Y координата надписи «нельзя ответить» вместо поля ввода официальному аккаунту, -1 — не показывать. */
+    private int officialNoticeY = -1;
+
+    /** true, если {@code name} — официальный аккаунт PocketChat (см. PmBackend/server-pocketchat). */
+    private boolean isOfficialAccount(String name) {
+        if (!isPlayerTab(name) || !com.pmchat.client.PmBackend.isConfigured()) return false;
+        com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(name);
+        return acc != null && acc.official;
+    }
 
     /** Плавность появления счётчика символов (5.2) — как в Telegram. */
     private float counterAlpha = 0f;
@@ -862,6 +871,21 @@ public class PmScreen extends Screen {
         }
     }
 
+    /**
+     * Значок верификации: зелёный кружок с белой галочкой (под размер строки текста),
+     * а не просто символ "✓". {@code topY} — верх строки, как в обычном drawText.
+     */
+    static int drawVerifiedBadge(DrawContext ctx, net.minecraft.client.font.TextRenderer tr, int x, int topY) {
+        int d = 8;
+        int cx = x + d / 2;
+        int cy = topY + 4;
+        fillCircle(ctx, cx, cy, d / 2, 0xFF1E9E5A);
+        String check = "✓";
+        int tw = tr.getWidth(check);
+        ctx.drawText(tr, check, cx - tw / 2, cy - 4, 0xFFFFFFFF, false);
+        return d;
+    }
+
     /** Затемнить цвет ARGB на коэффициент. */
     private static int dim(int argb, float k) {
         int a = argb >>> 24;
@@ -1121,6 +1145,7 @@ public class PmScreen extends Screen {
         searchField = null;
         inputField = null;
         amountField = null;
+        officialNoticeY = -1;
 
         applyTheme();
         if (config.fullscreen) {
@@ -1204,13 +1229,9 @@ public class PmScreen extends Screen {
                 com.pmchat.client.PmServerMedia.get().isSelfStreaming() ? 0xFFE07A6A : 0xFF9CC4DC,
                 "pmchat.tip.streams", btn ->
                         MinecraftClient.getInstance().setScreen(new PmStreamsScreen(this))));
-        // Игры: подброс монетки + камень-ножницы-бумага на монеты Vault
-        addDrawableChild(icon(px + 106, py + PANEL_H - 19, 16, 13, PmIcons.DICE, 0xFFE0B040,
-                "pmchat.tip.games", btn ->
-                        MinecraftClient.getInstance().setScreen(new PmGamesScreen(this))));
         // Discord сервера — открыть приглашение, если задано в pmchat.json (discordUrl)
         if (config.discordUrl != null && !config.discordUrl.isBlank()) {
-            addDrawableChild(icon(px + 126, py + PANEL_H - 19, 16, 13, PmIcons.DISCORD, 0xFF8FA7E0,
+            addDrawableChild(icon(px + 106, py + PANEL_H - 19, 16, 13, PmIcons.DISCORD, 0xFF8FA7E0,
                     "pmchat.tip.discord", btn -> PmChatClient.openDiscord()));
         }
 
@@ -1291,7 +1312,11 @@ public class PmScreen extends Screen {
             }
 
             int inputY = py + PANEL_H - 24;
-            if (moneyMode) {
+            if (isOfficialAccount(selected)) {
+                // Официальному аккаунту PocketChat отвечать нельзя — поля ввода тут не будет вовсе,
+                // вместо него просто надпись (отрисовывается в render() по officialNoticeY).
+                officialNoticeY = inputY;
+            } else if (moneyMode) {
                 amountField = new TextFieldWidget(textRenderer, px + LEFT_W + 8, inputY, PANEL_W - LEFT_W - 78, 16,
                         Text.translatable("pmchat.money.hint"));
                 amountField.setMaxLength(12);
@@ -1644,11 +1669,8 @@ public class PmScreen extends Screen {
             return;
         }
         // Официальному аккаунту PocketChat отвечать нельзя (см. PmBackend/server-pocketchat)
-        if (isPlayerTab(selected) && com.pmchat.client.PmBackend.isConfigured()) {
-            com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);
-            if (acc != null && acc.official) {
-                return;
-            }
+        if (isOfficialAccount(selected)) {
+            return;
         }
         String replyHash = replyTarget != null ? PmHistory.msgHash(replyTarget.text) : null;
         PmChatClient.sendMessage(selected, text, replyHash, replyFragStart, replyFragLen, replyFragText);
@@ -2144,6 +2166,12 @@ public class PmScreen extends Screen {
             context.drawText(textRenderer, hint, hx, py + PANEL_H / 2 - 4, SUBTLE, false);
         } else {
             renderChat(context, mouseX, mouseY);
+        }
+
+        if (officialNoticeY >= 0) {
+            Text notice = Text.translatable("pmchat.official.noreply");
+            context.drawText(textRenderer, notice,
+                    px + LEFT_W + (PANEL_W - LEFT_W - textRenderer.getWidth(notice)) / 2, officialNoticeY + 4, SUBTLE, false);
         }
 
         if (callMenuOpen) {
@@ -3303,8 +3331,8 @@ public class PmScreen extends Screen {
             if (com.pmchat.client.PmBackend.isConfigured()) {
                 com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(name);
                 int afterNameX = nameX + textRenderer.getWidth(rowDisplayName) + 3;
-                if (acc != null && (acc.verified || acc.official) && afterNameX + 7 <= px + LEFT_W - (unread > 0 ? 16 : 7)) {
-                    context.drawText(textRenderer, "✓", afterNameX, y + 3, 0xFF4CC26A, false);
+                if (acc != null && (acc.verified || acc.official) && afterNameX + 9 <= px + LEFT_W - (unread > 0 ? 16 : 7)) {
+                    drawVerifiedBadge(context, textRenderer, afterNameX, y + 2);
                 }
             }
 
@@ -3387,8 +3415,8 @@ public class PmScreen extends Screen {
         if (isPlayerTab(selected) && com.pmchat.client.PmBackend.isConfigured()) {
             com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);
             if (acc != null && (acc.verified || acc.official)) {
-                context.drawText(textRenderer, "✓", afterHeaderX, py + 8, 0xFF4CC26A, false);
-                afterHeaderX += textRenderer.getWidth("✓") + 4;
+                int badgeW = drawVerifiedBadge(context, textRenderer, afterHeaderX, py + 7);
+                afterHeaderX += badgeW + 4;
             }
         }
         // Значок ЧС (5.5): блокировавший видит, что собеседник в чёрном списке

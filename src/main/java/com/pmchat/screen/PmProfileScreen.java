@@ -195,10 +195,20 @@ public class PmProfileScreen extends Screen {
             nameX += textRenderer.getWidth(icon) + 4;
         }
         int nameMax = px + PANEL_W - 10 - nameX;
+        String nameDrawn;
         if (textRenderer.getWidth(fullName) <= nameMax) {
             context.drawText(textRenderer, fullName, nameX, py + 30, TITLE, false);
+            nameDrawn = fullName.getString();
         } else {
-            context.drawText(textRenderer, trimTo(fullName.getString(), nameMax), nameX, py + 30, TITLE, false);
+            nameDrawn = trimTo(fullName.getString(), nameMax);
+            context.drawText(textRenderer, nameDrawn, nameX, py + 30, TITLE, false);
+        }
+        // Галочка верификации / официальный аккаунт (см. PmBackend, server-pocketchat)
+        if (com.pmchat.client.PmBackend.isConfigured()) {
+            com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(player);
+            if (acc != null && (acc.verified || acc.official)) {
+                PmScreen.drawVerifiedBadge(context, textRenderer, nameX + textRenderer.getWidth(nameDrawn) + 3, py + 29);
+            }
         }
 
         boolean online = self || onlineEntry() != null;
@@ -211,6 +221,13 @@ public class PmProfileScreen extends Screen {
             String balText = Text.translatable("pmchat.profile.balance").getString() + ": "
                     + (bal == null ? Text.translatable("pmchat.profile.balance.unknown").getString() : bal);
             context.drawText(textRenderer, balText, tx, py + 56, 0xFFE0B040, false);
+
+            if (com.pmchat.client.PmBackend.isConfigured() && com.pmchat.client.PmBackend.hasAccount()) {
+                Long pcBal = com.pmchat.client.PmBackend.cachedSelfBalance();
+                String pcBalText = Text.translatable("pmchat.profile.balance.pocketchat").getString() + ": "
+                        + (pcBal == null ? "…" : pcBal);
+                context.drawText(textRenderer, pcBalText, tx, py + 66, 0xFF4CC26A, false);
+            }
         }
 
         // ---- Подписи полей ----
