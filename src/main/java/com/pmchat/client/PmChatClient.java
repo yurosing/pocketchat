@@ -220,7 +220,7 @@ public class PmChatClient implements ClientModInitializer {
             if (client.world != null && System.currentTimeMillis() >= nextBroadcastPollAt
                     && PmBackend.isConfigured() && PmBackend.hasAccount()) {
                 nextBroadcastPollAt = System.currentTimeMillis() + 30_000L;
-                PmBackend.pollBroadcastsOnce(PmChatClient::broadcastToast);
+                PmBackend.pollBroadcastsOnce(PmChatClient::receiveOfficialBroadcast);
             }
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
@@ -2031,15 +2031,25 @@ public class PmChatClient implements ClientModInitializer {
         com.pmchat.client.api.PocketChatClientImpl.fireGift(from, giftName, icon);
     }
 
-    /** Рассылка официального аккаунта PocketChat (зелёная галочка) — см. {@link PmBackend}. */
-    public static void broadcastToast(String from, String message) {
+    /**
+     * Рассылка официального аккаунта PocketChat (см. {@link PmBackend}) — приходит
+     * как обычное входящее сообщение от {@code from} (обычно "PocketChat"), поэтому
+     * появляется отдельным диалогом в списке слева, с непрочитанным и тостом,
+     * как любая другая ЛС. Ответить такому собеседнику мод не даст (см.
+     * {@code PmScreen#doSend}, проверка {@code PmBackend.AccountInfo#official}).
+     */
+    public static void receiveOfficialBroadcast(String from, String message) {
+        PmMessage msg = history.add(from, false, message, 0);
+        com.pmchat.client.api.PocketChatClientImpl.fireReceived(from, msg);
+
         MinecraftClient client = MinecraftClient.getInstance();
-        client.getToastManager().add(new PmToast("✅ " + from, message));
-        if (client.inGameHud != null) {
-            net.minecraft.text.MutableText msg = Text.literal("✅ " + from + ": ")
-                    .formatted(net.minecraft.util.Formatting.GREEN)
-                    .append(Text.literal(message).formatted(net.minecraft.util.Formatting.WHITE));
-            client.inGameHud.getChatHud().addMessage(msg);
+        boolean viewing = client.currentScreen instanceof PmScreen screen && screen.isViewing(from);
+        if (!viewing) {
+            history.markUnread(from);
+            if (!config.dnd && !config.isMutedThread(from)) {
+                client.getToastManager().add(new PmToast(from, previewOf(message)));
+                playNotifySound(client);
+            }
         }
     }
 

@@ -9,6 +9,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
 /**
@@ -68,10 +69,12 @@ public class PmSettingsScreen extends Screen {
         return switch (t) {
             case 1 -> 10;
             case 2 -> 4;
-            case 3 -> backendConfigured() ? (1 + (isAdminAccount() ? 1 : 0)) : 0;
+            case 3 -> backendConfigured() ? (1 + (isAdminAccount() ? 1 : 0)) : 4;
             default -> 11;
         };
     }
+
+    private TextFieldWidget backendUrlField;
 
     @Override
     protected void init() {
@@ -284,8 +287,31 @@ public class PmSettingsScreen extends Screen {
 
     private int buildAccountTab(int y) {
         if (!backendConfigured()) {
+            int fx = px + 16;
+            int fw = PANEL_W - 32;
             optionLabels.add(new Object[]{"pmchat.settings.tab.account.none", y});
-            return y + ROW_H;
+            y += 12;
+
+            String hint = Text.translatable("pmchat.settings.backendurl.hint").getString();
+            backendUrlField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.settings.backendurl.hint"));
+            backendUrlField.setMaxLength(200);
+            backendUrlField.setSuggestion(hint);
+            backendUrlField.setChangedListener(s -> backendUrlField.setSuggestion(s.isEmpty() ? hint : null));
+            addDrawableChild(backendUrlField);
+            y += 20;
+
+            addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
+                    Text.translatable("pmchat.settings.backendurl.connect"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
+                    btn -> {
+                        String url = backendUrlField.getText().trim();
+                        if (!url.isEmpty()) {
+                            config.backendUrl = url;
+                            config.save();
+                            reinit();
+                        }
+                    }));
+            y += 20;
+            return y;
         }
 
         y = addOption(y, "pmchat.login.open",
