@@ -82,7 +82,7 @@ public class PmLoginScreen extends Screen {
                     btn -> {
                         config.backendToken = "";
                         config.save();
-                        reinit();
+                        init();
                     }));
         }
 
