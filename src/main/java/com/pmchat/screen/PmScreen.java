@@ -3297,7 +3297,16 @@ public class PmScreen extends Screen {
                 nameX += 8;
             }
             int nameMax = LEFT_W - (nameX - px) - 7 - (unread > 0 ? 16 : 0);
-            context.drawText(textRenderer, trim(config.aliasOf(name), nameMax), nameX, y + 3, NAME_TEXT, false);
+            String rowDisplayName = trim(config.aliasOf(name), nameMax);
+            context.drawText(textRenderer, rowDisplayName, nameX, y + 3, NAME_TEXT, false);
+            // Галочка верификации / официальный аккаунт (см. PmBackend, server-pocketchat)
+            if (com.pmchat.client.PmBackend.isConfigured()) {
+                com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(name);
+                int afterNameX = nameX + textRenderer.getWidth(rowDisplayName) + 3;
+                if (acc != null && (acc.verified || acc.official) && afterNameX + 7 <= px + LEFT_W - (unread > 0 ? 16 : 7)) {
+                    context.drawText(textRenderer, "✓", afterNameX, y + 3, 0xFF4CC26A, false);
+                }
+            }
 
             PmMessage last = history.lastMessage(name);
             if (last != null) {
