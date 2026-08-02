@@ -55,13 +55,16 @@ public final class PmBackend {
         public final String avatarUrl;
         /** Эпоха в мс последнего пинга/активности аккаунта на бэкенде, 0 — неизвестно. */
         public final long lastSeenAt;
+        /** Включил ли сам этот игрок точный статус «был(а) N часов/дней назад» (см. humanizeLastSeen). */
+        public final boolean sharePrecise;
 
-        AccountInfo(String username, boolean verified, boolean official, String avatarUrl, long lastSeenAt) {
+        AccountInfo(String username, boolean verified, boolean official, String avatarUrl, long lastSeenAt, boolean sharePrecise) {
             this.username = username;
             this.verified = verified;
             this.official = official;
             this.avatarUrl = avatarUrl;
             this.lastSeenAt = lastSeenAt;
+            this.sharePrecise = sharePrecise;
         }
     }
 
@@ -114,20 +117,34 @@ public final class PmBackend {
      * Человекочитаемый статус «был(а) в сети» по последнему пингу присутствия —
      * кросс-серверный (не зависит от таб-листа текущего Minecraft-сервера).
      */
+    /** Расплывчатый статус (недавно/на этой неделе/давно) — по умолчанию, без взаимного согласия на точность. */
     public static net.minecraft.text.Text humanizeLastSeen(long lastSeenAtMs) {
+        return humanizeLastSeen(lastSeenAtMs, false);
+    }
+
+    /**
+     * @param precise точный вариант («N ч./дн. назад») вместо расплывчатых «недавно/на этой
+     *                неделе/давно» — вызывающий код должен передавать true только когда ОБЕ
+     *                стороны включили {@link PmConfig#preciseLastSeen} (см. AccountInfo.sharePrecise).
+     */
+    public static net.minecraft.text.Text humanizeLastSeen(long lastSeenAtMs, boolean precise) {
         if (lastSeenAtMs <= 0) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.unknown");
         long diff = System.currentTimeMillis() - lastSeenAtMs;
         if (diff < 90_000L) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.online");
-        if (diff < 5 * 60_000L) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.recent");
-        if (diff < 3_600_000L) {
-            return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.minutes", diff / 60_000L);
+        if (precise) {
+            if (diff < 3_600_000L) {
+                return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.minutes", diff / 60_000L);
+            }
+            if (diff < 24 * 3_600_000L) {
+                return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.hours", diff / 3_600_000L);
+            }
+            if (diff < 30L * 24 * 3_600_000L) {
+                return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.days", diff / (24 * 3_600_000L));
+            }
+            return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.long");
         }
-        if (diff < 24 * 3_600_000L) {
-            return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.hours", diff / 3_600_000L);
-        }
-        if (diff < 7 * 24 * 3_600_000L) {
-            return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.week");
-        }
+        if (diff < 3_600_000L) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.recent");
+        if (diff < 7 * 24 * 3_600_000L) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.week");
         return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.long");
     }
 
@@ -329,9 +346,25 @@ public final class PmBackend {
                     json.has("official") && json.get("official").getAsBoolean(),
                     json.has("avatarUrl") && !json.get("avatarUrl").isJsonNull() ? json.get("avatarUrl").getAsString() : null,
                     json.has("lastSeen") && !json.get("lastSeen").isJsonNull()
-                            ? parseIsoMillis(json.get("lastSeen").getAsString()) : 0L);
+                            ? parseIsoMillis(json.get("lastSeen").getAsString()) : 0L,
+                    json.has("sharePrecise") && json.get("sharePrecise").getAsBoolean());
             run(cb, true, info, null);
         });
+    }
+
+    /**
+     * Переключает свой точный статус «был(а) N часов/дней назад» (взаимно — см.
+     * {@link #humanizeLastSeen}). Сбрасывает свой кэш, чтобы UI сразу подхватил.
+     */
+    public static void setPrecisePresence(boolean sharePrecise, Callback<Void> cb) {
+        if (!isConfigured() || !hasAccount()) return;
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("sharePrecise", sharePrecise);
+        postJson("/v1/account/privacy", body, resp -> {
+            String self = PmChatClient.selfName();
+            if (self != null) ACCOUNT_CACHE.remove(self.toLowerCase(java.util.Locale.ROOT));
+        }, cb);
     }
 
     /** «Пинг» присутствия — держит lastSeen свежим, пока открыт мессенджер (см. PmChatClient). */
@@ -412,13 +445,15 @@ public final class PmBackend {
         public final boolean verified;
         public final boolean official;
         public final long lastSeenAt;
+        public final boolean sharePrecise;
 
-        AdminAccount(String username, long balance, boolean verified, boolean official, long lastSeenAt) {
+        AdminAccount(String username, long balance, boolean verified, boolean official, long lastSeenAt, boolean sharePrecise) {
             this.username = username;
             this.balance = balance;
             this.verified = verified;
             this.official = official;
             this.lastSeenAt = lastSeenAt;
+            this.sharePrecise = sharePrecise;
         }
     }
 
@@ -453,7 +488,8 @@ public final class PmBackend {
                                     a.has("verified") && a.get("verified").getAsBoolean(),
                                     a.has("official") && a.get("official").getAsBoolean(),
                                     a.has("lastSeen") && !a.get("lastSeen").isJsonNull()
-                                            ? parseIsoMillis(a.get("lastSeen").getAsString()) : 0L));
+                                            ? parseIsoMillis(a.get("lastSeen").getAsString()) : 0L,
+                                    a.has("sharePrecise") && a.get("sharePrecise").getAsBoolean()));
                         }
                     }
                 } else {

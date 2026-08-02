@@ -30,6 +30,7 @@ public class PmSettingsScreen extends Screen {
             "pmchat.settings.tab.chat",
             "pmchat.settings.tab.sound",
             "pmchat.settings.tab.account",
+            "pmchat.settings.tab.privacy",
     };
 
     // Тема применяется в init() до построения строк (см. applyTheme)
@@ -70,6 +71,7 @@ public class PmSettingsScreen extends Screen {
             case 1 -> 10;
             case 2 -> 4;
             case 3 -> backendConfigured() && !editBackendUrl ? (2 + (isAdminAccount() ? 1 : 0)) : 4;
+            case 4 -> 1;
             default -> 11;
         };
     }
@@ -106,6 +108,7 @@ public class PmSettingsScreen extends Screen {
             case 1 -> y = buildChatTab(y);
             case 2 -> y = buildSoundTab(y);
             case 3 -> y = buildAccountTab(y);
+            case 4 -> y = buildPrivacyTab(y);
             default -> { }
         }
 
@@ -340,6 +343,19 @@ public class PmSettingsScreen extends Screen {
                 () -> LABEL,
                 () -> editBackendUrl = true);
 
+        return y;
+    }
+
+    private int buildPrivacyTab(int y) {
+        y = addOption(y, "pmchat.set.preciseseen",
+                () -> Text.translatable(config.preciseLastSeen ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> config.preciseLastSeen ? 0xFF8FD8A8 : VALUE,
+                () -> {
+                    config.preciseLastSeen = !config.preciseLastSeen;
+                    if (backendConfigured()) {
+                        com.pmchat.client.PmBackend.setPrecisePresence(config.preciseLastSeen, null);
+                    }
+                });
         return y;
     }
 

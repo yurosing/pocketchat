@@ -78,6 +78,12 @@ public class PmConfig {
     public String backendAdminSecret = "";
     /** Последний увиденный id рассылки официального аккаунта — чтобы не показывать повторно. */
     public long lastBroadcastId = 0;
+    /**
+     * Точный статус «был(а) N часов/дней назад» вместо расплывчатого «недавно/на этой
+     * неделе/давно» — взаимно, как в Telegram: виден только тем собеседникам, у кого
+     * этот же переключатель тоже включён (см. server-pocketchat, sharePrecise).
+     */
+    public boolean preciseLastSeen = false;
 
     /** Хостинг картинок: куда грузим и откуда качаем по id. */
     public String uploadUrl = "https://catbox.moe/user/api.php";

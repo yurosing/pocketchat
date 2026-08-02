@@ -915,6 +915,17 @@ public class PmScreen extends Screen {
         return d;
     }
 
+    /** Мелкий текст (0.8x) для статуса «был(а) в сети» — {@code x,y} как в обычном drawText. */
+    private void drawSmallText(DrawContext ctx, Text text, int x, int y, int color) {
+        float scale = 0.8f;
+        Matrix3x2fStack m = ctx.getMatrices();
+        m.pushMatrix();
+        m.translate(x, y);
+        m.scale(scale, scale);
+        ctx.drawText(textRenderer, text, 0, 0, color, false);
+        m.popMatrix();
+    }
+
     /** Затемнить цвет ARGB на коэффициент. */
     private static int dim(int argb, float k) {
         int a = argb >>> 24;
@@ -3389,10 +3400,10 @@ public class PmScreen extends Screen {
                 }
             }
 
-            if (hovered && rowAcc != null && rowAcc.lastSeenAt > 0) {
-                net.minecraft.text.Text status = com.pmchat.client.PmBackend.humanizeLastSeen(rowAcc.lastSeenAt);
-                context.drawText(textRenderer, trim(status.getString(), LEFT_W - 30), px + 23, y + 14,
-                        statusColored ? 0xFF6FBF8B : PREVIEW_TEXT, false);
+            // Пока собеседник реально онлайн — показываем это вместо превью (как в Telegram);
+            // иначе обычное превью последнего сообщения (детальный статус — в шапке чата/профиле).
+            if (rowAcc != null && rowAcc.lastSeenAt > 0 && statusColored) {
+                drawSmallText(context, Text.translatable("pmchat.profile.lastseen.online"), px + 23, y + 15, 0xFF6FBF8B);
             } else {
                 PmMessage last = history.lastMessage(name);
                 if (last != null) {
@@ -3524,8 +3535,9 @@ public class PmScreen extends Screen {
             com.pmchat.client.PmBackend.AccountInfo statusAcc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);
             if (statusAcc != null && statusAcc.lastSeenAt > 0) {
                 boolean isOnline = System.currentTimeMillis() - statusAcc.lastSeenAt < 90_000L;
-                net.minecraft.text.Text status = com.pmchat.client.PmBackend.humanizeLastSeen(statusAcc.lastSeenAt);
-                context.drawText(textRenderer, status, headerX, py + 18, isOnline ? 0xFF6FBF8B : SUBTLE, false);
+                boolean precise = config.preciseLastSeen && statusAcc.sharePrecise;
+                net.minecraft.text.Text status = com.pmchat.client.PmBackend.humanizeLastSeen(statusAcc.lastSeenAt, precise);
+                drawSmallText(context, status, headerX, py + 19, isOnline ? 0xFF6FBF8B : SUBTLE);
             }
         }
 

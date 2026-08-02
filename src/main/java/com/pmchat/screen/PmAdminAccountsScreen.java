@@ -119,7 +119,7 @@ public class PmAdminAccountsScreen extends Screen {
             String balanceStr = String.valueOf(a.balance);
             context.drawText(textRenderer, balanceStr,
                     px + PANEL_W - 14 - textRenderer.getWidth(balanceStr), y + 2, VALUE, false);
-            net.minecraft.text.Text lastSeen = PmBackend.humanizeLastSeen(a.lastSeenAt);
+            net.minecraft.text.Text lastSeen = PmBackend.humanizeLastSeen(a.lastSeenAt, config.preciseLastSeen && a.sharePrecise);
             context.drawText(textRenderer, lastSeen, px + 10, y + 13, LABEL, false);
             y += ROW_H;
         }

@@ -74,7 +74,14 @@ public class PmProfileScreen extends Screen {
     protected void init() {
         applyTheme();
         clearChildren();
-        panelH = self ? 214 : 291;
+        // Высота панели для чужого профиля зависит от количества строк каталога подарков
+        // (4 колонки), чтобы результат покупки и кнопка «Готово» не наезжали на сетку.
+        int catalogRows = 3;
+        if (!self && backendGiftsAvailable()) {
+            int catalogSize = com.pmchat.client.PmBackend.cachedCatalog().size();
+            if (catalogSize > 0) catalogRows = (catalogSize + 3) / 4;
+        }
+        panelH = self ? 214 : 260 + catalogRows * 19;
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
@@ -229,7 +236,8 @@ public class PmProfileScreen extends Screen {
             context.drawText(textRenderer, Text.translatable(online ? "pmchat.profile.online" : "pmchat.profile.offline"),
                     tx, py + 44, online ? 0xFF6FBF8B : SUBTLE, false);
         } else {
-            net.minecraft.text.Text status = com.pmchat.client.PmBackend.humanizeLastSeen(backendAcc.lastSeenAt);
+            boolean precise = config.preciseLastSeen && backendAcc.sharePrecise;
+            net.minecraft.text.Text status = com.pmchat.client.PmBackend.humanizeLastSeen(backendAcc.lastSeenAt, precise);
             boolean isOnline = System.currentTimeMillis() - backendAcc.lastSeenAt < 90_000L;
             context.drawText(textRenderer, status, tx, py + 44, isOnline ? 0xFF6FBF8B : SUBTLE, false);
         }
@@ -386,6 +394,7 @@ public class PmProfileScreen extends Screen {
             }
         }
 
+        int gridBottom = iy + 12;
         if (!self) {
             java.util.List<com.pmchat.client.PmBackend.Gift> cat = com.pmchat.client.PmBackend.cachedCatalog();
             Long selfBal = com.pmchat.client.PmBackend.cachedSelfBalance();
@@ -407,11 +416,13 @@ public class PmProfileScreen extends Screen {
                 giftRects.add(new Object[]{cx, cy, cellW, cellH, g.id, true});
                 cx += cellW + gap;
             }
+            if (!cat.isEmpty()) gridBottom = cy + cellH;
         }
 
         if (backendResultMsg != null && System.currentTimeMillis() - backendResultAt < 4000) {
             context.drawText(textRenderer, trimTo(backendResultMsg, PANEL_W - 24),
-                    px + 12, py + panelH - 38, backendResultOk ? 0xFF6FBF8B : 0xFFE0574C, false);
+                    px + 12, Math.min(gridBottom + 6, py + panelH - 38),
+                    backendResultOk ? 0xFF6FBF8B : 0xFFE0574C, false);
         }
     }
 
