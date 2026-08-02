@@ -647,6 +647,35 @@ public class PmScreen extends Screen {
                         openProfile(peer);
                     }));
         }
+        // «Кружок» (6.11, шаг 1): мгновенный снимок экрана как сообщение — тем же
+        // способом, что и снимок по F2, только без похода в папку screenshots.
+        // Анимация/запись в реальном времени — отдельный следующий шаг.
+        if (isPlayerTab(selected)) {
+            y += rowH + 2;
+            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                    Text.literal("◉ " + Text.translatable("pmchat.tip.circle").getString()),
+                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFE07A6A, btn -> {
+                        moreMenuOpen = false;
+                        sendCircleSnapshot();
+                    }));
+        }
+    }
+
+    /** «Кружок», шаг 1: захватывает текущий кадр так же, как F2, и сразу отправляет. */
+    private void sendCircleSnapshot() {
+        if (selected == null) return;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        try {
+            net.minecraft.client.texture.NativeImage image =
+                    net.minecraft.client.util.ScreenshotRecorder.takeScreenshot(mc.getFramebuffer());
+            java.nio.file.Path dir = mediaDir("pmchat-circles");
+            java.nio.file.Path file = dir.resolve("circle-" + System.currentTimeMillis() + ".png");
+            image.writeTo(file.toFile());
+            image.close();
+            startUpload(file);
+        } catch (Exception e) {
+            PmChatClient.LOGGER.warn("Circle snapshot failed: {}", e.toString());
+        }
     }
 
     // ---------- Меню звонка (карточка внутри окна мода) ----------
