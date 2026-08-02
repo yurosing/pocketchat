@@ -3001,6 +3001,13 @@ public class PmScreen extends Screen {
                     x + size / 2 - textRenderer.getWidth(mark) / 2, y + size / 2 - 4, 0xFF8A9096, false);
             return;
         }
+        if (com.pmchat.client.PmBackend.isConfigured()) {
+            com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(name);
+            if (acc != null && acc.official && com.pmchat.client.PmOfficialIcon.isReady()) {
+                com.pmchat.client.PmOfficialIcon.draw(context, x, y, size);
+                return;
+            }
+        }
         MinecraftClient mc = MinecraftClient.getInstance();
         net.minecraft.client.network.PlayerListEntry entry =
                 mc.getNetworkHandler() != null ? mc.getNetworkHandler().getPlayerListEntry(name) : null;

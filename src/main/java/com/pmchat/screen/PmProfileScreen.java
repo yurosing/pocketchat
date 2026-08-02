@@ -454,6 +454,13 @@ public class PmProfileScreen extends Screen {
                     x + size / 2 - textRenderer.getWidth("⊘") / 2, y + size / 2 - 4, 0xFF8A9096, false);
             return;
         }
+        if (com.pmchat.client.PmBackend.isConfigured()) {
+            com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(player);
+            if (acc != null && acc.official && com.pmchat.client.PmOfficialIcon.isReady()) {
+                com.pmchat.client.PmOfficialIcon.draw(context, x, y, size);
+                return;
+            }
+        }
         PlayerListEntry entry = onlineEntry();
         if (entry != null && entry.getSkinTextures() != null) {
             try {
