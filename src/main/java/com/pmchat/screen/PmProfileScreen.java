@@ -220,9 +220,19 @@ public class PmProfileScreen extends Screen {
             }
         }
 
-        boolean online = self || onlineEntry() != null;
-        context.drawText(textRenderer, Text.translatable(online ? "pmchat.profile.online" : "pmchat.profile.offline"),
-                tx, py + 44, online ? 0xFF6FBF8B : SUBTLE, false);
+        // Статус «был(а) в сети»: если есть бэкенд — кросс-серверный (по последнему
+        // пингу присутствия), иначе — по таб-листу текущего Minecraft-сервера.
+        com.pmchat.client.PmBackend.AccountInfo backendAcc = com.pmchat.client.PmBackend.isConfigured()
+                ? com.pmchat.client.PmBackend.cachedAccountInfo(player) : null;
+        if (self || backendAcc == null || backendAcc.lastSeenAt <= 0) {
+            boolean online = self || onlineEntry() != null;
+            context.drawText(textRenderer, Text.translatable(online ? "pmchat.profile.online" : "pmchat.profile.offline"),
+                    tx, py + 44, online ? 0xFF6FBF8B : SUBTLE, false);
+        } else {
+            net.minecraft.text.Text status = com.pmchat.client.PmBackend.humanizeLastSeen(backendAcc.lastSeenAt);
+            boolean isOnline = System.currentTimeMillis() - backendAcc.lastSeenAt < 90_000L;
+            context.drawText(textRenderer, status, tx, py + 44, isOnline ? 0xFF6FBF8B : SUBTLE, false);
+        }
 
         if (self) {
             // Баланс рядом — только свой (4.5). Значение доступно с плагином/Vault.

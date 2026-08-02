@@ -24,7 +24,7 @@ public class PmAdminAccountsScreen extends Screen {
 
     private static final int PANEL_W = 260;
     private static final int PANEL_H = 220;
-    private static final int ROW_H = 16;
+    private static final int ROW_H = 24;
 
     private final Screen parent;
     private final Consumer<String> onPick;
@@ -114,11 +114,13 @@ public class PmAdminAccountsScreen extends Screen {
             if (hovered) context.fill(px + 6, y, px + PANEL_W - 6, y + ROW_H - 1, 0x22FFFFFF);
 
             String badge = (a.official ? "★ " : a.verified ? "✓ " : "");
-            context.drawText(textRenderer, badge + a.username, px + 10, y + 4,
+            context.drawText(textRenderer, badge + a.username, px + 10, y + 2,
                     a.official ? 0xFFF0C34E : a.verified ? 0xFF4CC26A : LABEL, false);
             String balanceStr = String.valueOf(a.balance);
             context.drawText(textRenderer, balanceStr,
-                    px + PANEL_W - 14 - textRenderer.getWidth(balanceStr), y + 4, VALUE, false);
+                    px + PANEL_W - 14 - textRenderer.getWidth(balanceStr), y + 2, VALUE, false);
+            net.minecraft.text.Text lastSeen = PmBackend.humanizeLastSeen(a.lastSeenAt);
+            context.drawText(textRenderer, lastSeen, px + 10, y + 13, LABEL, false);
             y += ROW_H;
         }
 

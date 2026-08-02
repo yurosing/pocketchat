@@ -50,6 +50,8 @@ public class PmChatClient implements ClientModInitializer {
     private static boolean chatScreenOpenLastTick = false;
     /** Следующий момент опроса рассылок официального аккаунта (см. server-pocketchat). */
     private static long nextBroadcastPollAt = 0;
+    /** Следующий "пинг" присутствия на бэкенде — держит lastSeen свежим (см. PmBackend.ping). */
+    private static long nextPresencePingAt = 0;
     private static long chatScreenClosedAt = 0;
 
     /** Сентинел «диалога» общего чата. */
@@ -221,6 +223,13 @@ public class PmChatClient implements ClientModInitializer {
                     && PmBackend.isConfigured() && PmBackend.hasAccount()) {
                 nextBroadcastPollAt = System.currentTimeMillis() + 30_000L;
                 PmBackend.pollBroadcastsOnce(PmChatClient::receiveOfficialBroadcast);
+            }
+            // Пинг присутствия — раз в минуту, чтобы "был(а) в сети" на бэкенде было
+            // актуальным независимо от того, на каком Minecraft-сервере сейчас игрок.
+            if (client.world != null && System.currentTimeMillis() >= nextPresencePingAt
+                    && PmBackend.isConfigured() && PmBackend.hasAccount()) {
+                nextPresencePingAt = System.currentTimeMillis() + 60_000L;
+                PmBackend.ping();
             }
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {

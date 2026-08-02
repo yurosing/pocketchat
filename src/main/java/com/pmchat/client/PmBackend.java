@@ -53,12 +53,25 @@ public final class PmBackend {
         public final boolean verified;
         public final boolean official;
         public final String avatarUrl;
+        /** Эпоха в мс последнего пинга/активности аккаунта на бэкенде, 0 — неизвестно. */
+        public final long lastSeenAt;
 
-        AccountInfo(String username, boolean verified, boolean official, String avatarUrl) {
+        AccountInfo(String username, boolean verified, boolean official, String avatarUrl, long lastSeenAt) {
             this.username = username;
             this.verified = verified;
             this.official = official;
             this.avatarUrl = avatarUrl;
+            this.lastSeenAt = lastSeenAt;
+        }
+    }
+
+    /** Парсит ISO-8601 timestamp сервера (например "2026-07-31T16:31:37.123Z") в эпоху мс, 0 при ошибке. */
+    private static long parseIsoMillis(String s) {
+        if (s == null || s.isBlank()) return 0L;
+        try {
+            return java.time.Instant.parse(s).toEpochMilli();
+        } catch (Exception e) {
+            return 0L;
         }
     }
 
@@ -95,6 +108,27 @@ public final class PmBackend {
             });
         }
         return e != null ? e.info : null;
+    }
+
+    /**
+     * Человекочитаемый статус «был(а) в сети» по последнему пингу присутствия —
+     * кросс-серверный (не зависит от таб-листа текущего Minecraft-сервера).
+     */
+    public static net.minecraft.text.Text humanizeLastSeen(long lastSeenAtMs) {
+        if (lastSeenAtMs <= 0) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.unknown");
+        long diff = System.currentTimeMillis() - lastSeenAtMs;
+        if (diff < 90_000L) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.online");
+        if (diff < 5 * 60_000L) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.recent");
+        if (diff < 3_600_000L) {
+            return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.minutes", diff / 60_000L);
+        }
+        if (diff < 24 * 3_600_000L) {
+            return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.hours", diff / 3_600_000L);
+        }
+        if (diff < 7 * 24 * 3_600_000L) {
+            return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.week");
+        }
+        return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.long");
     }
 
     // ---------- логин/пароль (своя система, не Mojang) ----------
@@ -293,9 +327,19 @@ public final class PmBackend {
                     json.has("username") ? json.get("username").getAsString() : username,
                     json.has("verified") && json.get("verified").getAsBoolean(),
                     json.has("official") && json.get("official").getAsBoolean(),
-                    json.has("avatarUrl") && !json.get("avatarUrl").isJsonNull() ? json.get("avatarUrl").getAsString() : null);
+                    json.has("avatarUrl") && !json.get("avatarUrl").isJsonNull() ? json.get("avatarUrl").getAsString() : null,
+                    json.has("lastSeen") && !json.get("lastSeen").isJsonNull()
+                            ? parseIsoMillis(json.get("lastSeen").getAsString()) : 0L);
             run(cb, true, info, null);
         });
+    }
+
+    /** «Пинг» присутствия — держит lastSeen свежим, пока открыт мессенджер (см. PmChatClient). */
+    public static void ping() {
+        if (!isConfigured() || !hasAccount()) return;
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        postJson("/v1/account/ping", body, null, null);
     }
 
     // ---------- рассылки официального аккаунта ----------
@@ -367,12 +411,14 @@ public final class PmBackend {
         public final long balance;
         public final boolean verified;
         public final boolean official;
+        public final long lastSeenAt;
 
-        AdminAccount(String username, long balance, boolean verified, boolean official) {
+        AdminAccount(String username, long balance, boolean verified, boolean official, long lastSeenAt) {
             this.username = username;
             this.balance = balance;
             this.verified = verified;
             this.official = official;
+            this.lastSeenAt = lastSeenAt;
         }
     }
 
@@ -405,7 +451,9 @@ public final class PmBackend {
                                     a.get("username").getAsString(),
                                     a.get("balance").getAsLong(),
                                     a.has("verified") && a.get("verified").getAsBoolean(),
-                                    a.has("official") && a.get("official").getAsBoolean()));
+                                    a.has("official") && a.get("official").getAsBoolean(),
+                                    a.has("lastSeen") && !a.get("lastSeen").isJsonNull()
+                                            ? parseIsoMillis(a.get("lastSeen").getAsString()) : 0L));
                         }
                     }
                 } else {
