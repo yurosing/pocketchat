@@ -3357,9 +3357,18 @@ public class PmScreen extends Screen {
             int unread = history.unreadCount(name);
             // Аватарка-голова слева
             drawAvatar(context, name, px + 4, y + 4, 16);
-            // Индикатор мода: зелёная точка в углу аватарки
+            // Индикатор статуса в углу аватарки: онлайн по бэкенду (кросс-серверно),
+            // если недоступно — по наличию мода (как раньше).
             boolean hasMod = config.isModUser(name);
-            context.fill(px + 16, y + 14, px + 20, y + 18, hasMod ? 0xFF6FBF8B : SUBTLE);
+            com.pmchat.client.PmBackend.AccountInfo rowAcc = com.pmchat.client.PmBackend.isConfigured()
+                    ? com.pmchat.client.PmBackend.cachedAccountInfo(name) : null;
+            boolean statusColored;
+            if (rowAcc != null && rowAcc.lastSeenAt > 0) {
+                statusColored = System.currentTimeMillis() - rowAcc.lastSeenAt < 90_000L;
+            } else {
+                statusColored = hasMod;
+            }
+            context.fill(px + 16, y + 14, px + 20, y + 18, statusColored ? 0xFF6FBF8B : SUBTLE);
             boolean contact = config.isContact(name);
             int nameX = px + 23;
             if (contact) {
@@ -3380,13 +3389,19 @@ public class PmScreen extends Screen {
                 }
             }
 
-            PmMessage last = history.lastMessage(name);
-            if (last != null) {
-                String body = last.money > 0
-                        ? "$ " + groupDigits(last.money)
-                        : PmChatClient.previewOf(last.text != null ? last.text : "");
-                String preview = (last.out ? "→ " : "") + body;
-                context.drawText(textRenderer, trim(preview, LEFT_W - 30), px + 23, y + 14, PREVIEW_TEXT, false);
+            if (hovered && rowAcc != null && rowAcc.lastSeenAt > 0) {
+                net.minecraft.text.Text status = com.pmchat.client.PmBackend.humanizeLastSeen(rowAcc.lastSeenAt);
+                context.drawText(textRenderer, trim(status.getString(), LEFT_W - 30), px + 23, y + 14,
+                        statusColored ? 0xFF6FBF8B : PREVIEW_TEXT, false);
+            } else {
+                PmMessage last = history.lastMessage(name);
+                if (last != null) {
+                    String body = last.money > 0
+                            ? "$ " + groupDigits(last.money)
+                            : PmChatClient.previewOf(last.text != null ? last.text : "");
+                    String preview = (last.out ? "→ " : "") + body;
+                    context.drawText(textRenderer, trim(preview, LEFT_W - 30), px + 23, y + 14, PREVIEW_TEXT, false);
+                }
             }
 
             if (unread > 0) {
