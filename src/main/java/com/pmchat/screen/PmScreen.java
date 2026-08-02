@@ -665,17 +665,17 @@ public class PmScreen extends Screen {
     private void sendCircleSnapshot() {
         if (selected == null) return;
         MinecraftClient mc = MinecraftClient.getInstance();
-        try {
-            net.minecraft.client.texture.NativeImage image =
-                    net.minecraft.client.util.ScreenshotRecorder.takeScreenshot(mc.getFramebuffer());
-            java.nio.file.Path dir = mediaDir("pmchat-circles");
-            java.nio.file.Path file = dir.resolve("circle-" + System.currentTimeMillis() + ".png");
-            image.writeTo(file.toFile());
-            image.close();
-            startUpload(file);
-        } catch (Exception e) {
-            PmChatClient.LOGGER.warn("Circle snapshot failed: {}", e.toString());
-        }
+        net.minecraft.client.util.ScreenshotRecorder.takeScreenshot(mc.getFramebuffer(), image -> {
+            try {
+                java.nio.file.Path dir = mediaDir("pmchat-circles");
+                java.nio.file.Path file = dir.resolve("circle-" + System.currentTimeMillis() + ".png");
+                image.writeTo(file.toFile());
+                image.close();
+                startUpload(file);
+            } catch (Exception e) {
+                PmChatClient.LOGGER.warn("Circle snapshot failed: {}", e.toString());
+            }
+        });
     }
 
     // ---------- Меню звонка (карточка внутри окна мода) ----------
