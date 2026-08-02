@@ -5,10 +5,12 @@ import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
+import net.minecraft.resource.Resource;
 import net.minecraft.util.Identifier;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 
 /**
  * Аватар официального аккаунта PocketChat — единственная встроенная в мод PNG-
@@ -33,15 +35,21 @@ public final class PmOfficialIcon {
         if (attempted) return;
         attempted = true;
         MinecraftClient client = MinecraftClient.getInstance();
-        try (InputStream in = client.getResourceManager().open(RESOURCE)) {
-            NativeImage image = NativeImage.read(in);
+        Optional<Resource> res = client.getResourceManager().getResource(RESOURCE);
+        if (res.isEmpty()) {
+            PmChatClient.LOGGER.debug("PocketChat official icon resource not found: {}", RESOURCE);
+            return;
+        }
+        try (InputStream in = res.get().getInputStream()) {
+            byte[] bytes = in.readAllBytes();
+            NativeImage image = NativeImage.read(bytes);
             width = image.getWidth();
             height = image.getHeight();
             client.getTextureManager().registerTexture(TEXTURE_ID,
                     new NativeImageBackedTexture(() -> "pmchat-official-icon", image));
             ready = true;
         } catch (IOException e) {
-            PmChatClient.LOGGER.debug("PocketChat official icon missing: {}", e.toString());
+            PmChatClient.LOGGER.debug("PocketChat official icon load failed: {}", e.toString());
         }
     }
 
