@@ -915,17 +915,6 @@ public class PmScreen extends Screen {
         return d;
     }
 
-    /** Мелкий текст (0.8x) для статуса «был(а) в сети» — {@code x,y} как в обычном drawText. */
-    private void drawSmallText(DrawContext ctx, Text text, int x, int y, int color) {
-        float scale = 0.8f;
-        Matrix3x2fStack m = ctx.getMatrices();
-        m.pushMatrix();
-        m.translate(x, y);
-        m.scale(scale, scale);
-        ctx.drawText(textRenderer, text, 0, 0, color, false);
-        m.popMatrix();
-    }
-
     /** Затемнить цвет ARGB на коэффициент. */
     private static int dim(int argb, float k) {
         int a = argb >>> 24;
@@ -3400,10 +3389,13 @@ public class PmScreen extends Screen {
                 }
             }
 
-            // Пока собеседник реально онлайн — показываем это вместо превью (как в Telegram);
-            // иначе обычное превью последнего сообщения (детальный статус — в шапке чата/профиле).
-            if (rowAcc != null && rowAcc.lastSeenAt > 0 && statusColored) {
-                drawSmallText(context, Text.translatable("pmchat.profile.lastseen.online"), px + 23, y + 15, 0xFF6FBF8B);
+            // Официальный аккаунт — не игрок, статус «в сети» ему не подходит;
+            // пока собеседник реально онлайн — показываем это вместо превью (как в Telegram);
+            // иначе обычное превью последнего сообщения (детальный статус — в шапке чата/профиля).
+            if (rowAcc != null && rowAcc.official) {
+                context.drawText(textRenderer, Text.translatable("pmchat.official.notice"), px + 23, y + 14, PREVIEW_TEXT, false);
+            } else if (rowAcc != null && rowAcc.lastSeenAt > 0 && statusColored) {
+                context.drawText(textRenderer, Text.translatable("pmchat.profile.lastseen.online"), px + 23, y + 14, 0xFF6FBF8B, false);
             } else {
                 PmMessage last = history.lastMessage(name);
                 if (last != null) {
@@ -3533,11 +3525,13 @@ public class PmScreen extends Screen {
         // Статус «был(а) в сети» под ником собеседника (кросс-серверно, см. PmBackend)
         if (isPlayerTab(selected) && !isGlobal && !localChat && com.pmchat.client.PmBackend.isConfigured()) {
             com.pmchat.client.PmBackend.AccountInfo statusAcc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);
-            if (statusAcc != null && statusAcc.lastSeenAt > 0) {
+            if (statusAcc != null && statusAcc.official) {
+                context.drawText(textRenderer, Text.translatable("pmchat.official.notice"), headerX, py + 19, SUBTLE, false);
+            } else if (statusAcc != null && statusAcc.lastSeenAt > 0) {
                 boolean isOnline = System.currentTimeMillis() - statusAcc.lastSeenAt < 90_000L;
                 boolean precise = config.preciseLastSeen && statusAcc.sharePrecise;
                 net.minecraft.text.Text status = com.pmchat.client.PmBackend.humanizeLastSeen(statusAcc.lastSeenAt, precise);
-                drawSmallText(context, status, headerX, py + 19, isOnline ? 0xFF6FBF8B : SUBTLE);
+                context.drawText(textRenderer, status, headerX, py + 19, isOnline ? 0xFF6FBF8B : SUBTLE, false);
             }
         }
 

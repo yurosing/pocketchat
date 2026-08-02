@@ -375,6 +375,14 @@ public final class PmBackend {
         postJson("/v1/account/ping", body, null, null);
     }
 
+    /** Явный сигнал «вышел» при дисконнекте — чтобы статус не «висел» в «в сети» до истечения окна пинга. */
+    public static void goOffline() {
+        if (!isConfigured() || !hasAccount()) return;
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        postJson("/v1/account/offline", body, null, null);
+    }
+
     // ---------- рассылки официального аккаунта ----------
 
     /** Опрашивает новые рассылки один раз (id больше lastBroadcastId) и зовёт onEach(from, message) на игровом потоке. */

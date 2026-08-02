@@ -346,6 +346,7 @@
   "pmchat.profile.online": "online",
   "pmchat.profile.offline": "offline",
   "pmchat.profile.lastseen.unknown": "status unknown",
+  "pmchat.official.notice": "Service notifications",
   "pmchat.profile.lastseen.online": "online",
   "pmchat.profile.lastseen.recent": "last seen recently",
   "pmchat.profile.lastseen.minutes": "last seen %s min ago",

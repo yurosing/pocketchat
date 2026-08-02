@@ -346,6 +346,7 @@
   "pmchat.profile.online": "в сети",
   "pmchat.profile.offline": "не в сети",
   "pmchat.profile.lastseen.unknown": "статус неизвестен",
+  "pmchat.official.notice": "Служебные уведомления",
   "pmchat.profile.lastseen.online": "в сети",
   "pmchat.profile.lastseen.recent": "был(-а) недавно",
   "pmchat.profile.lastseen.minutes": "был(-а) %s мин. назад",

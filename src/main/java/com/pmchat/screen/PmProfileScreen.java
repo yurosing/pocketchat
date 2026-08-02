@@ -231,7 +231,9 @@ public class PmProfileScreen extends Screen {
         // пингу присутствия), иначе — по таб-листу текущего Minecraft-сервера.
         com.pmchat.client.PmBackend.AccountInfo backendAcc = com.pmchat.client.PmBackend.isConfigured()
                 ? com.pmchat.client.PmBackend.cachedAccountInfo(player) : null;
-        if (self || backendAcc == null || backendAcc.lastSeenAt <= 0) {
+        if (!self && backendAcc != null && backendAcc.official) {
+            context.drawText(textRenderer, Text.translatable("pmchat.official.notice"), tx, py + 44, SUBTLE, false);
+        } else if (self || backendAcc == null || backendAcc.lastSeenAt <= 0) {
             boolean online = self || onlineEntry() != null;
             context.drawText(textRenderer, Text.translatable(online ? "pmchat.profile.online" : "pmchat.profile.offline"),
                     tx, py + 44, online ? 0xFF6FBF8B : SUBTLE, false);

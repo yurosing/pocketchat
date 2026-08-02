@@ -181,6 +181,11 @@ public class PmChatClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> PmUpdate.resetSession());
 
+        // Выход с сервера — сразу сообщаем бэкенду, чтобы статус «был(а) в сети»
+        // не висел «в сети» до истечения окна пинга (см. PmBackend.goOffline).
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) -> PmBackend.goOffline());
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             boolean chatScreenOpenNow = client.currentScreen instanceof net.minecraft.client.gui.screen.ChatScreen;
             if (chatScreenOpenLastTick && !chatScreenOpenNow) {
