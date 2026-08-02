@@ -3519,9 +3519,19 @@ public class PmScreen extends Screen {
                         headerX + textRenderer.getWidth(header) + 10, py + 8, SUBTLE, false);
             }
         }
-        context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
+        // Статус «был(а) в сети» под ником собеседника (кросс-серверно, см. PmBackend)
+        if (isPlayerTab(selected) && !isGlobal && !localChat && com.pmchat.client.PmBackend.isConfigured()) {
+            com.pmchat.client.PmBackend.AccountInfo statusAcc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);
+            if (statusAcc != null && statusAcc.lastSeenAt > 0) {
+                boolean isOnline = System.currentTimeMillis() - statusAcc.lastSeenAt < 90_000L;
+                net.minecraft.text.Text status = com.pmchat.client.PmBackend.humanizeLastSeen(statusAcc.lastSeenAt);
+                context.drawText(textRenderer, status, headerX, py + 18, isOnline ? 0xFF6FBF8B : SUBTLE, false);
+            }
+        }
 
-        int areaTop = py + 26;
+        context.fill(px + LEFT_W + 1, py + 31, px + PANEL_W - 2, py + 32, DIVIDER);
+
+        int areaTop = py + 35;
         int areaBottom = py + PANEL_H - 30;
 
         // Закреплённые сообщения — полоска сверху (несколько, как в Telegram)
