@@ -64,10 +64,12 @@ public class PmConfig {
 
     /**
      * URL бэкенда PocketChat (server-pocketchat): медиа, своя валюта, логин/
-     * пароль, верификация, официальный аккаунт и админ-панель. Пусто — фичи
-     * бэкенда выключены, мод работает как раньше, чисто через чат-строки.
+     * пароль, верификация, официальный аккаунт и админ-панель. По умолчанию —
+     * официальный бэкенд, чтобы игроку не нужно было вводить адрес вручную.
+     * Пусто — фичи бэкенда выключены, мод работает как раньше, чисто через
+     * чат-строки; сменить адрес по-прежнему можно в настройках.
      */
-    public String backendUrl = "";
+    public String backendUrl = "http://13.50.242.222/";
     /** Токен установки/аккаунта, выданный бэкендом при /v1/register или /v1/login. */
     public String backendToken = "";
     /**
@@ -692,7 +694,12 @@ public class PmConfig {
                         cfg.sttModelUrlEn = new PmConfig().sttModelUrlEn;
                     }
                     if (cfg.discordUrl == null) cfg.discordUrl = "";
-                    if (cfg.backendUrl == null) cfg.backendUrl = "";
+                    // Раньше поле было пустым по умолчанию и требовало ручного ввода —
+                    // теперь у нас есть официальный бэкенд, подставляем его тем, у кого
+                    // ещё ничего не настроено (пустая строка — старое значение по умолчанию).
+                    if (cfg.backendUrl == null || cfg.backendUrl.isBlank()) {
+                        cfg.backendUrl = new PmConfig().backendUrl;
+                    }
                     if (cfg.backendToken == null) cfg.backendToken = "";
                     if (cfg.backendAdminSecret == null) cfg.backendAdminSecret = "";
                     if (cfg.textScalePct < 60 || cfg.textScalePct > 150) cfg.textScalePct = 100;
