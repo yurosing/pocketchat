@@ -286,6 +286,23 @@ public class PmConfig {
     }
 
     /**
+     * Caches the auto-detected role while a player is online, so it survives after
+     * they log out and disappear from the tab list. Unlike {@link #setRole}, this is
+     * called every frame the player is visible — only touches disk when the value
+     * actually changes.
+     */
+    public void cacheRole(String name, String code) {
+        if (name == null || name.isBlank()) return;
+        String key = name.trim();
+        String norm = code == null ? "" : code;
+        String cur = playerRoles.get(key);
+        if (norm.equals(cur) || (norm.isEmpty() && cur == null)) return;
+        if (norm.isEmpty()) playerRoles.remove(key);
+        else playerRoles.put(key, norm);
+        save();
+    }
+
+    /**
      * Личные заметки о других игроках (ник → текст) — как в Discord: видно только
      * тебе, никуда не отправляется, хранится исключительно в {@code pmchat.json}.
      */

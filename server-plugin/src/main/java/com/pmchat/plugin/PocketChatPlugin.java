@@ -65,13 +65,15 @@ public final class PocketChatPlugin extends JavaPlugin implements Listener {
         boolean giftsEnabled = getConfig().getBoolean("gifts-enabled", true);
         List<Gift> catalog = loadGiftCatalog();
         GiftStore gifts = new GiftStore(getDataFolder().toPath().resolve("gifts.yml").toFile(), getLogger());
+        OfflineMailStore mail = new OfflineMailStore(
+                getDataFolder().toPath().resolve("offline-mail.yml").toFile(), getLogger());
 
         api = new PocketChatApiImpl(this, getPluginMeta().getVersion(), store, gifts,
                 isPro() ? PocketChatTier.PRO : PocketChatTier.FREE,
                 giftsEnabled, maxFileBytes, catalog);
         StreamManager streams = new StreamManager();
         channel = new MediaChannel(this, api, store, maxFileBytes, tellCommand, isPro(),
-                giftsEnabled, gifts, streams);
+                giftsEnabled, gifts, streams, mail);
         api.bind(channel);
 
         getServer().getMessenger().registerOutgoingPluginChannel(this, PocketChat.CHANNEL);

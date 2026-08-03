@@ -29,6 +29,7 @@
   "pmchat.image.loadfail": "⚠ photo failed to load",
   "pmchat.image.openweb": "⚠ photo failed — click to open in browser",
   "pmchat.image.clip": "Ctrl+V — from clipboard",
+  "pmchat.pm.offline": "%s is offline — the message will be delivered when they log in",
   "pmchat.typing": "typing",
   "pmchat.voice.label": "Voice message",
   "pmchat.voice.recording": "Recording",

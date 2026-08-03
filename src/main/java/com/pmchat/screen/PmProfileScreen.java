@@ -197,8 +197,7 @@ public class PmProfileScreen extends Screen {
 
         int tx = avX + avS + 12;
         // Роль определяется по серверному нику; отображаем локальный псевдоним, если задан
-        String serverDisplay = PmNames.displayString(player);
-        String role = PmRoles.detect(serverDisplay);
+        String role = PmRoles.resolve(config, player);
         net.minecraft.text.Text fullName = config.hasAlias(player)
                 ? Text.literal(config.aliasOf(player))
                 : PmNames.displayText(player);

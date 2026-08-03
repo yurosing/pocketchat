@@ -1,9 +1,13 @@
 package com.pmchat.screen;
 
+import com.pmchat.client.PmConfig;
+
 /**
  * Роли-должности игроков (4.5): кружок-префикс перед ником, цвет и подпись.
- * Коды хранятся в конфиге (своя роль profileRole, чужие — playerRoles).
- * Назначаются вручную («настраивать самому»).
+ * Код своей роли хранится в конфиге ({@code profileRole}). Роль другого игрока
+ * определяется автоматически из его серверного ника ({@link #detect}), пока он
+ * в сети — {@link PmConfig#playerRoles} держит последнее известное значение, чтобы
+ * значок не пропадал, когда игрок выходит и его больше нет в таб-листе.
  */
 public final class PmRoles {
 
@@ -68,6 +72,20 @@ public final class PmRoles {
             case "D" -> "pmchat.role.dev";
             default -> "pmchat.role.none";
         };
+    }
+
+    /**
+     * Роль игрока {@code name}: пока он в таб-листе — определяется заново из его
+     * серверного ника и кэшируется; офлайн — берётся последнее закэшированное
+     * значение, чтобы значок роли не пропадал, когда игрок выходит с сервера.
+     */
+    public static String resolve(PmConfig config, String name) {
+        if (PmNames.isOnline(name)) {
+            String code = detect(PmNames.displayString(name));
+            if (config != null) config.cacheRole(name, code);
+            return code;
+        }
+        return config != null ? config.roleOf(name) : "";
     }
 
     /** Следующий код при переборе в настройках роли. */

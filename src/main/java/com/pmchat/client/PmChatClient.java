@@ -1889,10 +1889,11 @@ public class PmChatClient implements ClientModInitializer {
         MinecraftClient.getInstance().execute(() -> onIncoming(sender, wire));
     }
 
-    /** Получатель оффлайн — сообщение по каналу не доставлено. */
+    /** Получатель оффлайн — сообщение поставлено в очередь, доставится при его входе. */
     public static void notifyPmOffline(String target) {
         MinecraftClient client = MinecraftClient.getInstance();
-        client.execute(() -> chatLine(client, "§c[pmchat] " + target + " оффлайн — сообщение не доставлено"));
+        String notice = Text.translatable("pmchat.pm.offline", target).getString();
+        client.execute(() -> chatLine(client, "§7[pmchat] " + notice));
     }
 
     /** Достаёт текст фрагмента [start, start+len) из оригинала (по хэшу) или null. */

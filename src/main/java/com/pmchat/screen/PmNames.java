@@ -37,4 +37,9 @@ public final class PmNames {
     public static String displayString(String name) {
         return displayText(name).getString();
     }
+
+    /** Есть ли игрок сейчас в таб-листе (т.е. можно прочитать его актуальный ник/роль). */
+    public static boolean isOnline(String name) {
+        return entry(name) != null;
+    }
 }

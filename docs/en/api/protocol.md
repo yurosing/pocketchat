@@ -124,7 +124,13 @@ The server checks whether the recipient is listening on `pmchat:media`:
 |---|---|
 | online, with the mod | `PM_RECV` carrying the `wire` form |
 | online, without the mod | the server runs `tell-command` with the `plain` text |
-| offline | `PM_OFFLINE` back to the sender |
+| offline | `PM_OFFLINE` back to the sender; the message is queued in the recipient's mailbox |
+
+Queued messages are persisted to disk (`offline-mail.yml`, up to 200 per player) and
+delivered automatically as `PM_RECV` the moment the recipient joins the server and
+their client sends `HELLO` — they survive a server restart in the meantime. Another
+plugin can take over delivery itself — see `PocketChatMessageOfflineEvent` in the
+[Plugin API](./plugin.md).
 
 ### Gifts
 

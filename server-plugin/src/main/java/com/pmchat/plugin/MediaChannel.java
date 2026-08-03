@@ -64,6 +64,9 @@ final class MediaChannel implements PluginMessageListener {
     // Streams (announcement + Vault donations)
     private final StreamManager streams;
 
+    // Mail queued for players who were offline when a PM was sent to them
+    private final OfflineMailStore mail;
+
     /** In-flight uploads, keyed by player then client-chosen transfer id. */
     private final ConcurrentHashMap<UUID, ConcurrentHashMap<Long, Upload>> uploads = new ConcurrentHashMap<>();
     /** Active download streams per player, to cap concurrency. */
@@ -71,7 +74,7 @@ final class MediaChannel implements PluginMessageListener {
 
     MediaChannel(Plugin plugin, PocketChatApiImpl api, MediaStore store, int maxFileBytes,
                  String tellCommand, boolean pro, boolean giftsEnabled, GiftStore gifts,
-                 StreamManager streams) {
+                 StreamManager streams, OfflineMailStore mail) {
         this.plugin = plugin;
         this.api = api;
         this.store = store;
@@ -81,6 +84,7 @@ final class MediaChannel implements PluginMessageListener {
         this.giftsEnabled = giftsEnabled;
         this.gifts = gifts;
         this.streams = streams;
+        this.mail = mail;
     }
 
     private static final class Upload {
@@ -156,6 +160,15 @@ final class MediaChannel implements PluginMessageListener {
         });
         send(player, out);
         api.fire(new PocketChatClientConnectEvent(player, clientVersion, api.tier()));
+        flushOfflineMail(player);
+    }
+
+    /** Delivers any PMs that piled up while {@code recipient} was offline. */
+    private void flushOfflineMail(Player recipient) {
+        List<OfflineMailStore.Mail> pending = mail.drain(recipient.getName());
+        for (OfflineMailStore.Mail m : pending) {
+            pushPm(recipient, m.sender(), m.wire());
+        }
     }
 
     // ---------- upload (client -> server), streamed to a temp file ----------
@@ -392,6 +405,7 @@ final class MediaChannel implements PluginMessageListener {
             PocketChatMessageOfflineEvent offline =
                     api.fire(new PocketChatMessageOfflineEvent(sender, target, wire, event.getPlain()));
             if (!offline.isHandled()) {
+                mail.queue(target, sender.getName(), wire);
                 send(sender, build(PocketChatProtocol.PM_OFFLINE, dos -> dos.writeUTF(target)));
             }
             return false;

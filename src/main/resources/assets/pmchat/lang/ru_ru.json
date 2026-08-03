@@ -29,6 +29,7 @@
   "pmchat.image.loadfail": "⚠ фото не загрузилось",
   "pmchat.image.openweb": "⚠ фото не загрузилось — клик, чтобы открыть в браузере",
   "pmchat.image.clip": "Ctrl+V — из буфера",
+  "pmchat.pm.offline": "%s оффлайн — доставим сообщение, когда зайдёт",
   "pmchat.typing": "печатает",
   "pmchat.voice.label": "Голосовое",
   "pmchat.voice.recording": "Запись",

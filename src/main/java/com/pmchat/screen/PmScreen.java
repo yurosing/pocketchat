@@ -3464,7 +3464,7 @@ public class PmScreen extends Screen {
         }
         // Роль-префикс собеседника в шапке (4.5) — определяется из ника автоматически
         if (isPlayerTab(selected)) {
-            String rCode = PmRoles.detect(PmNames.displayString(selected));
+            String rCode = PmRoles.resolve(config, selected);
             String rIcon = PmRoles.icon(rCode);
             if (!rIcon.isEmpty()) {
                 context.drawText(textRenderer, rIcon, headerX, py + 8, PmRoles.color(rCode), false);
@@ -3704,7 +3704,12 @@ public class PmScreen extends Screen {
             } else if (img != null) {
                 lines = List.of();
                 int[] size = imageSize(img);
-                textW = size[0];
+                if (img.state == PmImages.State.FAILED) {
+                    String failLabel = Text.translatable("pmchat.image.openweb").getString();
+                    textW = Math.max(size[0], Math.min(BUBBLE_MAX_TEXT_W, textRenderer.getWidth(failLabel)));
+                } else {
+                    textW = size[0];
+                }
                 bh = size[1] + 6;
             } else if (voice != null) {
                 lines = List.of();
@@ -3930,9 +3935,9 @@ public class PmScreen extends Screen {
                                 0f, 0f, size[0], size[1], img.width, img.height, img.width, img.height);
                     }
                 } else {
-                    Text label = img.state == PmImages.State.FAILED
-                            ? Text.translatable("pmchat.image.openweb")
-                            : Text.translatable("pmchat.image.uploading");
+                    String label = trim(img.state == PmImages.State.FAILED
+                            ? Text.translatable("pmchat.image.openweb").getString()
+                            : Text.translatable("pmchat.image.uploading").getString(), bw - 12);
                     context.drawText(textRenderer, label, bx + dx + 6, y + dy + quoteShift + 4,
                             applyAlpha(msg.out ? OUT_TEXT : IN_TEXT, alpha), false);
                 }
@@ -4458,9 +4463,9 @@ public class PmScreen extends Screen {
             context.drawTexture(RenderPipelines.GUI_TEXTURED, img.textureId, x + 6, y + 3,
                     0f, 0f, size[0], size[1], img.width, img.height, img.width, img.height);
         } else {
-            Text label = img.state == PmImages.State.FAILED
-                    ? Text.translatable("pmchat.image.loadfail")
-                    : Text.translatable("pmchat.image.uploading");
+            String label = trim(img.state == PmImages.State.FAILED
+                    ? Text.translatable("pmchat.image.loadfail").getString()
+                    : Text.translatable("pmchat.image.uploading").getString(), w - 12);
             int fg = msg.out ? OUT_TEXT : IN_TEXT;
             context.drawText(textRenderer, label, x + 6, y + h / 2 - 4, applyAlpha(fg, alpha), false);
         }
