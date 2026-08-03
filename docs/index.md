@@ -58,6 +58,6 @@ features:
     link: /guide/install
   - icon: 🔌
     title: API для разработчиков
-    details: Свои подарки, фильтры ЛС, права на файлы, мост в Discord. Две библиотеки на Maven Central — для плагина Paper и для мода Fabric.
+    details: Читайте переписки, слушайте события, отправляйте сообщения из своего мода. Библиотека на Maven Central для мода Fabric.
     link: /api/
 ---

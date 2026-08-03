@@ -58,6 +58,6 @@ features:
     link: /en/guide/install
   - icon: 🔌
     title: API for developers
-    details: Custom gifts, DM filters, media permissions, a Discord bridge. Two libraries on Maven Central — one for the Paper plugin, one for the Fabric mod.
+    details: Read conversations, listen for events, send messages from your own mod. A library on Maven Central for the Fabric mod.
     link: /en/api/
 ---

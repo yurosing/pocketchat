@@ -45,9 +45,7 @@ const sidebarRu = [
     collapsed: false,
     items: [
       { text: 'Обзор API', link: '/api/' },
-      { text: 'API плагина', link: '/api/plugin' },
       { text: 'API мода', link: '/api/mod' },
-      { text: 'Протокол pmchat:media', link: '/api/protocol' },
       { text: 'Примеры', link: '/api/examples' },
     ],
   },
@@ -106,9 +104,7 @@ const sidebarEn = [
     collapsed: false,
     items: [
       { text: 'API overview', link: '/en/api/' },
-      { text: 'Plugin API', link: '/en/api/plugin' },
       { text: 'Mod API', link: '/en/api/mod' },
-      { text: 'pmchat:media protocol', link: '/en/api/protocol' },
       { text: 'Examples', link: '/en/api/examples' },
     ],
   },

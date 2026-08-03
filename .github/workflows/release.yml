@@ -1,8 +1,6 @@
 name: Build and release (public)
 
-# Builds the client mod and the FREE server plugin edition only, then publishes
-# a GitHub release. The Pro plugin edition (PocketChatPro) is never built or
-# attached here — it lives only in the private build.
+# Builds the client mod and publishes a GitHub release.
 
 on:
   push:
@@ -33,28 +31,12 @@ jobs:
           jar=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n1)
           echo "path=$jar" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Gradle for the server plugin
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.10'
-
-      - name: Build server plugin (free edition only)
-        working-directory: server-plugin
-        run: gradle build --no-daemon --stacktrace
-
-      - name: Locate plugin jar
-        id: plugin
-        run: |
-          free=$(find server-plugin/build/libs -maxdepth 1 -name 'PocketChat-*.jar' | head -n1)
-          echo "free=$free" >> "$GITHUB_OUTPUT"
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pmchat-jars
           path: |
             ${{ steps.jar.outputs.path }}
-            ${{ steps.plugin.outputs.free }}
           if-no-files-found: error
 
       - name: Resolve tag
@@ -75,4 +57,3 @@ jobs:
           body_path: RELEASE_NOTES.md
           files: |
             ${{ steps.jar.outputs.path }}
-            ${{ steps.plugin.outputs.free }}

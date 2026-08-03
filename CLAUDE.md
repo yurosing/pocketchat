@@ -8,19 +8,40 @@ architecture each session.
 **PocketChat** is a **client-side Fabric mod for Minecraft 1.21.11** that turns a
 server's plain `/m` private messages into a Telegram-style messenger (threaded
 chats, bubbles, voice notes, stickers, media, calls, profiles, gifts). It works
-**with no server plugin** — it parses `/m` chat lines — but an **optional Paper
-server plugin** upgrades it (routes PMs/media through the server, adds balance +
-a Vault gift shop).
+**with no server plugin** — it parses `/m` chat lines. This repo no longer builds
+or ships a server plugin at all (removed — see "No server plugin" below); the
+client mod still speaks the `pmchat:media` wire protocol client-side
+(`PmServerMedia`) so it stays compatible with any third-party or private server
+implementing it, but nothing here provides one.
 
 This repo (`yurosing/pocketchat`) is the **public** build:
 - Mod version scheme is `X.Y.Z` (no `-secret`).
-- Ships the mod + the **free** server plugin edition only.
-- The **Pro plugin** and a special Pro mod build live ONLY in the private repo
-  `yurosing/pocketchat-sec` — do not add them here. The only Pro-gated client
-  feature (voice→text transcription) stays locked in public unless a Pro plugin
-  is present (which public doesn't distribute).
+- Ships the mod only.
+- A special Pro mod build lives ONLY in the private repo `yurosing/pocketchat-sec`
+  — do not add it here. The only Pro-gated client feature (voice→text
+  transcription) stays locked in public.
 - Default branch: `main`. The **VitePress docs site is published from THIS repo**
   (`docs/`, workflow `docs.yml`, base `/pocketchat/`).
+
+## No server plugin
+
+The Paper server plugin (`server-plugin/`, editions `PocketChat`/`PocketChatPro`,
+its published API `pocketchat-api-plugin`) has been **removed from this repo** —
+gifts, Vault balance, server-relayed media, streams, and the offline-message
+mailbox all went with it, since they were plugin-only features. Client code that
+optionally talks to a plugin (`PmServerMedia`, gift/balance/streams UI) was left
+in place — it degrades gracefully when no plugin answers, which is now always —
+but don't add anything that *requires* a plugin to exist; there isn't one to
+build or test against. `docs/api/plugin.md` and `docs/api/protocol.md` were
+deleted along with their sidebar entries; `docs/api/index.md` and
+`docs/api/examples.md` were trimmed to the mod API only.
+
+::: warning
+This repo is normally synced FROM `pocketchat-sec` (see the note at the bottom
+of this file) — if that private repo still carries a server-plugin edition, an
+unmodified future sync could reintroduce `server-plugin/` here. Flag that to
+whoever runs the sync rather than silently re-adding it.
+:::
 
 ## Layout
 
@@ -34,10 +55,8 @@ src/main/resources/
   pmchat.mixins.json
   assets/pmchat/lang/    — ru_ru.json, en_us.json (ALL user-facing strings)
 api-mod/                 — PUBLIC client API (com.pmchat.api.client), plain Java, no loom
-server-plugin/           — the Paper plugin (free edition only in this repo)
-server-plugin/api/       — PUBLIC plugin API (com.pmchat.api[.event|.protocol])
 docs/                    — VitePress docs site (RU root + /en); published from here
-.github/workflows/       — release.yml (build+publish, free-only), docs.yml,
+.github/workflows/       — release.yml (build+publish), docs.yml,
                            publish-api.yml (Maven Central, workflow_dispatch)
 ```
 
@@ -52,10 +71,11 @@ docs/                    — VitePress docs site (RU root + /en); published from
   GUARD for every new collection field. Notable: contacts, aliases(+aliasAsTarget),
   blocked(+ignoreCommand), profileBirthday/Description, channels, groups(+avatar),
   filters, pinned, stickerCache.
-- **PmServerMedia** — client side of the `pmchat:media` plugin channel. Detects the
+- **PmServerMedia** — client side of the `pmchat:media` plugin channel. Detects a
   plugin (`isAvailable()`), tier (`isPro()`), streams media up/down, routes PMs,
-  and the **gift** subsystem (catalog/balance/inventory + buy). Its private opcode
-  copy MUST match `com.pmchat.api.protocol.PocketChatProtocol` in `server-plugin/api`.
+  and the **gift** subsystem (catalog/balance/inventory + buy) — all no-ops now
+  that this repo ships no plugin to answer the handshake. Opcode constants are
+  private to this class (no external API mirrors them anymore).
 - **PmWire** — wire-string encoding for structured messages over `/m` (voice, images,
   reactions, replies, forwards, polls, typing/seen meta).
 - **PmHistory / PmMessage** — persisted conversations + message model.
@@ -81,46 +101,18 @@ docs/                    — VitePress docs site (RU root + /en); published from
 - **PmPalettes** — message/name/badge color arrays. **PmIcons** — pixel-bitmap icons.
 - FlatButton, PmFilters*/PmMediaScreen — dialogs.
 
-### Server plugin (`com.pmchat.plugin`)
-- **PocketChatPlugin** — `onEnable`; loads the gift catalog from config.yml and registers
-  `PocketChatApi` with the Bukkit `ServicesManager`. (This repo builds only the free
-  `PocketChat` edition — `server-plugin/build.gradle` `editions`.)
-- **MediaChannel** — the `pmchat:media` `PluginMessageListener`: media relay (chunked
-  to disk), PM routing, gifts (Vault economy via the `Economy` service, `GiftStore`).
-  Fires every API event; `routePm`/`pushPm`/`announceGift` are the shared entry points
-  the API impl calls into. Opcodes come from `PocketChatProtocol`.
-- **PocketChatApiImpl** — the `PocketChatApi` + `GiftRegistry` implementation and the
-  ONLY place events are fired from (`fire(...)`). **MediaServiceImpl** wraps `MediaStore`.
-- **MediaStore / GiftStore** — disk persistence.
+## Public API (`com.pmchat.api.client`) — published to Maven Central
 
-## Public API (`com.pmchat.api*`) — published to Maven Central
+`pocketchat-api-mod` (`api-mod`) — `PocketChatClient`/`PocketChatClientApi`,
+`PocketChatListener`, `PmChatMessage`/`Conversation`. **Zero Minecraft imports** —
+keep it that way, it is what makes the artifact version-proof. Packed UNRELOCATED
+into the mod jar (`from project(':api-mod').sourceSets.main.output` in the `jar`
+task), so consumers use `compileOnly`/`modCompileOnly` only.
 
-Two artifacts under `io.github.yurosing`, versioned independently of mod/plugin:
-- `pocketchat-api-plugin` (`server-plugin/api`) — `PocketChat`/`PocketChatApi`,
-  8 Bukkit events in `com.pmchat.api.event` (4 cancellable), `Gift`/`GiftRegistry`,
-  `MediaService`, and `PocketChatProtocol`. Needs `paper-api` `compileOnly`.
-- `pocketchat-api-mod` (`api-mod`) — `PocketChatClient`/`PocketChatClientApi`,
-  `PocketChatListener`, `PmChatMessage`/`Conversation`. **Zero Minecraft imports** —
-  keep it that way, it is what makes the artifact version-proof.
-
-Both are packed UNRELOCATED into the shipped jars (`from …sourceSets.main.output` in
-the edition `Jar` tasks and in the mod's `jar`), so consumers use `compileOnly` only.
-Every Bukkit event needs its OWN `HandlerList` + static `getHandlerList()` — the
-abstract `PocketChatEvent` deliberately has neither.
-
-Mod-side fire points live in `PocketChatClientImpl` (static `fireX` helpers) and are
-called from `PmChatClient` (receive/send/gift/init), `PmServerMedia` (HELLO_ACK, reset)
+Fire points live in `PocketChatClientImpl` (static `fireX` helpers) and are called
+from `PmChatClient` (receive/send/gift/init), `PmServerMedia` (HELLO_ACK, reset)
 and `PmScreen` (conversation opened). Adding a listener method → give it a `default`
 body so existing implementors keep compiling.
-
-## Wire protocol (mod ↔ plugin)
-
-Single plugin-messaging channel `pmchat:media`. Each message = `[opcode byte][payload]`
-written with `DataOutputStream`. Opcodes live in `PocketChatProtocol` (API module,
-used by the plugin) and are mirrored privately in the mod's `PmServerMedia.java` —
-those two MUST stay in sync. Handshake HELLO/HELLO_ACK carries the tier. Media is
-chunked. Gifts: `GIFT_LIST_REQ/GIFT_BUY/GIFT_INV_REQ` (C→S) and
-`GIFT_CATALOG/GIFT_RESULT/GIFT_RECV/GIFT_INV` (S→C).
 
 ## Build & release
 
@@ -130,8 +122,8 @@ chunked. Gifts: `GIFT_LIST_REQ/GIFT_BUY/GIFT_INV_REQ` (C→S) and
 - **You cannot build in this sandbox** — maven.fabricmc.net, Mojang, and repo.papermc.io
   are blocked by egress policy (403). Only Maven Central + the Gradle plugin portal are
   reachable. **Rely on GitHub Actions to compile.**
-- `release.yml` builds the mod + the free plugin (no Pro jar) and publishes a GitHub
-  Release using `RELEASE_NOTES.md` as the body. Pushing to `main` also rebuilds docs.
+- `release.yml` builds the mod and publishes a GitHub Release using
+  `RELEASE_NOTES.md` as the body. Pushing to `main` also rebuilds docs.
 - **Releasing**: pushing a tag is blocked (proxy 403). Instead trigger `release.yml` via
   `workflow_dispatch` (mcp github `actions_run_trigger`); its "Resolve tag" step derives
   the tag from `gradle.properties` `mod_version`, and `action-gh-release` creates the tag.
@@ -139,15 +131,13 @@ chunked. Gifts: `GIFT_LIST_REQ/GIFT_BUY/GIFT_INV_REQ` (C→S) and
   version is higher (semver "latest").
 - Watch runs with mcp github `actions_list`/`get_job_logs`. Fabric's first build is slow
   (~5–10 min).
-- **API artifacts**: `publish-api.yml`, `workflow_dispatch`. `dry_run: true` (default)
-  compiles both API modules and publishes to mavenLocal — no credentials, so it is the
+- **API artifact**: `publish-api.yml`, `workflow_dispatch`. `dry_run: true` (default)
+  compiles `api-mod` and publishes it to mavenLocal — no credentials, so it is the
   fast way to check an API change. `dry_run: false` deploys to Central and needs
   `MAVEN_CENTRAL_USERNAME/PASSWORD` + `SIGNING_KEY/PASSWORD`. Version is
-  `api_version` in `gradle.properties` (mod side) and `ext.apiVersion` in
-  `server-plugin/build.gradle` — bump BOTH together.
-- **The API modules DO compile in this sandbox**: `api-mod` is dependency-free
-  (`javac` it directly), and `server-plugin/api` + the plugin compile against hand-
-  written Bukkit/Vault stubs. Worth doing before pushing — CI is slow.
+  `api_version` in `gradle.properties`.
+- **The API module DOES compile in this sandbox**: `api-mod` is dependency-free —
+  `javac` it directly. Worth doing before pushing — CI is slow.
 
 ## Gotchas / conventions
 

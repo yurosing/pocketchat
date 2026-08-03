@@ -1,12 +1,12 @@
 name: Build check
 
-# Builds the mod and the free plugin without releasing anything, and asserts the
-# public API classes really are inside both jars.
+# Builds the mod without releasing anything, and asserts the public client API
+# classes really are inside the jar.
 #
-# That last check matters: consumers compile against com.pmchat.api from Maven
+# That check matters: consumers compile against com.pmchat.api.client from Maven
 # Central with `compileOnly`, so if the classes ever stop being packed into the
-# shipped jars, every dependent plugin and mod dies at runtime with
-# NoClassDefFoundError — and nothing else in CI would notice.
+# shipped jar, every dependent mod dies at runtime with NoClassDefFoundError —
+# and nothing else in CI would notice.
 
 on:
   push:
@@ -15,7 +15,6 @@ on:
     paths:
       - 'src/**'
       - 'api-mod/**'
-      - 'server-plugin/**'
       - 'build.gradle'
       - 'settings.gradle'
       - 'gradle.properties'
@@ -40,16 +39,7 @@ jobs:
       - name: Build mod
         run: ./gradlew build --stacktrace
 
-      - name: Set up Gradle for the server plugin
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.10'
-
-      - name: Build server plugin (free edition only)
-        working-directory: server-plugin
-        run: gradle build --no-daemon --stacktrace
-
-      - name: Assert the API ships inside both jars
+      - name: Assert the API ships inside the jar
         run: |
           set -euo pipefail
 
@@ -72,15 +62,12 @@ jobs:
           }
 
           mod=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n1)
-          plugin=$(find server-plugin/build/libs -maxdepth 1 -name 'PocketChat-*.jar' | head -n1)
 
           check "$mod" 'com/pmchat/api/client/'
-          check "$plugin" 'com/pmchat/api/'
 
       - uses: actions/upload-artifact@v4
         with:
           name: pmchat-jars
           path: |
             build/libs/*.jar
-            server-plugin/build/libs/*.jar
           if-no-files-found: error

@@ -1,10 +1,9 @@
 name: Publish API to Maven Central
 
-# Builds and publishes the two public API artifacts:
-#   io.github.yurosing:pocketchat-api-plugin  (server-plugin/api)
-#   io.github.yurosing:pocketchat-api-mod     (api-mod)
+# Builds and publishes the public client API artifact:
+#   io.github.yurosing:pocketchat-api-mod  (api-mod)
 #
-# Run with dry_run = true (the default) to compile both modules and publish them to the
+# Run with dry_run = true (the default) to compile the module and publish it to the
 # local Maven repository only — that needs NO credentials and is the quick way to check
 # a change before releasing. Run with dry_run = false to deploy to Maven Central; that
 # needs the four secrets listed below.
@@ -29,9 +28,6 @@ on:
   push:
     paths:
       - 'api-mod/**'
-      - 'server-plugin/api/**'
-      - 'server-plugin/build.gradle'
-      - 'server-plugin/settings.gradle'
       - 'build.gradle'
       - 'settings.gradle'
       - 'gradle.properties'
@@ -78,27 +74,6 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
         run: ./gradlew :api-mod:publishAndReleaseToMavenCentral --no-configuration-cache --stacktrace
 
-      # ---------- pocketchat-api-plugin (server-plugin build, needs paper-api) ----------
-
-      - name: Build plugin API
-        working-directory: server-plugin
-        run: gradle :api:build --no-daemon --stacktrace
-
-      - name: Publish plugin API locally
-        if: ${{ env.DRY_RUN == 'true' }}
-        working-directory: server-plugin
-        run: gradle :api:publishToMavenLocal --no-daemon --stacktrace
-
-      - name: Publish plugin API to Maven Central
-        if: ${{ env.DRY_RUN != 'true' }}
-        working-directory: server-plugin
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-        run: gradle :api:publishAndReleaseToMavenCentral --no-daemon --no-configuration-cache --stacktrace
-
       - name: Summary
         run: |
           {
@@ -106,7 +81,7 @@ jobs:
             echo
             echo '| Artifact | Jar |'
             echo '|---|---|'
-            for jar in api-mod/build/libs/*.jar server-plugin/api/build/libs/*.jar; do
+            for jar in api-mod/build/libs/*.jar; do
               [ -e "$jar" ] || continue
               echo "| \`$(basename "$jar")\` | $(du -h "$jar" | cut -f1) |"
             done
@@ -123,5 +98,4 @@ jobs:
           name: pocketchat-api-jars
           path: |
             api-mod/build/libs/*.jar
-            server-plugin/api/build/libs/*.jar
           if-no-files-found: error
