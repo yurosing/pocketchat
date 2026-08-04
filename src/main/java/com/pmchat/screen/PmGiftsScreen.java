@@ -31,11 +31,12 @@ import java.util.Locale;
 @Environment(EnvType.CLIENT)
 public class PmGiftsScreen extends Screen {
 
-    private static final int CELL = 64;
-    private static final int GAP = 8;
+    private static final int CELL = 100;
+    private static final int GAP = 14;
+    private static final int SPARKLES = 4;
 
-    private int PANEL_W = 360;
-    private int PANEL_H = 300;
+    private int PANEL_W = 420;
+    private int PANEL_H = 340;
 
     private final Screen parent;
     private final String player;
@@ -81,8 +82,8 @@ public class PmGiftsScreen extends Screen {
         applyTheme();
         clearChildren();
 
-        PANEL_W = Math.max(220, Math.min(360, width - 24));
-        PANEL_H = Math.max(160, Math.min(320, height - 24));
+        PANEL_W = Math.max(220, Math.min(420, width - 24));
+        PANEL_H = Math.max(160, Math.min(380, height - 24));
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 
@@ -128,6 +129,54 @@ public class PmGiftsScreen extends Screen {
         super.render(context, mouseX, mouseY, delta);
     }
 
+    /** Общий фон карточки: свечение кольцами цвета редкости + дышащий значок + искры на ховере. */
+    private void drawCardBase(DrawContext context, int x, int y, int index, String icon, int rarity,
+                               boolean hover, boolean dim) {
+        long now = System.currentTimeMillis();
+        double t = now / 1000.0 + index * 0.37;
+        int cx = x + CELL / 2, cy = y + CELL / 2 - 6;
+
+        context.fill(x, y, x + CELL, y + CELL, hover ? 0x48FFFFFF : 0x26FFFFFF);
+        context.drawStrokedRectangle(x, y, CELL, CELL, dim ? BTN_BORDER : rarity);
+
+        if (!dim) {
+            // Свечение кольцами — пульсирует по фазе, сдвинутой для каждой карточки.
+            int glowBase = hover ? 46 : 30;
+            for (int ring = 3; ring >= 1; ring--) {
+                float pulse = (float) (0.6 + 0.4 * Math.sin(t * 2 + ring));
+                int r = 14 + ring * 9;
+                fillCircleClamped(context, cx, cy, r, (rarity & 0xFFFFFF) | (((int) (glowBase / ring * pulse)) << 24),
+                        x, y, x + CELL, y + CELL);
+            }
+        }
+
+        float breathe = 1f + 0.12f * (float) Math.sin(t * 2.2);
+        float scale = 3.6f * breathe;
+        drawScaledCentered(context, icon, cx, cy, scale, dim ? 0xFFB0B0B0 : 0xFFFFFFFF);
+
+        if (hover && !dim) {
+            for (int i = 0; i < SPARKLES; i++) {
+                double angle = t * 2.4 + i * (Math.PI * 2 / SPARKLES);
+                double radius = CELL * 0.42;
+                int sx = cx + (int) (Math.cos(angle) * radius);
+                int sy = cy + (int) (Math.sin(angle) * radius * 0.7);
+                float sparkleAlpha = (float) (0.5 + 0.5 * Math.sin(t * 5 + i * 1.3));
+                drawCentered(context, i % 2 == 0 ? "✦" : "·", sx, sy, (rarity & 0xFFFFFF) | ((int) (220 * sparkleAlpha) << 24));
+            }
+        }
+    }
+
+    /** {@link #fillCircle} с обрезкой по прямоугольнику карточки — свечение не должно вылезать на соседей. */
+    private static void fillCircleClamped(DrawContext ctx, int cx, int cy, int r, int color, int minX, int minY, int maxX, int maxY) {
+        for (int dy = -r; dy <= r; dy++) {
+            int yy = cy + dy;
+            if (yy < minY || yy >= maxY) continue;
+            int dx = (int) Math.sqrt((double) r * r - dy * dy);
+            int x0 = Math.max(minX, cx - dx), x1 = Math.min(maxX, cx + dx + 1);
+            if (x1 > x0) ctx.fill(x0, yy, x1, yy + 1, color);
+        }
+    }
+
     private void renderCatalogGrid(DrawContext context, int mouseX, int mouseY) {
         cardRects.clear();
         List<PmBackend.Gift> cat = PmBackend.cachedCatalog();
@@ -150,13 +199,11 @@ public class PmGiftsScreen extends Screen {
             int rarity = PmBackend.rarityColor(g.rarity);
             boolean hover = mouseX >= x && mouseX < x + CELL && mouseY >= y && mouseY < y + CELL;
 
-            context.fill(x, y, x + CELL, y + CELL, hover ? 0x40FFFFFF : 0x28FFFFFF);
-            context.drawStrokedRectangle(x, y, CELL, CELL, afford ? rarity : BTN_BORDER);
-            drawScaledCentered(context, g.icon, x + CELL / 2, y + CELL / 2 - 12, 2.2f, 0xFFFFFFFF);
+            drawCardBase(context, x, y, i, g.icon, rarity, hover, !afford);
 
             String priceStr = PmBackend.formatCoins(g.price);
             context.drawText(textRenderer, priceStr, x + (CELL - textRenderer.getWidth(priceStr)) / 2,
-                    y + CELL - 12, afford ? PmBackend.CURRENCY_COLOR : 0xFF9A6A6A, false);
+                    y + CELL - 13, afford ? PmBackend.CURRENCY_COLOR : 0xFF9A6A6A, false);
 
             cardRects.add(new Object[]{x, y, CELL, CELL, i});
 
@@ -194,7 +241,6 @@ public class PmGiftsScreen extends Screen {
         int startX = px + (PANEL_W - cols * (CELL + GAP) + GAP) / 2;
         int col = 0;
         int x = startX, y = gridTop;
-        long now = System.currentTimeMillis();
 
         for (int i = scroll; i < got.size(); i++) {
             if (y + CELL > gridBottom) break;
@@ -204,16 +250,14 @@ public class PmGiftsScreen extends Screen {
             int rarity = PmBackend.rarityColor(def != null ? def.rarity : null);
             boolean hover = mouseX >= x && mouseX < x + CELL && mouseY >= y && mouseY < y + CELL;
 
-            context.fill(x, y, x + CELL, y + CELL, hover ? 0x40FFFFFF : 0x28FFFFFF);
-            context.drawStrokedRectangle(x, y, CELL, CELL, rarity);
-            float bob = hover ? 0 : (float) Math.sin(now / 450.0 + i * 0.7) * 1.5f;
-            drawScaledCentered(context, icon, x + CELL / 2, y + CELL / 2 - 8 + (int) bob, 2.2f, 0xFFFFFFFF);
+            drawCardBase(context, x, y, i, icon, rarity, hover, false);
 
+            // Цветной кружок-бейдж отправителя (первая буква ника) в углу — как в Telegram.
             String from = g.from == null || g.from.isEmpty() ? "?" : g.from;
             int badgeColor = 0xFF000000 | (from.toLowerCase(Locale.ROOT).hashCode() & 0xFFFFFF);
-            fillCircle(context, x + CELL - 8, y + 8, 8, badgeColor);
+            fillCircle(context, x + CELL - 13, y + 13, 12, badgeColor);
             String initial = from.substring(0, 1).toUpperCase(Locale.ROOT);
-            context.drawText(textRenderer, initial, x + CELL - 8 - textRenderer.getWidth(initial) / 2, y + 8 - 4, 0xFFFFFFFF, false);
+            context.drawText(textRenderer, initial, x + CELL - 13 - textRenderer.getWidth(initial) / 2, y + 13 - 4, 0xFFFFFFFF, false);
 
             cardRects.add(new Object[]{x, y, CELL, CELL, i});
 
@@ -235,21 +279,34 @@ public class PmGiftsScreen extends Screen {
         String icon = def != null ? def.icon : (g.giftId == null || g.giftId.isEmpty() ? "•" : g.giftId);
         int rarity = PmBackend.rarityColor(def != null ? def.rarity : null);
         int cx = px + PANEL_W / 2;
-        int cy = py + PANEL_H / 2 - 20;
+        int cy = py + PANEL_H / 2 - 30;
+        double t = System.currentTimeMillis() / 1000.0;
 
-        for (int ring = 3; ring >= 1; ring--) {
-            fillCircle(context, cx, cy, 20 + ring * 6, (rarity & 0xFFFFFF) | (0x18 * ring << 24));
+        for (int ring = 4; ring >= 1; ring--) {
+            float pulse = (float) (0.6 + 0.4 * Math.sin(t * 1.6 + ring));
+            fillCircle(context, cx, cy, 26 + ring * 9, (rarity & 0xFFFFFF) | (((int) (48 / ring * pulse)) << 24));
         }
-        drawScaledCentered(context, icon, cx, cy - 10, 4f, 0xFFFFFFFF);
+
+        for (int i = 0; i < SPARKLES * 2; i++) {
+            double angle = t * 1.4 + i * (Math.PI * 2 / (SPARKLES * 2));
+            double radius = 62 + 6 * Math.sin(t * 2 + i);
+            int sx = cx + (int) (Math.cos(angle) * radius);
+            int sy = cy + (int) (Math.sin(angle) * radius * 0.75);
+            float sparkleAlpha = (float) (0.5 + 0.5 * Math.sin(t * 4 + i * 1.3));
+            drawCentered(context, i % 2 == 0 ? "✦" : "·", sx, sy, (rarity & 0xFFFFFF) | ((int) (220 * sparkleAlpha) << 24));
+        }
+
+        float breathe = 1f + 0.08f * (float) Math.sin(t * 2.4);
+        drawScaledCentered(context, icon, cx, cy - 6, 6.5f * breathe, 0xFFFFFFFF);
 
         String name = def != null ? def.name : g.giftId;
-        drawCentered(context, name, cx, cy + 34, TITLE);
+        drawCentered(context, name, cx, cy + 58, TITLE);
         Text from = Text.translatable("pmchat.gifts.detail.from", g.from);
-        drawCentered(context, from.getString(), cx, cy + 46, LABEL);
+        drawCentered(context, from.getString(), cx, cy + 70, LABEL);
         if (g.at > 0) {
             String date = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.ROOT).format(new Date(g.at));
             Text when = Text.translatable("pmchat.gifts.detail.when", date);
-            drawCentered(context, when.getString(), cx, cy + 58, SUBTLE);
+            drawCentered(context, when.getString(), cx, cy + 82, SUBTLE);
         }
     }
 

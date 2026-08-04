@@ -39,7 +39,7 @@ public class PmGiftPopupScreen extends Screen {
     protected void init() {
         clearChildren();
         int cw = 90;
-        addDrawableChild(FlatButton.centered(textRenderer, width / 2 - cw / 2, height / 2 + 62, cw, 18,
+        addDrawableChild(FlatButton.centered(textRenderer, width / 2 - cw / 2, height / 2 + 88, cw, 18,
                 Text.translatable("pmchat.gift.popup.thanks"), 0xFF20321F, 0xFF2A422A, rarityColor, 0xFFE8F0E0,
                 btn -> close()));
     }
@@ -70,16 +70,16 @@ public class PmGiftPopupScreen extends Screen {
         String name = gift != null ? gift.name : giftIdFallback;
 
         // Свечение вокруг значка — несколько колец убывающей яркости цвета редкости.
-        int glowBase = (int) (60 * fade);
-        for (int ring = 3; ring >= 1; ring--) {
-            int r = 26 + ring * 8;
+        int glowBase = (int) (70 * fade);
+        for (int ring = 4; ring >= 1; ring--) {
+            int r = 40 + ring * 13;
             fillCircle(context, cx, cy, r, withAlpha(rarityColor, glowBase / ring));
         }
 
         // Искры, кружащие вокруг значка — угол вращения и лёгкая пульсация радиуса.
         for (int i = 0; i < SPARKLES; i++) {
             double angle = t * 1.6 + i * (Math.PI * 2 / SPARKLES);
-            double radius = 34 + 5 * Math.sin(t * 3 + i);
+            double radius = 58 + 8 * Math.sin(t * 3 + i);
             int sx = cx + (int) (Math.cos(angle) * radius);
             int sy = cy + (int) (Math.sin(angle) * radius * 0.7);
             float sparkleAlpha = (float) (0.5 + 0.5 * Math.sin(t * 4 + i * 1.3));
@@ -88,14 +88,14 @@ public class PmGiftPopupScreen extends Screen {
         }
 
         // Значок подарка — крупно, с "отскоком" при появлении и лёгкой пульсацией после.
-        float pulse = t > 0.45f ? 1f + 0.04f * (float) Math.sin(t * 4) : 1f;
-        drawScaledCentered(context, icon, cx, cy - 14, 3.2f * intro * pulse, withAlpha(0xFFFFFF, (int) (255 * fade)));
+        float pulse = t > 0.45f ? 1f + 0.05f * (float) Math.sin(t * 4) : 1f;
+        drawScaledCentered(context, icon, cx, cy - 18, 5.2f * intro * pulse, withAlpha(0xFFFFFF, (int) (255 * fade)));
 
         // Подпись: от кого и что подарили.
         Text fromText = Text.translatable("pmchat.gift.popup.from", from);
         Text nameText = Text.literal(name);
-        drawCentered(context, fromText.getString(), cx, cy + 34, withAlpha(0xFFFFFF, (int) (220 * fade)));
-        drawCentered(context, nameText.getString(), cx, cy + 46, withAlpha(rarityColor, (int) (255 * fade)));
+        drawCentered(context, fromText.getString(), cx, cy + 56, withAlpha(0xFFFFFF, (int) (220 * fade)));
+        drawCentered(context, nameText.getString(), cx, cy + 70, withAlpha(rarityColor, (int) (255 * fade)));
 
         super.render(context, mouseX, mouseY, delta);
     }
