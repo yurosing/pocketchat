@@ -21,9 +21,11 @@ import net.minecraft.text.Text;
 @Environment(EnvType.CLIENT)
 public class PmSettingsScreen extends Screen {
 
-    private static final int PANEL_W = 280;
     private static final int ROW_H = 17;
     private static final int TAB_H = 16;
+
+    /** Не static final — подгоняется под размер экрана в init() (GUI Scale 4 и т.п.). */
+    private int PANEL_W = 280;
 
     private static final String[] TAB_KEYS = {
             "pmchat.settings.tab.appearance",
@@ -58,7 +60,7 @@ public class PmSettingsScreen extends Screen {
     }
 
     private boolean isAdminAccount() {
-        return PmChatClient.isAdminAccount();
+        return PmChatClient.canOpenAdminPanel();
     }
 
     private boolean backendConfigured() {
@@ -87,7 +89,8 @@ public class PmSettingsScreen extends Screen {
         lastTab = tab;
 
         int rows = Math.max(1, rowsForTab(tab));
-        panelH = 26 + TAB_H + rows * ROW_H + 28;
+        PANEL_W = Math.max(200, Math.min(280, width - 24));
+        panelH = Math.min(26 + TAB_H + rows * ROW_H + 28, height - 24);
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 

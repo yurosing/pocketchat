@@ -22,9 +22,12 @@ import java.util.List;
 @Environment(EnvType.CLIENT)
 public class PmWhatsNewScreen extends Screen {
 
-    private static final int PANEL_W = 300;
-    private static final int TEXT_W = PANEL_W - 40;   // отступы слева/справа + буллет
     private static final int LINE_H = 11;
+
+    // Не static final — подгоняются под размер экрана в init() (см. GUI Scale 4 и т.п.),
+    // иначе панель шире/выше настоящего окна и всё наезжает друг на друга.
+    private int PANEL_W = 300;
+    private int TEXT_W = PANEL_W - 40;   // отступы слева/справа + буллет
 
     /** Ключи пунктов «что нового» этого релиза (порядок = порядок показа). */
     private static final String[] ITEMS = {
@@ -71,6 +74,9 @@ public class PmWhatsNewScreen extends Screen {
         clearChildren();
         lines.clear();
         firstLine.clear();
+
+        PANEL_W = Math.max(160, Math.min(300, width - 24));
+        TEXT_W = PANEL_W - 40;
 
         for (String key : ITEMS) {
             List<OrderedText> wrapped = textRenderer.wrapLines(Text.translatable(key), TEXT_W);

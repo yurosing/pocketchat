@@ -27,7 +27,8 @@ import java.util.Locale;
 @Environment(EnvType.CLIENT)
 public class PmFilterListScreen extends Screen {
 
-    private static final int PANEL_W = 320;
+    /** Не static final — подгоняется под размер экрана в init() (GUI Scale 4 и т.п.). */
+    private int PANEL_W = 320;
 
     private static final int SECTION = 0xFF8FD8A8;
 
@@ -78,6 +79,7 @@ public class PmFilterListScreen extends Screen {
         if (field != null) input = field.getText();
         clearChildren();
 
+        PANEL_W = Math.max(160, Math.min(320, width - 24));
         panelH = Math.min(300, height - 30);
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;

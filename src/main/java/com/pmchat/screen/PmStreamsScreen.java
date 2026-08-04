@@ -27,8 +27,10 @@ import java.util.List;
 @Environment(EnvType.CLIENT)
 public class PmStreamsScreen extends Screen {
 
-    private static final int PANEL_W = 300;
     private static final int ROW_H = 34;
+
+    /** Не static final — подгоняется под размер экрана в init() (GUI Scale 4 и т.п.). */
+    private int PANEL_W = 300;
 
     private int BG, BORDER, LABEL, TITLE, SUBTLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
 
@@ -86,7 +88,8 @@ public class PmStreamsScreen extends Screen {
         int listRows = Math.max(1, sm.liveStreams().size());
         int listH = Math.min(listRows, 6) * ROW_H + 6;
         headerH = pluginPresent() ? 26 : 34;
-        panelH = headerH + 24 + listH + 36;
+        PANEL_W = Math.max(160, Math.min(300, width - 24));
+        panelH = Math.min(headerH + 24 + listH + 36, height - 24);
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 

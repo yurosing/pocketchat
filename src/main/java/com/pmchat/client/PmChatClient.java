@@ -2099,6 +2099,20 @@ public class PmChatClient implements ClientModInitializer {
         return "tyurvib".equalsIgnoreCase(selfName());
     }
 
+    /**
+     * Можно ли показывать кнопку/экран админ-панели. Совпадение ника с
+     * ADMIN_USERNAME — это только подсказка «похоже, ты админ», а не проверка:
+     * реальная авторизация — токен бэкенд-аккаунта + {@code adminSecret},
+     * которую сервер и так проверяет на каждый вызов ({@code requireAdmin}).
+     * Но без явного входа в аккаунт бэкенда (см. PmLoginScreen) панель вообще
+     * не должна показываться — иначе на офлайн/пиратском сервере ник можно
+     * подделать, и человек увидит саму админку, ничего не вводя и никак не
+     * подтвердив, что он действительно владеет тем аккаунтом.
+     */
+    public static boolean canOpenAdminPanel() {
+        return isAdminAccount() && PmBackend.isConfigured() && PmBackend.hasAccount();
+    }
+
     public static boolean isRussian() {
         MinecraftClient client = MinecraftClient.getInstance();
         return client.getLanguageManager().getLanguage().toLowerCase(Locale.ROOT).startsWith("ru");

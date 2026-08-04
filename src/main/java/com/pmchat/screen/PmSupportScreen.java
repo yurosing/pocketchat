@@ -18,8 +18,9 @@ import net.minecraft.text.Text;
 @Environment(EnvType.CLIENT)
 public class PmSupportScreen extends Screen {
 
-    private static final int PANEL_W = 260;
-    private static final int PANEL_H = 110;
+    /** Не static final — подгоняются под размер экрана в init() (GUI Scale 4 и т.п.). */
+    private int PANEL_W = 260;
+    private int PANEL_H = 110;
 
     private final Screen parent;
     private final PmConfig config = PmChatClient.getConfig();
@@ -46,6 +47,8 @@ public class PmSupportScreen extends Screen {
     protected void init() {
         applyTheme();
         clearChildren();
+        PANEL_W = Math.max(180, Math.min(260, width - 24));
+        PANEL_H = Math.min(110, height - 16);
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 

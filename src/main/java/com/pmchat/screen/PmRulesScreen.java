@@ -18,7 +18,12 @@ import net.minecraft.text.Text;
 @Environment(EnvType.CLIENT)
 public class PmRulesScreen extends Screen {
 
-    private static final int PANEL_W = 260;
+    /**
+     * Не static final — подгоняется под размер экрана в init() (GUI Scale 4 и
+     * т.п.). Этот экран — обязательный шаг перед первым открытием мессенджера,
+     * так что он ОБЯЗАН оставаться пригодным для использования на любом экране.
+     */
+    private int PANEL_W = 260;
 
     private final Runnable onAccept;
     private final PmConfig config = PmChatClient.getConfig();
@@ -48,6 +53,7 @@ public class PmRulesScreen extends Screen {
         applyTheme();
         clearChildren();
 
+        PANEL_W = Math.max(180, Math.min(260, width - 24));
         int textW = PANEL_W - 32;
         int y = 40;
 
@@ -72,9 +78,12 @@ public class PmRulesScreen extends Screen {
         y += lineCount("pmchat.rules.footer", textW) * 10;
         y += 26;
 
-        panelH = y;
+        // Кнопки «Принимаю»/«Не сейчас» обязаны остаться на экране даже если
+        // содержимое не влезло по высоте (иначе мод нечем принять) — жмём
+        // panelH к height и держим py неотрицательным, а не наоборот.
+        panelH = Math.min(y, height - 8);
         px = (width - PANEL_W) / 2;
-        py = (height - panelH) / 2;
+        py = Math.max(4, (height - panelH) / 2);
 
         addDrawableChild(FlatButton.centered(textRenderer, px + 12, py + panelH - 22, (PANEL_W - 32) / 2, 16,
                 Text.translatable("pmchat.rules.decline"), BTN_BG, BTN_HOVER, BTN_BORDER, SUBTLE,

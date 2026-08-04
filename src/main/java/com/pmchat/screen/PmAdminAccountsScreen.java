@@ -22,9 +22,11 @@ import java.util.function.Consumer;
 @Environment(EnvType.CLIENT)
 public class PmAdminAccountsScreen extends Screen {
 
-    private static final int PANEL_W = 260;
-    private static final int PANEL_H = 220;
     private static final int ROW_H = 24;
+
+    /** Не static final — подгоняются под размер экрана в init() (GUI Scale 4 и т.п.). */
+    private int PANEL_W = 260;
+    private int PANEL_H = 220;
 
     private final Screen parent;
     private final Consumer<String> onPick;
@@ -56,6 +58,8 @@ public class PmAdminAccountsScreen extends Screen {
     protected void init() {
         applyTheme();
         clearChildren();
+        PANEL_W = Math.max(180, Math.min(260, width - 24));
+        PANEL_H = Math.min(220, height - 16);
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 

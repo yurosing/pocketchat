@@ -23,8 +23,10 @@ public class PmFiltersScreen extends Screen {
 
     public static final int CAT_CHAT = 0, CAT_DISCORD = 1, CAT_TEXT = 2;
 
-    private static final int PANEL_W = 300;
     private static final int ROW_H = 17;
+
+    /** Не static final — подгоняется под размер экрана в init() (GUI Scale 4 и т.п.). */
+    private int PANEL_W = 300;
 
     private static final int SECTION = 0xFF8FD8A8;
 
@@ -59,7 +61,8 @@ public class PmFiltersScreen extends Screen {
         labels.clear();
         tiles.clear();
 
-        panelH = 26 + 2 * ROW_H + 12 + 70 + 34;
+        PANEL_W = Math.max(160, Math.min(300, width - 24));
+        panelH = Math.min(26 + 2 * ROW_H + 12 + 70 + 34, height - 24);
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 

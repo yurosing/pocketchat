@@ -18,8 +18,9 @@ import net.minecraft.text.Text;
 @Environment(EnvType.CLIENT)
 public class PmReportScreen extends Screen {
 
-    private static final int PANEL_W = 240;
-    private static final int PANEL_H = 110;
+    /** Не static final — подгоняются под размер экрана в init() (GUI Scale 4 и т.п.). */
+    private int PANEL_W = 240;
+    private int PANEL_H = 110;
 
     private final Screen parent;
     private final String target;
@@ -48,6 +49,8 @@ public class PmReportScreen extends Screen {
     protected void init() {
         applyTheme();
         clearChildren();
+        PANEL_W = Math.max(160, Math.min(240, width - 24));
+        PANEL_H = Math.min(110, height - 16);
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 

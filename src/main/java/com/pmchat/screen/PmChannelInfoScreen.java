@@ -22,8 +22,10 @@ import java.util.Locale;
 @Environment(EnvType.CLIENT)
 public class PmChannelInfoScreen extends Screen {
 
-    private static final int PANEL_W = 300;
     private static final int ROW_H = 18;
+
+    /** Не static final — подгоняется под размер экрана в init() (GUI Scale 4 и т.п.). */
+    private int PANEL_W = 300;
 
     private int BG, BORDER, LABEL, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
 
@@ -66,6 +68,7 @@ public class PmChannelInfoScreen extends Screen {
     protected void init() {
         applyTheme();
         clearChildren();
+        PANEL_W = Math.max(160, Math.min(300, width - 24));
         panelH = Math.min(280, height - 30);
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;

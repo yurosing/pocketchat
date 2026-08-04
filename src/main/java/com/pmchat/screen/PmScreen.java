@@ -1193,10 +1193,15 @@ public class PmScreen extends Screen {
             PANEL_H = Math.max(SIZES[0][1], Math.min(config.customPanelH, maxH));
             LEFT_W = Math.max(SIZES[0][2], Math.min(240, PANEL_W / 4));
         } else {
+            // Пресеты (маленький/средний/большой) — фиксированные размеры, но при
+            // высоком GUI Scale (мало логических пикселей) окно может оказаться
+            // больше самого экрана, и всё наезжает друг на друга. Прижимаем к
+            // реальному размеру экрана точно так же, как фуллскрин/кастом выше.
             int scale = Math.max(0, Math.min(SIZES.length - 1, config.uiScale));
-            PANEL_W = SIZES[scale][0];
-            PANEL_H = SIZES[scale][1];
-            LEFT_W = SIZES[scale][2];
+            int m = 12;
+            PANEL_W = Math.max(SIZES[0][0], Math.min(SIZES[scale][0], width - m * 2));
+            PANEL_H = Math.max(SIZES[0][1], Math.min(SIZES[scale][1], height - m * 2));
+            LEFT_W = Math.min(SIZES[scale][2], Math.min(240, PANEL_W / 4));
         }
         BUBBLE_MAX_TEXT_W = PANEL_W - LEFT_W - 96;
 
@@ -1276,7 +1281,9 @@ public class PmScreen extends Screen {
 
         // Красная кнопка входа в админ-панель — видна только аккаунту ADMIN_USERNAME
         // бэкенда (server-pocketchat, по умолчанию tyurvib), прямо у списка чатов.
-        if (PmChatClient.isAdminAccount()) {
+        // Обязательно требует входа в аккаунт бэкенда (см. canOpenAdminPanel) —
+        // совпадения ника Minecraft одного недостаточно.
+        if (PmChatClient.canOpenAdminPanel()) {
             FlatButton adminBtn = FlatButton.centered(textRenderer, footerX, py + PANEL_H - 19, 16, 13,
                     Text.literal("⚑"), 0xFF5A1418, 0xFF7A1C22, 0xFFE0203C, 0xFFFF4D63,
                     btn -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));

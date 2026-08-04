@@ -23,7 +23,8 @@ import java.util.Locale;
 @Environment(EnvType.CLIENT)
 public class PmProfileScreen extends Screen {
 
-    private static final int PANEL_W = 250;
+    /** Не static final — подгоняется под размер экрана в init() (GUI Scale 4 и т.п.). */
+    private int PANEL_W = 250;
 
     private final Screen parent;
     private final PmConfig config = PmChatClient.getConfig();
@@ -81,7 +82,8 @@ public class PmProfileScreen extends Screen {
             int catalogSize = com.pmchat.client.PmBackend.cachedCatalog().size();
             if (catalogSize > 0) catalogRows = (catalogSize + 3) / 4;
         }
-        panelH = self ? 214 : 260 + catalogRows * 19;
+        PANEL_W = Math.max(160, Math.min(250, width - 24));
+        panelH = Math.min(self ? 214 : 260 + catalogRows * 19, height - 24);
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
