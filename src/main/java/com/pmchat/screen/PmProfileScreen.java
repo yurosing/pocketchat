@@ -276,8 +276,8 @@ public class PmProfileScreen extends Screen {
             if (com.pmchat.client.PmBackend.isConfigured() && com.pmchat.client.PmBackend.hasAccount()) {
                 Long pcBal = com.pmchat.client.PmBackend.cachedSelfBalance();
                 String pcBalText = Text.translatable("pmchat.profile.balance.pocketchat").getString() + ": "
-                        + (pcBal == null ? "…" : pcBal);
-                context.drawText(textRenderer, pcBalText, tx, py + 66, 0xFF4CC26A, false);
+                        + (pcBal == null ? "…" : com.pmchat.client.PmBackend.formatCoins(pcBal));
+                context.drawText(textRenderer, pcBalText, tx, py + 66, com.pmchat.client.PmBackend.CURRENCY_COLOR, false);
             }
         }
 
@@ -400,26 +400,38 @@ public class PmProfileScreen extends Screen {
 
     private void renderGiftsViaBackend(DrawContext context, int mouseX, int mouseY, int top) {
         java.util.List<com.pmchat.client.PmBackend.ReceivedGift> got = com.pmchat.client.PmBackend.cachedGiftInbox(player);
-        int iy = top + 16;
+        int iy = top + 15;
         if (got.isEmpty()) {
             context.drawText(textRenderer, Text.translatable("pmchat.profile.gifts.empty"),
-                    px + 12, iy, SUBTLE, false);
+                    px + 12, iy + 4, SUBTLE, false);
         } else {
+            int cell = 18, gap = 3;
             int gx = px + 12;
             int shown = 0;
             long now = System.currentTimeMillis();
-            for (int i = got.size() - 1; i >= 0 && shown < 14; i--, shown++) {
+            for (int i = got.size() - 1; i >= 0 && shown < 10; i--, shown++) {
                 com.pmchat.client.PmBackend.ReceivedGift g = got.get(i);
                 com.pmchat.client.PmBackend.Gift def = com.pmchat.client.PmBackend.giftById(g.giftId);
                 String ic = def != null ? def.icon : (g.giftId == null || g.giftId.isEmpty() ? "•" : g.giftId);
-                // Лёгкая волна-пульсация значков вразнобой (сдвиг фазы по индексу) — живее статичного ряда.
-                float bob = (float) Math.sin(now / 400.0 + shown * 0.9) * 1.5f;
-                context.drawText(textRenderer, ic, gx, iy + (int) bob,
-                        com.pmchat.client.PmBackend.rarityColor(def != null ? def.rarity : null), false);
-                gx += textRenderer.getWidth(ic) + 4;
+                int rarity = com.pmchat.client.PmBackend.rarityColor(def != null ? def.rarity : null);
+                boolean hover = mouseX >= gx && mouseX < gx + cell && mouseY >= iy && mouseY < iy + cell;
+
+                // Карточка-«чип»: фон + рамка цвета редкости, значок по центру.
+                context.fill(gx, iy, gx + cell, iy + cell, hover ? 0x40FFFFFF : 0x22FFFFFF);
+                context.drawStrokedRectangle(gx, iy, cell, cell, rarity);
+                float bob = hover ? 0 : (float) Math.sin(now / 400.0 + shown * 0.9) * 1f;
+                context.drawText(textRenderer, ic, gx + (cell - textRenderer.getWidth(ic)) / 2,
+                        iy + 4 + (int) bob, 0xFFFFFFFF, false);
+
+                // Цветной кружок-бейдж отправителя (первая буква ника) в углу — как в Telegram.
+                String from = g.from == null || g.from.isEmpty() ? "?" : g.from;
+                int badgeColor = 0xFF000000 | (from.toLowerCase(Locale.ROOT).hashCode() & 0xFFFFFF);
+                fillCircle(context, gx + cell - 2, iy + 2, 4, badgeColor);
+
+                gx += cell + gap;
             }
-            if (got.size() > 14) {
-                context.drawText(textRenderer, "+" + (got.size() - 14), gx, iy, SUBTLE, false);
+            if (got.size() > 10) {
+                context.drawText(textRenderer, "+" + (got.size() - 10), gx, iy + 4, SUBTLE, false);
             }
         }
 
@@ -427,7 +439,7 @@ public class PmProfileScreen extends Screen {
         if (!self) {
             java.util.List<com.pmchat.client.PmBackend.Gift> cat = com.pmchat.client.PmBackend.cachedCatalog();
             Long selfBal = com.pmchat.client.PmBackend.cachedSelfBalance();
-            int cy = top + 30;
+            int cy = top + 36;
             int cx = px + 12;
             int cellW = 55, cellH = 16, gap = 3;
             for (com.pmchat.client.PmBackend.Gift g : cat) {

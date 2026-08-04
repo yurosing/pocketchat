@@ -313,6 +313,15 @@ public final class PmBackend {
         };
     }
 
+    /** Значок и цвет валюты PocketChat — везде, где показывается баланс/цена в монетах. */
+    public static final String CURRENCY_ICON = "Ⓒ";
+    public static final int CURRENCY_COLOR = 0xFF38D94E;
+
+    /** "Ⓒ 123" — единый вид суммы монет PocketChat в UI. */
+    public static String formatCoins(long amount) {
+        return CURRENCY_ICON + " " + amount;
+    }
+
     private static volatile java.util.List<Gift> cachedCatalog = null;
     private static volatile boolean catalogInFlight = false;
 

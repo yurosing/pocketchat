@@ -1283,7 +1283,8 @@ public class PmScreen extends Screen {
         // Магазин возможностей — оформление/функции за монеты, ограниченный срок
         if (com.pmchat.client.PmBackend.isConfigured()) {
             FlatButton shopBtn = FlatButton.centered(textRenderer, footerX, py + PANEL_H - 19, 16, 13,
-                    Text.literal("$"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFF0C34E,
+                    Text.literal(com.pmchat.client.PmBackend.CURRENCY_ICON), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
+                    com.pmchat.client.PmBackend.CURRENCY_COLOR,
                     btn -> MinecraftClient.getInstance().setScreen(new PmShopScreen(this)));
             shopBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.tip.shop")));
             addDrawableChild(shopBtn);
@@ -4718,11 +4719,12 @@ public class PmScreen extends Screen {
     }
 
     /**
-     * Списывает цену получателя за входящее ЛС (фича «Платные ЛС» из магазина
-     * возможностей), если она у него активна, и только потом зовёт {@code proceed}
-     * (реальную отправку). Бесплатным получателям (нет фичи/цена 0) отправляет
-     * сразу — без сетевого похода. При нехватке монет проигрывает анимацию отказа
-     * вместо отправки.
+     * Платное ЛС (фича из магазина возможностей): если у получателя настроена
+     * цена, сперва спрашивает явное согласие ({@link PmConfirmChargeScreen}) —
+     * только после «Отправить» списывает монеты и зовёт {@code proceed} (реальную
+     * отправку). Бесплатным получателям (нет фичи/цена 0) отправляет сразу, без
+     * диалога и сетевого похода. При нехватке монет на попытке списания
+     * проигрывает анимацию отказа вместо отправки.
      */
     private void chargeIfNeeded(String target, Runnable proceed) {
         com.pmchat.client.PmBackend.AccountInfo info = com.pmchat.client.PmBackend.cachedAccountInfo(target);
@@ -4730,14 +4732,15 @@ public class PmScreen extends Screen {
             proceed.run();
             return;
         }
-        com.pmchat.client.PmBackend.chargeDm(target, (ok, charged, err) -> {
-            if (ok) {
-                proceed.run();
-            } else {
-                muteShakeAt = System.currentTimeMillis();
-                paymentNeeded = com.pmchat.client.PmBackend.lastChargeRequiredPrice();
-            }
-        });
+        MinecraftClient.getInstance().setScreen(new PmConfirmChargeScreen(this, target, info.dmPrice, () ->
+                com.pmchat.client.PmBackend.chargeDm(target, (ok, charged, err) -> {
+                    if (ok) {
+                        proceed.run();
+                    } else {
+                        muteShakeAt = System.currentTimeMillis();
+                        paymentNeeded = com.pmchat.client.PmBackend.lastChargeRequiredPrice();
+                    }
+                })));
     }
 
     /** Ладонь ✋ трясётся и гаснет + «у вас нет прав» — как отказ в Telegram. */

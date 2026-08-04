@@ -19,7 +19,7 @@ import net.minecraft.text.Text;
 public class PmSendCoinsScreen extends Screen {
 
     private int PANEL_W = 220;
-    private int PANEL_H = 100;
+    private int PANEL_H = 108;
 
     private final Screen parent;
     private final String target;
@@ -49,13 +49,13 @@ public class PmSendCoinsScreen extends Screen {
         applyTheme();
         clearChildren();
         PANEL_W = Math.max(160, Math.min(220, width - 24));
-        PANEL_H = Math.min(100, height - 16);
+        PANEL_H = Math.min(108, height - 16);
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 
         int fx = px + 16;
         int fw = PANEL_W - 32;
-        int y = py + 26;
+        int y = py + 34;
 
         amountField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.coins.hint"));
         amountField.setMaxLength(10);
@@ -103,6 +103,10 @@ public class PmSendCoinsScreen extends Screen {
 
         Text title = getTitle();
         context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
+
+        Long bal = PmBackend.cachedSelfBalance();
+        String balStr = Text.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
+        context.drawText(textRenderer, balStr, px + 16, py + 20, PmBackend.CURRENCY_COLOR, false);
 
         if (!status.getString().isEmpty()) {
             context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 40, statusColor, false);

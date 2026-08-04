@@ -112,14 +112,34 @@ public class PmAdminScreen extends Screen {
     private final java.util.List<Object[]> roleRowRects = new java.util.ArrayList<>();
     private final java.util.List<Object[]> roleDeleteRects = new java.util.ArrayList<>();
 
+    /** Подписи над полями форм (ключ локализации, x, y) — рисуются в render() поверх полей ниже них. */
+    private final java.util.List<Object[]> formLabels = new java.util.ArrayList<>();
+    /** Секции-заголовки форм (ключ локализации, x, y). */
+    private final java.util.List<Object[]> formSections = new java.util.ArrayList<>();
+
     public PmAdminScreen(Screen parent) {
         super(Text.translatable("pmchat.admin.title"));
         this.parent = parent;
     }
 
+    /** Текстовое поле с постоянной подписью сверху (не пропадает при вводе, в отличие от {@code placeholder}). */
+    private TextFieldWidget labeledField(int x, int y, int w, String labelKey, int maxLen) {
+        formLabels.add(new Object[]{labelKey, x, y});
+        TextFieldWidget f = new TextFieldWidget(textRenderer, x, y + 11, w, 16, Text.translatable(labelKey));
+        f.setMaxLength(maxLen);
+        addDrawableChild(f);
+        return f;
+    }
+
+    private void section(String labelKey, int x, int y) {
+        formSections.add(new Object[]{labelKey, x, y});
+    }
+
     @Override
     protected void init() {
         clearChildren();
+        formLabels.clear();
+        formSections.clear();
         lastTab = tab;
         status = Text.empty();
 
@@ -544,42 +564,31 @@ public class PmAdminScreen extends Screen {
         int fx = cx - cardW / 2 + 12;
         int fw = cardW - 24;
 
-        shopListTop = y;
-        shopListBottom = y + 5 * ROW_H;
+        section("pmchat.admin.shop.section.list", fx, y - 2);
+        shopListTop = y + 12;
+        shopListBottom = shopListTop + 5 * ROW_H;
 
-        int formY = shopListBottom + 8;
-        shopNameField = new TextFieldWidget(textRenderer, fx, formY, fw, 16, Text.translatable("pmchat.admin.shop.name"));
-        shopNameField.setMaxLength(64);
-        placeholder(shopNameField, "pmchat.admin.shop.name");
-        addDrawableChild(shopNameField);
+        int formY = shopListBottom + 10;
+        section("pmchat.admin.shop.section.edit", fx, formY);
+        formY += 14;
 
-        shopDescField = new TextFieldWidget(textRenderer, fx, formY + 20, fw, 16, Text.translatable("pmchat.admin.shop.desc"));
-        shopDescField.setMaxLength(200);
-        placeholder(shopDescField, "pmchat.admin.shop.desc");
-        addDrawableChild(shopDescField);
-
-        shopFeatureKeyField = new TextFieldWidget(textRenderer, fx, formY + 40, fw, 16, Text.translatable("pmchat.admin.shop.featurekey"));
-        shopFeatureKeyField.setMaxLength(64);
-        placeholder(shopFeatureKeyField, "pmchat.admin.shop.featurekey");
-        addDrawableChild(shopFeatureKeyField);
+        shopNameField = labeledField(fx, formY, fw, "pmchat.admin.shop.name", 64);
+        formY += 30;
+        shopDescField = labeledField(fx, formY, fw, "pmchat.admin.shop.desc", 200);
+        formY += 30;
+        shopFeatureKeyField = labeledField(fx, formY, fw, "pmchat.admin.shop.featurekey", 64);
+        formY += 30;
 
         int halfW = (fw - 8) / 2;
-        shopPriceField = new TextFieldWidget(textRenderer, fx, formY + 60, halfW, 16, Text.translatable("pmchat.admin.shop.price"));
-        shopPriceField.setMaxLength(10);
-        placeholder(shopPriceField, "pmchat.admin.shop.price");
-        addDrawableChild(shopPriceField);
+        shopPriceField = labeledField(fx, formY, halfW, "pmchat.admin.shop.price", 10);
+        shopDurationField = labeledField(fx + halfW + 8, formY, halfW, "pmchat.admin.shop.duration", 5);
+        formY += 30;
 
-        shopDurationField = new TextFieldWidget(textRenderer, fx + halfW + 8, formY + 60, halfW, 16, Text.translatable("pmchat.admin.shop.duration"));
-        shopDurationField.setMaxLength(5);
-        placeholder(shopDurationField, "pmchat.admin.shop.duration");
-        addDrawableChild(shopDurationField);
-
-        int btnY = formY + 80;
         int btnW = (fw - 8) / 2;
-        addDrawableChild(FlatButton.centered(textRenderer, fx, btnY, btnW, 16,
+        addDrawableChild(FlatButton.centered(textRenderer, fx, formY, btnW, 16,
                 Text.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doSaveShopItem()));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, btnY, btnW, 16,
+        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, formY, btnW, 16,
                 Text.translatable("pmchat.admin.shop.new"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> resetShopForm()));
 
@@ -694,8 +703,10 @@ public class PmAdminScreen extends Screen {
             y += ROW_H;
         }
 
-        if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, left + 8, shopListTop - 10, statusColor, false);
+        if (shopItems.isEmpty() && !status.getString().isEmpty()) {
+            context.drawText(textRenderer, status, left + 8, shopListTop + 2, statusColor, false);
+        } else if (!status.getString().isEmpty()) {
+            context.drawText(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -707,47 +718,39 @@ public class PmAdminScreen extends Screen {
         int fx = cx - cardW / 2 + 12;
         int fw = cardW - 24;
 
-        roleListTop = y;
-        roleListBottom = y + 4 * ROW_H;
+        section("pmchat.admin.role.section.list", fx, y - 2);
+        roleListTop = y + 12;
+        roleListBottom = roleListTop + 4 * ROW_H;
 
-        int formY = roleListBottom + 8;
-        roleKeyField = new TextFieldWidget(textRenderer, fx, formY, fw, 16, Text.translatable("pmchat.admin.role.key"));
-        roleKeyField.setMaxLength(32);
-        placeholder(roleKeyField, "pmchat.admin.role.key");
-        addDrawableChild(roleKeyField);
+        int formY = roleListBottom + 10;
+        section("pmchat.admin.role.section.edit", fx, formY);
+        formY += 14;
 
-        roleNameField = new TextFieldWidget(textRenderer, fx, formY + 20, fw, 16, Text.translatable("pmchat.admin.role.name"));
-        roleNameField.setMaxLength(40);
-        placeholder(roleNameField, "pmchat.admin.role.name");
-        addDrawableChild(roleNameField);
+        roleKeyField = labeledField(fx, formY, fw, "pmchat.admin.role.key", 32);
+        formY += 30;
+        roleNameField = labeledField(fx, formY, fw, "pmchat.admin.role.name", 40);
+        formY += 30;
 
-        int halfW = (fw - 8) / 2;
-        rolePrefixField = new TextFieldWidget(textRenderer, fx, formY + 40, halfW, 16, Text.translatable("pmchat.admin.role.prefix"));
-        rolePrefixField.setMaxLength(8);
-        placeholder(rolePrefixField, "pmchat.admin.role.prefix");
-        addDrawableChild(rolePrefixField);
+        int halfW = (fw - 8) / 2 - 18;
+        rolePrefixField = labeledField(fx, formY, halfW, "pmchat.admin.role.prefix", 8);
+        roleColorField = labeledField(fx + halfW + 26, formY, (fw - 8) / 2 - 8, "pmchat.admin.role.color", 9);
+        formY += 30;
 
-        roleColorField = new TextFieldWidget(textRenderer, fx + halfW + 8, formY + 40, halfW, 16, Text.translatable("pmchat.admin.role.color"));
-        roleColorField.setMaxLength(9);
-        placeholder(roleColorField, "pmchat.admin.role.color");
-        addDrawableChild(roleColorField);
-
-        int btnY = formY + 60;
         int btnW = (fw - 8) / 2;
-        addDrawableChild(FlatButton.centered(textRenderer, fx, btnY, btnW, 16,
+        addDrawableChild(FlatButton.centered(textRenderer, fx, formY, btnW, 16,
                 Text.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doSaveRole()));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, btnY, btnW, 16,
+        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, formY, btnW, 16,
                 Text.translatable("pmchat.admin.shop.new"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> resetRoleForm()));
+        formY += 26;
 
-        int assignY = btnY + 24;
-        roleAssignTargetField = new TextFieldWidget(textRenderer, fx, assignY, fw, 16, Text.translatable("pmchat.admin.target.hint"));
-        roleAssignTargetField.setMaxLength(32);
-        placeholder(roleAssignTargetField, "pmchat.admin.target.hint");
-        addDrawableChild(roleAssignTargetField);
+        section("pmchat.admin.role.section.assign", fx, formY);
+        formY += 14;
+        roleAssignTargetField = labeledField(fx, formY, fw, "pmchat.admin.target.hint", 32);
+        formY += 30;
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, assignY + 20, btnW, 16,
+        addDrawableChild(FlatButton.centered(textRenderer, fx, formY, btnW, 16,
                 Text.translatable("pmchat.admin.role.assign"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> {
                     if (roleEditingKey == null) {
@@ -756,7 +759,7 @@ public class PmAdminScreen extends Screen {
                     }
                     doAssignRole(roleEditingKey);
                 }));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, assignY + 20, btnW, 16,
+        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, formY, btnW, 16,
                 Text.translatable("pmchat.admin.role.unassign"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doAssignRole(null)));
 
@@ -823,6 +826,18 @@ public class PmAdminScreen extends Screen {
         });
     }
 
+    /** Best-effort разбор "#RRGGBB"/"#RRGGBBAA" для живого предпросмотра — серый, пока текст не похож на цвет. */
+    private static int previewColor(String hex) {
+        String h = hex == null ? "" : hex.trim();
+        if (h.startsWith("#")) h = h.substring(1);
+        if (!h.matches("(?i)[0-9a-f]{6}([0-9a-f]{2})?")) return 0xFF444444;
+        try {
+            return h.length() > 6 ? (int) Long.parseLong(h, 16) : 0xFF000000 | Integer.parseInt(h, 16);
+        } catch (NumberFormatException e) {
+            return 0xFF444444;
+        }
+    }
+
     private void deleteRoleDef(String key) {
         PmBackend.adminDeleteRole(key, (ok, v, err) -> {
             if (ok) {
@@ -877,8 +892,10 @@ public class PmAdminScreen extends Screen {
             y += ROW_H;
         }
 
-        if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, left + 8, roleListTop - 10, statusColor, false);
+        if (roleDefs.isEmpty() && !status.getString().isEmpty()) {
+            context.drawText(textRenderer, status, left + 8, roleListTop + 2, statusColor, false);
+        } else if (!status.getString().isEmpty()) {
+            context.drawText(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -1004,6 +1021,19 @@ public class PmAdminScreen extends Screen {
         context.drawText(textRenderer, backend, width - 12 - textRenderer.getWidth(backend), 10, SUBTLE, false);
 
         super.render(context, mouseX, mouseY, delta);
+
+        for (Object[] entry : formSections) {
+            context.drawText(textRenderer, Text.translatable((String) entry[0]), (int) entry[1], (int) entry[2], TITLE, false);
+        }
+        for (Object[] entry : formLabels) {
+            context.drawText(textRenderer, Text.translatable((String) entry[0]), (int) entry[1], (int) entry[2], SUBTLE, false);
+        }
+        if (tab == 7 && roleColorField != null && rolePrefixField != null) {
+            int sx = rolePrefixField.getX() + rolePrefixField.getWidth() + 5;
+            int sy = roleColorField.getY();
+            context.fill(sx, sy, sx + 16, sy + 16, previewColor(roleColorField.getText()));
+            context.drawStrokedRectangle(sx, sy, 16, 16, NEON_DIM);
+        }
 
         switch (tab) {
             case 0 -> drawDashboard(context, mouseX, mouseY);
