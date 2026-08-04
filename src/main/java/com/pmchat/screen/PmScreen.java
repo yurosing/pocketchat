@@ -449,6 +449,7 @@ public class PmScreen extends Screen {
     private String amountText = "";
 
     private long planeAt = -1;      // время последней отправки для анимации ➤
+    private long muteShakeAt = -1;  // время последней заблокированной попытки отправки (мут/бан)
 
     // Tab-автодополнение ника (6.6): кандидаты и текущий индекс
     private final List<String> tabMatches = new ArrayList<>();
@@ -1271,6 +1272,17 @@ public class PmScreen extends Screen {
                 btn -> openProfile(PmChatClient.selfName()));
         myProfileBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.tip.myprofile")));
         addDrawableChild(myProfileBtn);
+        footerX += 20;
+
+        // Красная кнопка входа в админ-панель — видна только аккаунту ADMIN_USERNAME
+        // бэкенда (server-pocketchat, по умолчанию tyurvib), прямо у списка чатов.
+        if (PmChatClient.isAdminAccount()) {
+            FlatButton adminBtn = FlatButton.centered(textRenderer, footerX, py + PANEL_H - 19, 16, 13,
+                    Text.literal("⚑"), 0xFF5A1418, 0xFF7A1C22, 0xFFE0203C, 0xFFFF4D63,
+                    btn -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));
+            adminBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.admin.open")));
+            addDrawableChild(adminBtn);
+        }
 
         // Поиск (слева сверху)
         searchField = new TextFieldWidget(textRenderer, px + 6, py + 22, LEFT_W - 12, 14,
@@ -1677,6 +1689,7 @@ public class PmScreen extends Screen {
         if (inputField == null || selected == null) return;
         String text = inputField.getText().trim();
         if (text.isEmpty()) return;
+        if (blockIfMuted()) return;
         // Перебор лимита — не отправляем (счётчик 5.2 подсвечен красным)
         if (text.length() > composerLimit()) return;
         if (isFeedTab()) {
@@ -1721,6 +1734,7 @@ public class PmScreen extends Screen {
 
     private void toggleVoice() {
         if (selected == null) return;
+        if (!com.pmchat.client.PmVoice.isRecording() && blockIfMuted()) return;
         if (com.pmchat.client.PmVoice.isRecording()) {
             Path wav = com.pmchat.client.PmVoice.stopRecording();
             rebuild();
@@ -1905,6 +1919,7 @@ public class PmScreen extends Screen {
 
     /** Стикер: одноразовая загрузка на хостинг с кэшем id в конфиге. */
     private void sendSticker(Path sticker) {
+        if (blockIfMuted()) return;
         String name = sticker.getFileName().toString();
         config.pushRecentSticker(sticker.toAbsolutePath().toString());
         String cached = config.stickerCache.get(name);
@@ -2063,6 +2078,7 @@ public class PmScreen extends Screen {
     /** Загрузка видеофайла на хостинг + отправка pmc vid. */
     private void startVideoUpload(Path file) {
         if (uploading || selected == null) return;
+        if (blockIfMuted()) return;
         uploading = true;
         uploadFailed = false;
         String target = selected;
@@ -2086,6 +2102,7 @@ public class PmScreen extends Screen {
     /** Загрузка аудиофайла (WAV) + отправка как голосовое pmc voice. */
     private void startAudioUpload(Path file) {
         if (uploading || selected == null) return;
+        if (blockIfMuted()) return;
         int secs = com.pmchat.client.PmVoice.fileDurationSeconds(file);
         if (secs <= 0) secs = 1;
         int seconds = secs;
@@ -2115,6 +2132,7 @@ public class PmScreen extends Screen {
     /** Package-private: {@link PmPhotoEditScreen} calls back into this after «Отправить». */
     void startUpload(Path file) {
         if (uploading || selected == null) return;
+        if (blockIfMuted()) return;
         uploading = true;
         uploadFailed = false;
         String target = selected;
@@ -2221,6 +2239,7 @@ public class PmScreen extends Screen {
         renderCharCounter(context);
 
         renderPlane(context);
+        renderMuteNotice(context);
         renderCtxMenu(context, mouseX, mouseY);
         renderFragSelector(context, mouseX, mouseY);
         renderPinList(context, mouseX, mouseY);
@@ -4643,6 +4662,37 @@ public class PmScreen extends Screen {
         context.drawText(textRenderer, label, x, y, PREVIEW_TEXT, false);
         context.drawText(textRenderer, value, px + PANEL_W - 12 - textRenderer.getWidth(value), y, NAME_TEXT, false);
         return y + 12;
+    }
+
+    /**
+     * Замучен/забанен на бэкенде (server-pocketchat) — отправка текста, голосовых
+     * и фото блокируется в интерфейсе (бэкенд не видит {@code /m}, так что это
+     * единственное место, где мут реально на что-то влияет). При блокировке
+     * запускает анимацию отказа {@link #renderMuteNotice}. Вызывать в самом
+     * начале каждого места, откуда уходит сообщение/голосовое/фото/видео.
+     */
+    private boolean blockIfMuted() {
+        if (!com.pmchat.client.PmBackend.selfRestricted()) return false;
+        muteShakeAt = System.currentTimeMillis();
+        return true;
+    }
+
+    /** Ладонь ✋ трясётся и гаснет + «у вас нет прав» — как отказ в Telegram. */
+    private void renderMuteNotice(DrawContext context) {
+        if (muteShakeAt < 0) return;
+        long age = System.currentTimeMillis() - muteShakeAt;
+        if (age > 700) return;
+        float t = age / 700f;
+        float decay = 1f - t;
+        float shake = (float) Math.sin(t * Math.PI * 7) * 3f * decay;
+        float alpha = t < 0.7f ? 1f : 1f - (t - 0.7f) / 0.3f;
+
+        Text notice = Text.translatable("pmchat.muted.notice");
+        int baseX = px + LEFT_W + (PANEL_W - LEFT_W - (10 + textRenderer.getWidth(notice))) / 2;
+        int y = py + PANEL_H - 42;
+        int x = baseX + Math.round(shake);
+        context.drawText(textRenderer, "✋", x, y, applyAlpha(0xFFFF6A6A, alpha), false);
+        context.drawText(textRenderer, notice, x + 10, y, applyAlpha(0xFFFF6A6A, alpha), false);
     }
 
     /** Бумажный самолётик ➤ летит от кнопки отправки вверх вдоль чата. */

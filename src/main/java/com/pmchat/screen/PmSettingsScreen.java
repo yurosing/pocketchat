@@ -58,7 +58,7 @@ public class PmSettingsScreen extends Screen {
     }
 
     private boolean isAdminAccount() {
-        return "tyurvib".equalsIgnoreCase(PmChatClient.selfName());
+        return PmChatClient.isAdminAccount();
     }
 
     private boolean backendConfigured() {

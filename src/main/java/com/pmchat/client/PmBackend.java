@@ -57,14 +57,20 @@ public final class PmBackend {
         public final long lastSeenAt;
         /** Включил ли сам этот игрок точный статус «был(а) N часов/дней назад» (см. humanizeLastSeen). */
         public final boolean sharePrecise;
+        /** Модерация (см. PmAdminScreen): временно замучен / забанен. */
+        public final boolean muted;
+        public final boolean banned;
 
-        AccountInfo(String username, boolean verified, boolean official, String avatarUrl, long lastSeenAt, boolean sharePrecise) {
+        AccountInfo(String username, boolean verified, boolean official, String avatarUrl, long lastSeenAt,
+                    boolean sharePrecise, boolean muted, boolean banned) {
             this.username = username;
             this.verified = verified;
             this.official = official;
             this.avatarUrl = avatarUrl;
             this.lastSeenAt = lastSeenAt;
             this.sharePrecise = sharePrecise;
+            this.muted = muted;
+            this.banned = banned;
         }
     }
 
@@ -184,7 +190,34 @@ public final class PmBackend {
             if (resp == null) return;
             if (resp.has("token")) PmChatClient.getConfig().backendToken = resp.get("token").getAsString();
             PmChatClient.getConfig().save();
+            applySelfStatus(resp);
         }, cb);
+    }
+
+    // ---------- модерация: свой статус (мут/бан), обновляется через ping/login ----------
+
+    private static volatile boolean selfMuted = false;
+    private static volatile long selfMutedUntilAt = 0L;
+    private static volatile boolean selfBanned = false;
+
+    private static void applySelfStatus(JsonObject resp) {
+        if (resp == null) return;
+        if (resp.has("muted")) selfMuted = resp.get("muted").getAsBoolean();
+        if (resp.has("mutedUntil") && !resp.get("mutedUntil").isJsonNull()) {
+            selfMutedUntilAt = parseIsoMillis(resp.get("mutedUntil").getAsString());
+        }
+        if (resp.has("banned")) selfBanned = resp.get("banned").getAsBoolean();
+    }
+
+    /**
+     * Замучен или забанен прямо сейчас — единственный способ (клиентская сторона)
+     * заблокировать отправку ЛС/голосовых/фото, раз бэкенд не видит {@code /m}.
+     * Статус обновляется раз в минуту через {@link #ping()} (и сразу после
+     * {@link #login}), так что применяется с задержкой до минуты.
+     */
+    public static boolean selfRestricted() {
+        if (!isConfigured() || !hasAccount()) return false;
+        return selfBanned || (selfMuted && selfMutedUntilAt > System.currentTimeMillis());
     }
 
     public static void setPassword(String password, Callback<Void> cb) {
@@ -347,7 +380,9 @@ public final class PmBackend {
                     json.has("avatarUrl") && !json.get("avatarUrl").isJsonNull() ? json.get("avatarUrl").getAsString() : null,
                     json.has("lastSeen") && !json.get("lastSeen").isJsonNull()
                             ? parseIsoMillis(json.get("lastSeen").getAsString()) : 0L,
-                    json.has("sharePrecise") && json.get("sharePrecise").getAsBoolean());
+                    json.has("sharePrecise") && json.get("sharePrecise").getAsBoolean(),
+                    json.has("muted") && json.get("muted").getAsBoolean(),
+                    json.has("banned") && json.get("banned").getAsBoolean());
             run(cb, true, info, null);
         });
     }
@@ -372,7 +407,7 @@ public final class PmBackend {
         if (!isConfigured() || !hasAccount()) return;
         JsonObject body = new JsonObject();
         body.addProperty("token", PmChatClient.getConfig().backendToken);
-        postJson("/v1/account/ping", body, null, null);
+        postJson("/v1/account/ping", body, PmBackend::applySelfStatus, null);
     }
 
     /** Явный сигнал «вышел» при дисконнекте — чтобы статус не «висел» в «в сети» до истечения окна пинга. */
@@ -400,6 +435,36 @@ public final class PmBackend {
         body.addProperty("token", PmChatClient.getConfig().backendToken);
         body.addProperty("message", message);
         postJson("/v1/support", body, null, cb);
+    }
+
+    // ---------- переключатели фич (GET /v1/features, публичное) ----------
+
+    private static final java.util.Map<String, Boolean> FEATURE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static volatile long featuresFetchedAt = 0;
+    private static volatile boolean featuresInFlight = false;
+    private static final long FEATURES_TTL_MS = 30_000L;
+
+    /**
+     * Включена ли фича ({@code gifts}/{@code reports}/{@code support}) прямо сейчас —
+     * читает кэш (обновляется в фоне раз в 30с), по умолчанию {@code true} (в т.ч. пока
+     * бэкенд не настроен), чтобы ничего не блокировать без явного отключения админом.
+     */
+    public static boolean isFeatureEnabled(String name) {
+        if (!isConfigured()) return true;
+        long now = System.currentTimeMillis();
+        if (now - featuresFetchedAt > FEATURES_TTL_MS && !featuresInFlight) {
+            featuresInFlight = true;
+            getJson("/v1/features", json -> {
+                featuresInFlight = false;
+                featuresFetchedAt = System.currentTimeMillis();
+                if (json == null || !json.has("features")) return;
+                JsonObject f = json.getAsJsonObject("features");
+                for (var e : f.entrySet()) {
+                    FEATURE_CACHE.put(e.getKey(), e.getValue().getAsBoolean());
+                }
+            });
+        }
+        return FEATURE_CACHE.getOrDefault(name, true);
     }
 
     // ---------- рассылки официального аккаунта ----------
@@ -466,6 +531,30 @@ public final class PmBackend {
         body.addProperty("targetUsername", targetUsername);
         body.addProperty("message", message);
         postJson("/v1/admin/message", body, null, cb);
+    }
+
+    /** Временный мут; {@code minutes <= 0} снимает мут. */
+    public static void adminMute(String targetUsername, int minutes, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("targetUsername", targetUsername);
+        body.addProperty("minutes", minutes);
+        postJson("/v1/admin/mute", body, null, cb);
+    }
+
+    public static void adminBan(String targetUsername, boolean banned, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("targetUsername", targetUsername);
+        body.addProperty("banned", banned);
+        postJson("/v1/admin/ban", body, null, cb);
+    }
+
+    /** Включить/выключить фичу целиком ({@code gifts}/{@code reports}/{@code support}). */
+    public static void adminSetFeature(String name, boolean enabled, int minutes, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("name", name);
+        body.addProperty("enabled", enabled);
+        if (!enabled && minutes > 0) body.addProperty("minutes", minutes);
+        postJson("/v1/admin/feature", body, resp -> FEATURE_CACHE.clear(), cb);
     }
 
     public static final class ReportEntry {

@@ -2094,6 +2094,11 @@ public class PmChatClient implements ClientModInitializer {
         return client.player != null ? client.player.getGameProfile().name() : "";
     }
 
+    /** Ник с доступом к бэкенд-админке (см. server-pocketchat ADMIN_USERNAME, по умолчанию tyurvib). */
+    public static boolean isAdminAccount() {
+        return "tyurvib".equalsIgnoreCase(selfName());
+    }
+
     public static boolean isRussian() {
         MinecraftClient client = MinecraftClient.getInstance();
         return client.getLanguageManager().getLanguage().toLowerCase(Locale.ROOT).startsWith("ru");

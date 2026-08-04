@@ -88,6 +88,16 @@ backend account (the "Account" tab in settings).
 In settings, "Account" tab, there's a **"Support"** button — a short message
 goes to the same admin as reports.
 
+## Moderation: mute and ban
+
+The server admin can mute a player (temporarily, for N minutes) or ban them
+(indefinitely) from the admin panel. A muted/banned player has text, voice and
+photo sending blocked — trying anyway plays a denial animation (✋) and shows
+"You don't have permission". Only works for players who have a backend account
+(logged in via "Account" in settings) — the backend never sees plain `/m`, so
+the mute/ban is enforced client-side the next time it checks its status (up to
+a minute of delay).
+
 ## Gifts for coins (Vault)
 
 The **“Gifts”** section works when the server runs the **PocketChat** plugin +
