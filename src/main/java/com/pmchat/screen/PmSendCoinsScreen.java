@@ -19,7 +19,7 @@ import net.minecraft.text.Text;
 public class PmSendCoinsScreen extends Screen {
 
     private int PANEL_W = 220;
-    private int PANEL_H = 108;
+    private int PANEL_H = 122;
 
     private final Screen parent;
     private final String target;
@@ -49,7 +49,7 @@ public class PmSendCoinsScreen extends Screen {
         applyTheme();
         clearChildren();
         PANEL_W = Math.max(160, Math.min(220, width - 24));
-        PANEL_H = Math.min(108, height - 16);
+        PANEL_H = Math.min(122, height - 16);
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 
@@ -109,7 +109,7 @@ public class PmSendCoinsScreen extends Screen {
         context.drawText(textRenderer, balStr, px + 16, py + 20, PmBackend.CURRENCY_COLOR, false);
 
         if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 40, statusColor, false);
+            context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 34, statusColor, false);
         }
 
         super.render(context, mouseX, mouseY, delta);

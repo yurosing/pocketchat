@@ -316,12 +316,18 @@ public class PmProfileScreen extends Screen {
     }
 
     private final java.util.List<Object[]> giftRects = new java.util.ArrayList<>(); // x,y,w,h,giftId
+    private int[] openGalleryRect = null; // x,y,w,h — клик по заголовку «Подарки» открывает полную галерею
 
     private void renderGifts(DrawContext context, int mouseX, int mouseY, int top) {
         giftRects.clear();
         context.fill(px + 8, top, px + PANEL_W - 8, top + 1, BORDER);
-        context.drawText(textRenderer, Text.translatable("pmchat.profile.gifts"),
-                px + 12, top + 5, TITLE, false);
+        Text giftsTitle = Text.translatable("pmchat.profile.gifts");
+        boolean titleHover = mouseX >= px + 12 && mouseX < px + 12 + textRenderer.getWidth(giftsTitle) + 12
+                && mouseY >= top && mouseY < top + 11;
+        context.drawText(textRenderer, giftsTitle, px + 12, top + 5, titleHover ? VALUE : TITLE, false);
+        Text openHint = Text.translatable("pmchat.gifts.openall");
+        context.drawText(textRenderer, openHint, px + 12 + textRenderer.getWidth(giftsTitle) + 6, top + 5, SUBTLE, false);
+        openGalleryRect = new int[]{px + 8, top, textRenderer.getWidth(giftsTitle) + textRenderer.getWidth(openHint) + 20, 11};
 
         boolean plugin = pluginPresent();
         boolean backend = !plugin && backendGiftsAvailable();
@@ -480,6 +486,13 @@ public class PmProfileScreen extends Screen {
     @Override
     public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
+        if (openGalleryRect != null) {
+            int rx = openGalleryRect[0], ry = openGalleryRect[1], rw = openGalleryRect[2], rh = openGalleryRect[3];
+            if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
+                MinecraftClient.getInstance().setScreen(new PmGiftsScreen(this, player));
+                return true;
+            }
+        }
         for (Object[] r : giftRects) {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
             if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
