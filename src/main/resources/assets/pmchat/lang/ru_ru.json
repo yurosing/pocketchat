@@ -479,6 +479,7 @@
   "pmchat.profile.gifts.empty": "Пока нет подарков",
   "pmchat.profile.gifts.buyhint": "нажми, чтобы подарить",
   "pmchat.gifts.openall": "(все →)",
+  "pmchat.gifts.give.title": "Подарить %s",
   "pmchat.gifts.back": "Назад",
   "pmchat.gifts.caption": "Подарки, полученные игроком %s",
   "pmchat.gifts.detail.from": "От: %s",

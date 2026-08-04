@@ -479,6 +479,7 @@
   "pmchat.profile.gifts.empty": "No gifts yet",
   "pmchat.profile.gifts.buyhint": "click to send",
   "pmchat.gifts.openall": "(view all →)",
+  "pmchat.gifts.give.title": "Gift to %s",
   "pmchat.gifts.back": "Back",
   "pmchat.gifts.caption": "Gifts received by %s",
   "pmchat.gifts.detail.from": "From: %s",

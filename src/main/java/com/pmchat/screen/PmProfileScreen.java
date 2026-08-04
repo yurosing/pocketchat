@@ -67,19 +67,17 @@ public class PmProfileScreen extends Screen {
         return com.pmchat.client.PmBackend.isConfigured() && com.pmchat.client.PmBackend.hasAccount();
     }
 
-    private String backendResultMsg;
-    private boolean backendResultOk;
-    private long backendResultAt;
-
     @Override
     protected void init() {
         applyTheme();
         clearChildren();
-        // Высота панели для чужого профиля зависит от количества строк каталога подарков
-        // (4 колонки), чтобы результат покупки и кнопка «Готово» не наезжали на сетку.
+        // Высота панели для чужого профиля: каталог подарков через бэкенд теперь
+        // открывается отдельным прокручиваемым окном (PmGiftsScreen), а не рисуется
+        // тут же — только устаревший путь через плагин сервера всё ещё встроен
+        // прямо в профиль и резервирует под себя место по числу строк.
         int catalogRows = 3;
-        if (!self && backendGiftsAvailable()) {
-            int catalogSize = com.pmchat.client.PmBackend.cachedCatalog().size();
+        if (!self && pluginPresent()) {
+            int catalogSize = com.pmchat.client.PmServerMedia.get().giftCatalog().size();
             if (catalogSize > 0) catalogRows = (catalogSize + 3) / 4;
         }
         PANEL_W = Math.max(160, Math.min(250, width - 24));
@@ -317,9 +315,11 @@ public class PmProfileScreen extends Screen {
 
     private final java.util.List<Object[]> giftRects = new java.util.ArrayList<>(); // x,y,w,h,giftId
     private int[] openGalleryRect = null; // x,y,w,h — клик по заголовку «Подарки» открывает полную галерею
+    private int[] openCatalogRect = null; // x,y,w,h — клик по «Подарить →» открывает каталог покупки
 
     private void renderGifts(DrawContext context, int mouseX, int mouseY, int top) {
         giftRects.clear();
+        openCatalogRect = null;
         context.fill(px + 8, top, px + PANEL_W - 8, top + 1, BORDER);
         Text giftsTitle = Text.translatable("pmchat.profile.gifts");
         boolean titleHover = mouseX >= px + 12 && mouseX < px + 12 + textRenderer.getWidth(giftsTitle) + 12
@@ -332,8 +332,15 @@ public class PmProfileScreen extends Screen {
         boolean plugin = pluginPresent();
         boolean backend = !plugin && backendGiftsAvailable();
 
-        // Подсказка «нажми, чтобы подарить» — только на чужом профиле, когда есть чем дарить
-        if (!self && (plugin || backend)) {
+        // «Подарить →» — только на чужом профиле, когда есть чем дарить; открывает
+        // отдельный прокручиваемый каталог (PmGiftsScreen), а не рисуется тут же —
+        // каталог может быть длинным и не влезает в компактный профиль.
+        if (!self && backend) {
+            Text buyLink = Text.translatable("pmchat.profile.gifts.buyhint");
+            int bx = px + PANEL_W - 12 - textRenderer.getWidth(buyLink);
+            context.drawText(textRenderer, buyLink, bx, top + 5, SUBTLE, false);
+            openCatalogRect = new int[]{bx - 4, top, textRenderer.getWidth(buyLink) + 8, 11};
+        } else if (!self && plugin) {
             String hint = Text.translatable("pmchat.profile.gifts.buyhint").getString();
             context.drawText(textRenderer, hint,
                     px + PANEL_W - 12 - textRenderer.getWidth(hint), top + 5, SUBTLE, false);
@@ -440,42 +447,6 @@ public class PmProfileScreen extends Screen {
                 context.drawText(textRenderer, "+" + (got.size() - 10), gx, iy + 4, SUBTLE, false);
             }
         }
-
-        int gridBottom = iy + 12;
-        if (!self) {
-            java.util.List<com.pmchat.client.PmBackend.Gift> cat = com.pmchat.client.PmBackend.cachedCatalog();
-            Long selfBal = com.pmchat.client.PmBackend.cachedSelfBalance();
-            int cy = top + 36;
-            int cx = px + 12;
-            int cellW = 55, cellH = 16, gap = 3;
-            for (com.pmchat.client.PmBackend.Gift g : cat) {
-                if (cx + cellW > px + PANEL_W - 8) {
-                    cx = px + 12;
-                    cy += cellH + gap;
-                }
-                boolean hover = mouseX >= cx && mouseX < cx + cellW && mouseY >= cy && mouseY < cy + cellH;
-                boolean afford = selfBal != null && selfBal >= g.price;
-                int rarity = com.pmchat.client.PmBackend.rarityColor(g.rarity);
-                context.fill(cx, cy, cx + cellW, cy + cellH, hover ? BTN_HOVER : BTN_BG);
-                // Рамка цвета редкости — ярче и с лёгким свечением, когда можно себе позволить.
-                context.drawStrokedRectangle(cx, cy, cellW, cellH, afford ? rarity : BTN_BORDER);
-                if (afford && hover) {
-                    context.drawStrokedRectangle(cx - 1, cy - 1, cellW + 2, cellH + 2, (rarity & 0xFFFFFF) | 0x50000000);
-                }
-                String label = g.icon + " " + g.price;
-                context.drawText(textRenderer, trimTo(label, cellW - 6), cx + 4, cy + 4,
-                        afford ? rarity : 0xFF9A6A6A, false);
-                giftRects.add(new Object[]{cx, cy, cellW, cellH, g.id, true});
-                cx += cellW + gap;
-            }
-            if (!cat.isEmpty()) gridBottom = cy + cellH;
-        }
-
-        if (backendResultMsg != null && System.currentTimeMillis() - backendResultAt < 4000) {
-            context.drawText(textRenderer, trimTo(backendResultMsg, PANEL_W - 24),
-                    px + 12, Math.min(gridBottom + 6, py + panelH - 38),
-                    backendResultOk ? 0xFF6FBF8B : 0xFFE0574C, false);
-        }
     }
 
     private static String fmt(double d) {
@@ -489,26 +460,23 @@ public class PmProfileScreen extends Screen {
         if (openGalleryRect != null) {
             int rx = openGalleryRect[0], ry = openGalleryRect[1], rw = openGalleryRect[2], rh = openGalleryRect[3];
             if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
-                MinecraftClient.getInstance().setScreen(new PmGiftsScreen(this, player));
+                MinecraftClient.getInstance().setScreen(new PmGiftsScreen(this, player, false));
                 return true;
             }
         }
+        if (openCatalogRect != null) {
+            int rx = openCatalogRect[0], ry = openCatalogRect[1], rw = openCatalogRect[2], rh = openCatalogRect[3];
+            if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
+                MinecraftClient.getInstance().setScreen(new PmGiftsScreen(this, player, true));
+                return true;
+            }
+        }
+        // Дарение через плагин (устаревший путь — плагин сервера больше не поставляется,
+        // код оставлен на случай стороннего сервера, отвечающего на pmchat:media)
         for (Object[] r : giftRects) {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
             if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
-                String giftId = (String) r[4];
-                boolean viaBackend = (boolean) r[5];
-                if (viaBackend) {
-                    com.pmchat.client.PmBackend.sendGift(player, giftId, (ok, v, err) -> {
-                        backendResultOk = ok;
-                        backendResultMsg = ok
-                                ? Text.translatable("pmchat.profile.gifts.sent").getString()
-                                : Text.translatable("pmchat.profile.gifts.fail", String.valueOf(err)).getString();
-                        backendResultAt = System.currentTimeMillis();
-                    });
-                } else {
-                    com.pmchat.client.PmServerMedia.get().buyGift(player, giftId);
-                }
+                com.pmchat.client.PmServerMedia.get().buyGift(player, (String) r[4]);
                 return true;
             }
         }

@@ -16,11 +16,17 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Полноценная галерея полученных подарков игрока — большое отдельное окно
- * (кнопка «Подарки» в профиле), в духе Telegram: сетка крупных карточек
- * (значок + цветной кружок-бейдж отправителя), клик по карточке открывает
- * подробности (кто подарил, когда). Отдельно от компактного превью в самом
- * профиле ({@code PmProfileScreen}), которому не хватает места на детали.
+ * Полноценное окно подарков — большое отдельное окно (открывается из профиля),
+ * в духе Telegram: сетка крупных карточек. Два режима:
+ * <ul>
+ *   <li>{@code catalogMode=false} — просмотр ПОЛУЧЕННЫХ игроком подарков,
+ *   клик по карточке открывает подробности (кто подарил, когда);</li>
+ *   <li>{@code catalogMode=true} — КАТАЛОГ на покупку (каталог заметно вырос,
+ *   в компактный профиль без прокрутки уже не помещался), клик покупает и
+ *   сразу дарит выбранный подарок этому игроку.</li>
+ * </ul>
+ * Обе сетки прокручиваемые — компактный профиль ({@code PmProfileScreen})
+ * оставляет только маленькое превью и ссылки сюда.
  */
 @Environment(EnvType.CLIENT)
 public class PmGiftsScreen extends Screen {
@@ -33,21 +39,26 @@ public class PmGiftsScreen extends Screen {
 
     private final Screen parent;
     private final String player;
+    private final boolean catalogMode;
     private final PmConfig config = PmChatClient.getConfig();
 
     private int px, py;
     private int BG, BORDER, LABEL, TITLE, SUBTLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
 
     private int gridTop, gridBottom, scroll = 0;
-    private final List<Object[]> cardRects = new java.util.ArrayList<>(); // {x,y,w,h,giftIndex}
+    private final List<Object[]> cardRects = new java.util.ArrayList<>(); // {x,y,w,h,index}
 
-    /** Индекс выбранного подарка (в списке got) для показа деталей, -1 — сетка. */
+    /** Индекс выбранного полученного подарка для показа деталей, -1 — сетка (только не-каталог). */
     private int detailIndex = -1;
 
-    public PmGiftsScreen(Screen parent, String player) {
-        super(Text.translatable("pmchat.profile.gifts"));
+    private Text status = Text.empty();
+    private int statusColor = 0xFFAAAAAA;
+
+    public PmGiftsScreen(Screen parent, String player, boolean catalogMode) {
+        super(catalogMode ? Text.translatable("pmchat.gifts.give.title", player) : Text.translatable("pmchat.profile.gifts"));
         this.parent = parent;
         this.player = player;
+        this.catalogMode = catalogMode;
     }
 
     private void applyTheme() {
@@ -61,17 +72,21 @@ public class PmGiftsScreen extends Screen {
         return PmBackend.cachedGiftInbox(player);
     }
 
+    private int itemCount() {
+        return catalogMode ? PmBackend.cachedCatalog().size() : gifts().size();
+    }
+
     @Override
     protected void init() {
         applyTheme();
         clearChildren();
 
         PANEL_W = Math.max(220, Math.min(360, width - 24));
-        PANEL_H = Math.max(160, Math.min(300, height - 24));
+        PANEL_H = Math.max(160, Math.min(320, height - 24));
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 
-        gridTop = py + 34;
+        gridTop = py + (catalogMode ? 46 : 34);
         gridBottom = py + PANEL_H - 34;
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
@@ -95,18 +110,80 @@ public class PmGiftsScreen extends Screen {
         Text title = getTitle();
         context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
-        List<PmBackend.ReceivedGift> got = gifts();
-        if (detailIndex >= 0 && detailIndex < got.size()) {
-            renderDetail(context, got.get(detailIndex));
+        if (catalogMode) {
+            Long bal = PmBackend.cachedSelfBalance();
+            String balStr = Text.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
+            context.drawText(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
+            renderCatalogGrid(context, mouseX, mouseY);
+            if (!status.getString().isEmpty()) {
+                context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2,
+                        py + PANEL_H - 46, statusColor, false);
+            }
+        } else if (detailIndex >= 0 && detailIndex < gifts().size()) {
+            renderDetail(context, gifts().get(detailIndex));
         } else {
-            renderGrid(context, mouseX, mouseY, got);
+            renderReceivedGrid(context, mouseX, mouseY);
         }
 
         super.render(context, mouseX, mouseY, delta);
     }
 
-    private void renderGrid(DrawContext context, int mouseX, int mouseY, List<PmBackend.ReceivedGift> got) {
+    private void renderCatalogGrid(DrawContext context, int mouseX, int mouseY) {
         cardRects.clear();
+        List<PmBackend.Gift> cat = PmBackend.cachedCatalog();
+        if (cat.isEmpty()) {
+            Text empty = Text.translatable("pmchat.shop.empty");
+            context.drawText(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
+            return;
+        }
+        Long selfBal = PmBackend.cachedSelfBalance();
+
+        int cols = Math.max(1, (PANEL_W - 16) / (CELL + GAP));
+        int startX = px + (PANEL_W - cols * (CELL + GAP) + GAP) / 2;
+        int col = 0;
+        int x = startX, y = gridTop;
+
+        for (int i = scroll; i < cat.size(); i++) {
+            if (y + CELL > gridBottom) break;
+            PmBackend.Gift g = cat.get(i);
+            boolean afford = selfBal != null && selfBal >= g.price;
+            int rarity = PmBackend.rarityColor(g.rarity);
+            boolean hover = mouseX >= x && mouseX < x + CELL && mouseY >= y && mouseY < y + CELL;
+
+            context.fill(x, y, x + CELL, y + CELL, hover ? 0x40FFFFFF : 0x28FFFFFF);
+            context.drawStrokedRectangle(x, y, CELL, CELL, afford ? rarity : BTN_BORDER);
+            drawScaledCentered(context, g.icon, x + CELL / 2, y + CELL / 2 - 12, 2.2f, 0xFFFFFFFF);
+
+            String priceStr = PmBackend.formatCoins(g.price);
+            context.drawText(textRenderer, priceStr, x + (CELL - textRenderer.getWidth(priceStr)) / 2,
+                    y + CELL - 12, afford ? PmBackend.CURRENCY_COLOR : 0xFF9A6A6A, false);
+
+            cardRects.add(new Object[]{x, y, CELL, CELL, i});
+
+            col++;
+            x += CELL + GAP;
+            if (col >= cols) {
+                col = 0;
+                x = startX;
+                y += CELL + GAP;
+            }
+        }
+    }
+
+    private void buy(int catalogIndex) {
+        List<PmBackend.Gift> cat = PmBackend.cachedCatalog();
+        if (catalogIndex < 0 || catalogIndex >= cat.size()) return;
+        PmBackend.Gift g = cat.get(catalogIndex);
+        PmBackend.sendGift(player, g.id, (ok, v, err) -> {
+            status = ok ? Text.translatable("pmchat.profile.gifts.sent")
+                    : Text.translatable("pmchat.profile.gifts.fail", String.valueOf(err));
+            statusColor = ok ? 0xFF6FBF8B : 0xFFE0574C;
+        });
+    }
+
+    private void renderReceivedGrid(DrawContext context, int mouseX, int mouseY) {
+        cardRects.clear();
+        List<PmBackend.ReceivedGift> got = gifts();
         if (got.isEmpty()) {
             Text empty = Text.translatable("pmchat.profile.gifts.empty");
             context.drawText(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
@@ -199,14 +276,18 @@ public class PmGiftsScreen extends Screen {
 
     @Override
     public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
-        if (detailIndex < 0) {
+        if (catalogMode || detailIndex < 0) {
             double mx = click.x(), my = click.y();
             for (Object[] rect : cardRects) {
                 int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
                 int idx = (int) rect[4];
                 if (mx >= x && mx < x + w && my >= y && my < y + h) {
-                    detailIndex = idx;
-                    init();
+                    if (catalogMode) {
+                        buy(idx);
+                    } else {
+                        detailIndex = idx;
+                        init();
+                    }
                     return true;
                 }
             }
@@ -216,11 +297,11 @@ public class PmGiftsScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (detailIndex >= 0) return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        if (!catalogMode && detailIndex >= 0) return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         int cols = Math.max(1, (PANEL_W - 16) / (CELL + GAP));
         int rows = Math.max(1, (gridBottom - gridTop) / (CELL + GAP));
         int visible = cols * rows;
-        int maxScroll = Math.max(0, gifts().size() - visible);
+        int maxScroll = Math.max(0, itemCount() - visible);
         scroll = Math.max(0, Math.min(maxScroll, scroll - (int) Math.signum(verticalAmount) * cols));
         return true;
     }
