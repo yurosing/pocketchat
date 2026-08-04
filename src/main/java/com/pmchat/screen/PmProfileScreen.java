@@ -133,15 +133,19 @@ public class PmProfileScreen extends Screen {
             addDrawableChild(aliasField);
             contentY += 21;
 
-            // Кнопка ЧС (5.5)
+            // Кнопка ЧС (5.5) + «Пожаловаться» рядом
             boolean blocked = config.isBlocked(player);
-            addDrawableChild(FlatButton.centered(textRenderer, px + 12, contentY, PANEL_W - 24, 16,
+            int halfW = (PANEL_W - 24 - 6) / 2;
+            addDrawableChild(FlatButton.centered(textRenderer, px + 12, contentY, halfW, 16,
                     Text.translatable(blocked ? "pmchat.profile.unblock" : "pmchat.profile.block"),
                     blocked ? 0xFF5A2A22 : BTN_BG, blocked ? 0xFF6E332A : BTN_HOVER,
                     blocked ? 0xFFA0463A : BTN_BORDER, 0xFFE07A6A, btn -> {
                         PmChatClient.toggleBlocked(player);
                         reinit();
                     }));
+            addDrawableChild(FlatButton.centered(textRenderer, px + 12 + halfW + 6, contentY, halfW, 16,
+                    Text.translatable("pmchat.report.open"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFE0B040,
+                    btn -> MinecraftClient.getInstance().setScreen(new PmReportScreen(this, player))));
             contentY += 22;
 
             // Личная заметка (4.2+) — как в Discord: видна только тебе, хранится

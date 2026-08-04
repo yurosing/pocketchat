@@ -70,7 +70,7 @@ public class PmSettingsScreen extends Screen {
         return switch (t) {
             case 1 -> 10;
             case 2 -> 4;
-            case 3 -> backendConfigured() && !editBackendUrl ? (2 + (isAdminAccount() ? 1 : 0)) : 4;
+            case 3 -> backendConfigured() && !editBackendUrl ? (3 + (isAdminAccount() ? 1 : 0)) : 4;
             case 4 -> 1;
             default -> 11;
         };
@@ -337,6 +337,11 @@ public class PmSettingsScreen extends Screen {
                     () -> 0xFFF0C34E,
                     () -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));
         }
+
+        y = addOption(y, "pmchat.support.open",
+                () -> Text.literal("✉"),
+                () -> 0xFF5AA0E0,
+                () -> MinecraftClient.getInstance().setScreen(new PmSupportScreen(this)));
 
         y = addOption(y, "pmchat.settings.backendurl.change",
                 () -> Text.literal("⚙"),

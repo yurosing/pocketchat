@@ -383,13 +383,33 @@ public final class PmBackend {
         postJson("/v1/account/offline", body, null, null);
     }
 
+    // ---------- жалобы и поддержка ----------
+
+    /** Пожаловаться на игрока — видно только админу ({@link #adminListReports}). */
+    public static void report(String targetUsername, String reason, Callback<Void> cb) {
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("targetUsername", targetUsername);
+        body.addProperty("reason", reason);
+        postJson("/v1/report", body, null, cb);
+    }
+
+    /** Обращение в поддержку — видно только админу ({@link #adminListSupport}). */
+    public static void support(String message, Callback<Void> cb) {
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("message", message);
+        postJson("/v1/support", body, null, cb);
+    }
+
     // ---------- рассылки официального аккаунта ----------
 
     /** Опрашивает новые рассылки один раз (id больше lastBroadcastId) и зовёт onEach(from, message) на игровом потоке. */
     public static void pollBroadcastsOnce(BiConsumer<String, String> onEach) {
         if (!isConfigured()) return;
         long since = PmChatClient.getConfig().lastBroadcastId;
-        getJson("/v1/broadcast?since=" + since, json -> {
+        String self = PmChatClient.selfName();
+        getJson("/v1/broadcast?since=" + since + (self != null ? "&username=" + enc(self) : ""), json -> {
             if (json == null || !json.has("broadcasts")) return;
             long maxId = since;
             for (var el : json.getAsJsonArray("broadcasts")) {
@@ -438,6 +458,144 @@ public final class PmBackend {
         body.addProperty("official", official);
         if (avatarUrl != null) body.addProperty("avatarUrl", avatarUrl);
         postJson("/v1/admin/set-official", body, null, cb);
+    }
+
+    /** Личное сообщение от официального аккаунта PocketChat одному игроку (не рассылка всем). */
+    public static void adminMessage(String targetUsername, String message, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("targetUsername", targetUsername);
+        body.addProperty("message", message);
+        postJson("/v1/admin/message", body, null, cb);
+    }
+
+    public static final class ReportEntry {
+        public final long id;
+        public final String reporter;
+        public final String target;
+        public final String reason;
+        public final long at;
+        public final boolean resolved;
+
+        ReportEntry(long id, String reporter, String target, String reason, long at, boolean resolved) {
+            this.id = id;
+            this.reporter = reporter;
+            this.target = target;
+            this.reason = reason;
+            this.at = at;
+            this.resolved = resolved;
+        }
+    }
+
+    public static final class SupportEntry {
+        public final long id;
+        public final String username;
+        public final String message;
+        public final long at;
+        public final boolean resolved;
+
+        SupportEntry(long id, String username, String message, long at, boolean resolved) {
+            this.id = id;
+            this.username = username;
+            this.message = message;
+            this.at = at;
+            this.resolved = resolved;
+        }
+    }
+
+    public static final class AdminStatus {
+        public final long uptimeSec;
+        public final int accounts;
+        public final int onlineNow;
+        public final int openReports;
+        public final int openTickets;
+
+        AdminStatus(long uptimeSec, int accounts, int onlineNow, int openReports, int openTickets) {
+            this.uptimeSec = uptimeSec;
+            this.accounts = accounts;
+            this.onlineNow = onlineNow;
+            this.openReports = openReports;
+            this.openTickets = openTickets;
+        }
+    }
+
+    /** Жалобы для админ-панели, по умолчанию только нерешённые. */
+    public static void adminListReports(boolean onlyOpen, Callback<java.util.List<ReportEntry>> cb) {
+        String path = "/v1/admin/reports?token=" + enc(PmChatClient.getConfig().backendToken)
+                + "&adminSecret=" + enc(PmChatClient.getConfig().backendAdminSecret)
+                + "&resolved=" + (onlyOpen ? "false" : "true");
+        getJson(path, json -> {
+            if (json == null || !json.has("reports")) {
+                run(cb, false, null, "request failed");
+                return;
+            }
+            java.util.List<ReportEntry> list = new java.util.ArrayList<>();
+            for (var el : json.getAsJsonArray("reports")) {
+                JsonObject r = el.getAsJsonObject();
+                list.add(new ReportEntry(
+                        r.get("id").getAsLong(),
+                        r.get("reporter").getAsString(),
+                        r.get("target").getAsString(),
+                        r.get("reason").getAsString(),
+                        r.has("at") && !r.get("at").isJsonNull() ? parseIsoMillis(r.get("at").getAsString()) : 0L,
+                        r.has("resolved") && r.get("resolved").getAsBoolean()));
+            }
+            run(cb, true, list, null);
+        });
+    }
+
+    public static void adminResolveReport(long id, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("id", id);
+        postJson("/v1/admin/report/resolve", body, null, cb);
+    }
+
+    /** Обращения в поддержку для админ-панели, по умолчанию только нерешённые. */
+    public static void adminListSupport(boolean onlyOpen, Callback<java.util.List<SupportEntry>> cb) {
+        String path = "/v1/admin/support?token=" + enc(PmChatClient.getConfig().backendToken)
+                + "&adminSecret=" + enc(PmChatClient.getConfig().backendAdminSecret)
+                + "&resolved=" + (onlyOpen ? "false" : "true");
+        getJson(path, json -> {
+            if (json == null || !json.has("tickets")) {
+                run(cb, false, null, "request failed");
+                return;
+            }
+            java.util.List<SupportEntry> list = new java.util.ArrayList<>();
+            for (var el : json.getAsJsonArray("tickets")) {
+                JsonObject t = el.getAsJsonObject();
+                list.add(new SupportEntry(
+                        t.get("id").getAsLong(),
+                        t.get("username").getAsString(),
+                        t.get("message").getAsString(),
+                        t.has("at") && !t.get("at").isJsonNull() ? parseIsoMillis(t.get("at").getAsString()) : 0L,
+                        t.has("resolved") && t.get("resolved").getAsBoolean()));
+            }
+            run(cb, true, list, null);
+        });
+    }
+
+    public static void adminResolveSupport(long id, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("id", id);
+        postJson("/v1/admin/support/resolve", body, null, cb);
+    }
+
+    /** Сводка для дашборда админ-панели: аптайм бэкенда + счётчики аккаунтов/жалоб/тикетов. */
+    public static void adminStatus(Callback<AdminStatus> cb) {
+        String path = "/v1/admin/status?token=" + enc(PmChatClient.getConfig().backendToken)
+                + "&adminSecret=" + enc(PmChatClient.getConfig().backendAdminSecret);
+        getJson(path, json -> {
+            if (json == null) {
+                run(cb, false, null, "request failed");
+                return;
+            }
+            AdminStatus status = new AdminStatus(
+                    json.has("uptimeSec") ? json.get("uptimeSec").getAsLong() : 0L,
+                    json.has("accounts") ? json.get("accounts").getAsInt() : 0,
+                    json.has("onlineNow") ? json.get("onlineNow").getAsInt() : 0,
+                    json.has("openReports") ? json.get("openReports").getAsInt() : 0,
+                    json.has("openTickets") ? json.get("openTickets").getAsInt() : 0);
+            run(cb, true, status, null);
+        });
     }
 
     private static JsonObject adminBody() {

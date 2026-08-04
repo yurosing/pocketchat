@@ -76,6 +76,18 @@ A player's profile has a **“Blacklist”** button:
 
 Remove from the blacklist with the same button.
 
+## Reporting a player
+
+Next to "Blacklist" there's a **"Report"** button: a short reason goes to the
+PocketChat backend and is only visible to the server admin (see "PocketChat
+rules" on first launch — threats and harassment are forbidden). Needs a
+backend account (the "Account" tab in settings).
+
+## Support
+
+In settings, "Account" tab, there's a **"Support"** button — a short message
+goes to the same admin as reports.
+
 ## Gifts for coins (Vault)
 
 The **“Gifts”** section works when the server runs the **PocketChat** plugin +
