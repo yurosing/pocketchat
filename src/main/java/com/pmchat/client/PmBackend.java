@@ -467,6 +467,119 @@ public final class PmBackend {
         return FEATURE_CACHE.getOrDefault(name, true);
     }
 
+    // ---------- правила мода (GET /v1/rules, публичное) — редактируются без релиза ----------
+
+    public static final class RuleLocale {
+        public final String eula, freedom, header, footer;
+        public final java.util.List<String> rules;
+
+        public RuleLocale(String eula, String freedom, String header, java.util.List<String> rules, String footer) {
+            this.eula = eula;
+            this.freedom = freedom;
+            this.header = header;
+            this.rules = rules;
+            this.footer = footer;
+        }
+    }
+
+    public static final class RulesContent {
+        public final int version;
+        public final RuleLocale ru, en;
+
+        public RulesContent(int version, RuleLocale ru, RuleLocale en) {
+            this.version = version;
+            this.ru = ru;
+            this.en = en;
+        }
+
+        /** Локаль под текущий язык клиента (см. PmChatClient.isRussian). */
+        public RuleLocale active() {
+            return PmChatClient.isRussian() ? ru : en;
+        }
+    }
+
+    private static volatile RulesContent cachedRules = null;
+    private static volatile long rulesFetchedAt = 0;
+    private static volatile boolean rulesInFlight = false;
+    private static final long RULES_TTL_MS = 60_000L;
+
+    private static RuleLocale parseRuleLocale(JsonObject o) {
+        if (o == null) return null;
+        java.util.List<String> rules = new java.util.ArrayList<>();
+        if (o.has("rules")) {
+            for (var el : o.getAsJsonArray("rules")) rules.add(el.getAsString());
+        }
+        return new RuleLocale(
+                o.has("eula") ? o.get("eula").getAsString() : "",
+                o.has("freedom") ? o.get("freedom").getAsString() : "",
+                o.has("header") ? o.get("header").getAsString() : "",
+                rules,
+                o.has("footer") ? o.get("footer").getAsString() : "");
+    }
+
+    /**
+     * Текст правил мода (экран при первом запуске), с фоновым обновлением по TTL.
+     * Возвращает {@code null}, пока бэкенд не настроен или ответ ещё не пришёл —
+     * вызывающий код (PmRulesScreen) в этом случае должен показать встроенный
+     * запасной текст, а не ждать.
+     */
+    public static RulesContent cachedRules() {
+        if (!isConfigured()) return null;
+        long now = System.currentTimeMillis();
+        if ((cachedRules == null || now - rulesFetchedAt > RULES_TTL_MS) && !rulesInFlight) {
+            rulesInFlight = true;
+            getJson("/v1/rules", json -> {
+                rulesInFlight = false;
+                rulesFetchedAt = System.currentTimeMillis();
+                RulesContent parsed = parseRulesContent(json);
+                if (parsed != null) cachedRules = parsed;
+            });
+        }
+        return cachedRules;
+    }
+
+    private static RulesContent parseRulesContent(JsonObject json) {
+        if (json == null || !json.has("ru") || !json.has("en")) return null;
+        return new RulesContent(
+                json.has("version") ? json.get("version").getAsInt() : 1,
+                parseRuleLocale(json.getAsJsonObject("ru")),
+                parseRuleLocale(json.getAsJsonObject("en")));
+    }
+
+    /** Свежий (не кэшированный) фетч — для экрана редактирования правил в админ-панели. */
+    public static void fetchRulesForEdit(Callback<RulesContent> cb) {
+        getJson("/v1/rules", json -> {
+            RulesContent parsed = parseRulesContent(json);
+            if (parsed != null) {
+                cachedRules = parsed;
+                rulesFetchedAt = System.currentTimeMillis();
+                run(cb, true, parsed, null);
+            } else {
+                run(cb, false, null, "request failed");
+            }
+        });
+    }
+
+    private static JsonObject ruleLocaleJson(RuleLocale loc) {
+        JsonObject o = new JsonObject();
+        o.addProperty("eula", loc.eula);
+        o.addProperty("freedom", loc.freedom);
+        o.addProperty("header", loc.header);
+        o.addProperty("footer", loc.footer);
+        com.google.gson.JsonArray arr = new com.google.gson.JsonArray();
+        for (String r : loc.rules) arr.add(r);
+        o.add("rules", arr);
+        return o;
+    }
+
+    /** Меняет текст правил целиком (оба языка обязательны) — версия растёт, старые принятия сбрасываются. */
+    public static void adminSetRules(RuleLocale ru, RuleLocale en, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.add("ru", ruleLocaleJson(ru));
+        body.add("en", ruleLocaleJson(en));
+        postJson("/v1/admin/rules", body, resp -> rulesFetchedAt = 0, cb);
+    }
+
     // ---------- рассылки официального аккаунта ----------
 
     /** Опрашивает новые рассылки один раз (id больше lastBroadcastId) и зовёт onEach(from, message) на игровом потоке. */

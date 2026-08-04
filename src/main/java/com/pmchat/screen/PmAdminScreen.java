@@ -50,6 +50,7 @@ public class PmAdminScreen extends Screen {
             "pmchat.admin.tab.players",
             "pmchat.admin.tab.reports",
             "pmchat.admin.tab.support",
+            "pmchat.admin.tab.rules",
     };
 
     private final Screen parent;
@@ -83,6 +84,13 @@ public class PmAdminScreen extends Screen {
     private int listScroll = 0;
     private int listTop, listBottom;
 
+    // ---- Вкладка 5: правила (правится только RU — EN пересылается как есть) ----
+    private TextFieldWidget ruleEulaField, ruleFreedomField, ruleFooterField;
+    private TextFieldWidget[] ruleLineFields;
+    private PmBackend.RuleLocale rulesEnCurrent;
+    private String rulesHeaderCurrent = "";
+    private static final int RULE_LINES = 5;
+
     public PmAdminScreen(Screen parent) {
         super(Text.translatable("pmchat.admin.title"));
         this.parent = parent;
@@ -113,6 +121,7 @@ public class PmAdminScreen extends Screen {
             case 2 -> buildPlayers(contentTop);
             case 3 -> buildList(contentTop, true);
             case 4 -> buildList(contentTop, false);
+            case 5 -> buildRules(contentTop);
             default -> { }
         }
 
@@ -413,6 +422,93 @@ public class PmAdminScreen extends Screen {
         String target = targetField.getText().trim();
         if (target.isEmpty()) return;
         PmBackend.adminSetOfficial(target, true, null, (ok, v, err) ->
+                setStatus(ok ? Text.translatable("pmchat.admin.ok") : Text.translatable("pmchat.admin.fail", String.valueOf(err)),
+                        ok ? OK : BAD));
+    }
+
+    // ---------- вкладка 5: правила мода (без релиза мода) ----------
+
+    /**
+     * Правится только русский текст — английский пересылается как есть (см.
+     * {@link PmBackend#adminSetRules}, оба языка обязательны на бэкенде).
+     * Пустые строки-правила пропускаются при сохранении.
+     */
+    private void buildRules(int y) {
+        int cardW = Math.min(420, width - 40);
+        int cx = width / 2;
+        int fx = cx - cardW / 2 + 12;
+        int fw = cardW - 24;
+
+        ruleEulaField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.admin.rules.eula"));
+        ruleEulaField.setMaxLength(500);
+        placeholder(ruleEulaField, "pmchat.admin.rules.eula");
+        addDrawableChild(ruleEulaField);
+
+        ruleFreedomField = new TextFieldWidget(textRenderer, fx, y + 20, fw, 16, Text.translatable("pmchat.admin.rules.freedom"));
+        ruleFreedomField.setMaxLength(500);
+        placeholder(ruleFreedomField, "pmchat.admin.rules.freedom");
+        addDrawableChild(ruleFreedomField);
+
+        ruleLineFields = new TextFieldWidget[RULE_LINES];
+        for (int i = 0; i < RULE_LINES; i++) {
+            TextFieldWidget f = new TextFieldWidget(textRenderer, fx, y + 44 + i * 20, fw, 16,
+                    Text.translatable("pmchat.admin.rules.line", i + 1));
+            f.setMaxLength(200);
+            placeholder(f, "pmchat.admin.rules.line.hint");
+            addDrawableChild(f);
+            ruleLineFields[i] = f;
+        }
+
+        int footerY = y + 44 + RULE_LINES * 20 + 4;
+        ruleFooterField = new TextFieldWidget(textRenderer, fx, footerY, fw, 16, Text.translatable("pmchat.admin.rules.footer"));
+        ruleFooterField.setMaxLength(500);
+        placeholder(ruleFooterField, "pmchat.admin.rules.footer");
+        addDrawableChild(ruleFooterField);
+
+        addDrawableChild(FlatButton.centered(textRenderer, fx, footerY + 22, fw, 16,
+                Text.translatable("pmchat.admin.rules.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
+                btn -> doSaveRules()));
+
+        loadRulesForEdit();
+    }
+
+    private void loadRulesForEdit() {
+        status = Text.translatable("pmchat.admin.loading");
+        statusColor = SUBTLE;
+        PmBackend.fetchRulesForEdit((ok, content, err) -> {
+            if (!ok || content == null) {
+                status = Text.translatable("pmchat.admin.fail", String.valueOf(err));
+                statusColor = BAD;
+                return;
+            }
+            status = Text.empty();
+            PmBackend.RuleLocale ru = content.ru;
+            rulesEnCurrent = content.en;
+            rulesHeaderCurrent = ru.header;
+            ruleEulaField.setText(ru.eula);
+            ruleFreedomField.setText(ru.freedom);
+            ruleFooterField.setText(ru.footer);
+            for (int i = 0; i < RULE_LINES; i++) {
+                ruleLineFields[i].setText(i < ru.rules.size() ? ru.rules.get(i) : "");
+            }
+        });
+    }
+
+    private void doSaveRules() {
+        if (rulesEnCurrent == null) return; // текущие правила ещё не подгрузились
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        for (TextFieldWidget f : ruleLineFields) {
+            String t = f.getText().trim();
+            if (!t.isEmpty()) lines.add(t);
+        }
+        if (lines.isEmpty()) {
+            setStatus(Text.translatable("pmchat.admin.rules.needline"), BAD);
+            return;
+        }
+        PmBackend.RuleLocale ru = new PmBackend.RuleLocale(
+                ruleEulaField.getText().trim(), ruleFreedomField.getText().trim(),
+                rulesHeaderCurrent, lines, ruleFooterField.getText().trim());
+        PmBackend.adminSetRules(ru, rulesEnCurrent, (ok, v, err) ->
                 setStatus(ok ? Text.translatable("pmchat.admin.ok") : Text.translatable("pmchat.admin.fail", String.valueOf(err)),
                         ok ? OK : BAD));
     }

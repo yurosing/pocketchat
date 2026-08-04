@@ -1849,8 +1849,10 @@ public class PmChatClient implements ClientModInitializer {
     /**
      * Единственная точка входа для открытия окна мессенджера — J, {@code /pm} и
      * публичное API идут сюда, а не напрямую в {@code new PmScreen()}. Пока
-     * {@link PmConfig#rulesAccepted} не выставлен, показывает правила вместо
-     * мессенджера; открыть его без принятия правил нельзя.
+     * принятая версия правил ({@link PmConfig#rulesAcceptedVersion}) отстаёт от
+     * актуальной (правила редактируются на бэкенде без релиза мода — см.
+     * {@link PmBackend#cachedRules}), показывает правила вместо мессенджера;
+     * открыть его без принятия правил нельзя.
      */
     public static void openMessenger(MinecraftClient client) {
         openMessenger(client, null);
@@ -1860,7 +1862,11 @@ public class PmChatClient implements ClientModInitializer {
     public static void openMessenger(MinecraftClient client, String conversationId) {
         Runnable open = () -> client.setScreen(conversationId == null || conversationId.isBlank()
                 ? new PmScreen() : new PmScreen(conversationId));
-        if (config.rulesAccepted) {
+        PmBackend.RulesContent rules = PmBackend.cachedRules();
+        // Не знаем актуальную версию (бэкенд не настроен/ещё не ответил) — доверяем
+        // тому, что уже приняли, а не дёргаем правила заново на пустом месте.
+        int latestVersion = rules != null ? rules.version : Math.max(1, config.rulesAcceptedVersion);
+        if (config.rulesAcceptedVersion >= latestVersion) {
             open.run();
         } else {
             client.setScreen(new com.pmchat.screen.PmRulesScreen(open));

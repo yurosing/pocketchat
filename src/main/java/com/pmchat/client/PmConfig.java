@@ -57,6 +57,14 @@ public class PmConfig {
      */
     public boolean rulesAccepted = false;
 
+    /**
+     * Версия правил, которую игрок принял (0 — ещё ни одной). Правила теперь
+     * редактируются на бэкенде без релиза мода (см. PmBackend#cachedRules) —
+     * если админ поменял текст, версия там растёт, и игрок с более старой
+     * принятой версией снова увидит экран правил.
+     */
+    public int rulesAcceptedVersion = 0;
+
     /** Проверять новые версии мода по релизам GitHub при заходе на сервер. */
     public boolean checkUpdates = true;
     /** Репозиторий для проверки обновлений (owner/repo, публичный). */
@@ -709,6 +717,10 @@ public class PmConfig {
                     }
                     if (cfg.backendToken == null) cfg.backendToken = "";
                     if (cfg.backendAdminSecret == null) cfg.backendAdminSecret = "";
+                    // Миграция: rulesAcceptedVersion появился позже rulesAccepted — тот, кто
+                    // уже принял правила по старому булеву флагу, засчитывается как принявший
+                    // версию 1 (исходный текст), а не как не принимавший ничего.
+                    if (cfg.rulesAccepted && cfg.rulesAcceptedVersion == 0) cfg.rulesAcceptedVersion = 1;
                     if (cfg.textScalePct < 60 || cfg.textScalePct > 150) cfg.textScalePct = 100;
                     if (cfg.notifyVolume < 5 || cfg.notifyVolume > 100) cfg.notifyVolume = 100;
                     return cfg;
