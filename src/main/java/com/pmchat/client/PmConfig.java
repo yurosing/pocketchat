@@ -50,6 +50,13 @@ public class PmConfig {
     /** Прятать перехваченные строки ЛС из обычного чата. */
     public boolean hideChatLines = false;
 
+    /**
+     * Принял ли игрок правила мода ({@link com.pmchat.screen.PmRulesScreen}).
+     * Пока false — окно мессенджера не открывается, вместо него показываются
+     * правила.
+     */
+    public boolean rulesAccepted = false;
+
     /** Проверять новые версии мода по релизам GitHub при заходе на сервер. */
     public boolean checkUpdates = true;
     /** Репозиторий для проверки обновлений (owner/repo, публичный). */

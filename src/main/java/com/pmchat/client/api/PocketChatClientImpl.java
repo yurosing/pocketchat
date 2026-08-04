@@ -196,10 +196,7 @@ public final class PocketChatClientImpl implements PocketChatClientApi {
     @Override
     public void open(String conversationId) {
         MinecraftClient client = MinecraftClient.getInstance();
-        client.execute(() -> client.setScreen(
-                conversationId == null || conversationId.isBlank()
-                        ? new com.pmchat.screen.PmScreen()
-                        : new com.pmchat.screen.PmScreen(conversationId)));
+        client.execute(() -> PmChatClient.openMessenger(client, conversationId));
     }
 
     @Override

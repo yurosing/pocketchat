@@ -1,9 +1,12 @@
 # Quick start
 
 1. Join a server and press <kbd>J</kbd> — the PocketChat window opens.
-2. Send someone a private message with the usual command (`/m Nick hi`) or
+2. On first launch the mod shows its rules (full Mojang EULA compliance, a
+   free-speech messenger, only threats and harassment are forbidden) — click
+   "I accept", otherwise the messenger window won't open.
+3. Send someone a private message with the usual command (`/m Nick hi`) or
    right from the open window.
-3. Check that both the sent and received message show up as bubbles in the
+4. Check that both the sent and received message show up as bubbles in the
    window.
 
 ::: tip If messages don't show up

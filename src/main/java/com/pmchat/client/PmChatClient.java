@@ -201,7 +201,7 @@ public class PmChatClient implements ClientModInitializer {
             while (openKey.wasPressed()) {
                 boolean justClosedChat = System.currentTimeMillis() - chatScreenClosedAt < 300;
                 if (client.currentScreen == null && !justClosedChat) {
-                    client.setScreen(new PmScreen());
+                    openMessenger(client);
                 }
             }
             // медиа-меню и управление плеером в игре
@@ -252,7 +252,7 @@ public class PmChatClient implements ClientModInitializer {
                 ClientCommandManager.literal("pm")
                         .executes(ctx -> {
                             MinecraftClient client = ctx.getSource().getClient();
-                            client.execute(() -> client.setScreen(new PmScreen()));
+                            client.execute(() -> openMessenger(client));
                             return 1;
                         })
                         .then(ClientCommandManager.literal("hosts")
@@ -1844,6 +1844,27 @@ public class PmChatClient implements ClientModInitializer {
             return config.aliasOf(conv);
         }
         return conv;
+    }
+
+    /**
+     * Единственная точка входа для открытия окна мессенджера — J, {@code /pm} и
+     * публичное API идут сюда, а не напрямую в {@code new PmScreen()}. Пока
+     * {@link PmConfig#rulesAccepted} не выставлен, показывает правила вместо
+     * мессенджера; открыть его без принятия правил нельзя.
+     */
+    public static void openMessenger(MinecraftClient client) {
+        openMessenger(client, null);
+    }
+
+    /** Same as {@link #openMessenger(MinecraftClient)}, but jumps straight to {@code conversationId}. */
+    public static void openMessenger(MinecraftClient client, String conversationId) {
+        Runnable open = () -> client.setScreen(conversationId == null || conversationId.isBlank()
+                ? new PmScreen() : new PmScreen(conversationId));
+        if (config.rulesAccepted) {
+            open.run();
+        } else {
+            client.setScreen(new com.pmchat.screen.PmRulesScreen(open));
+        }
     }
 
     static void pmDeliver(String to, String line) {
