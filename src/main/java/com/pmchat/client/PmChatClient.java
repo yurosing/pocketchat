@@ -54,6 +54,8 @@ public class PmChatClient implements ClientModInitializer {
     private static long nextPresencePingAt = 0;
     /** Следующая проверка новых подарков — показать анимированную всплывашку (см. PmBackend.checkNewGifts). */
     private static long nextGiftPollAt = 0;
+    /** Следующий опрос почтового ящика офлайн-сообщений (см. PmBackend.pollMailbox). */
+    private static long nextMailboxPollAt = 0;
     private static long chatScreenClosedAt = 0;
 
     /** Сентинел «диалога» общего чата. */
@@ -251,6 +253,13 @@ public class PmChatClient implements ClientModInitializer {
                         giftToast(g.from, gift != null ? gift.name : g.giftId, gift != null ? gift.icon : null);
                     }
                 });
+            }
+            // Опрос почтового ящика офлайн-сообщений — раз в 25 секунд, доставляет
+            // отложенные ЛС (см. PmChatClient#sendMessage) так же, как обычное входящее.
+            if (client.world != null && System.currentTimeMillis() >= nextMailboxPollAt
+                    && PmBackend.isConfigured() && PmBackend.hasAccount()) {
+                nextMailboxPollAt = System.currentTimeMillis() + 25_000L;
+                PmBackend.pollMailbox(m -> onIncoming(m.from, m.wire));
             }
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
@@ -1984,9 +1993,18 @@ public class PmChatClient implements ClientModInitializer {
         } else {
             wire = text;
         }
-        pmDeliver(target, wire);
-        synchronized (pendingEcho) {
-            pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
+        // Получателя нет в таб-листе этого Minecraft-сервера — /m ему уйдёт в никуда
+        // (офлайн вовсе или на другом сервере сети, чего мод отсюда не видит). Кладём
+        // сообщение в почтовый ящик на бэкенде вместо этого — заберёт при опросе
+        // (см. nextMailboxPollAt в тике), как только откроет мессенджер где угодно.
+        boolean online = isPlayerOnlineHere(target);
+        if (online || !(PmBackend.isConfigured() && PmBackend.hasAccount())) {
+            pmDeliver(target, wire);
+            synchronized (pendingEcho) {
+                pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
+            }
+        } else {
+            PmBackend.sendMailbox(target, wire, null);
         }
         PmMessage msg = history.add(target, true, text, 0);
         if (replyToHash != null) {
@@ -1996,6 +2014,13 @@ public class PmChatClient implements ClientModInitializer {
         }
         com.pmchat.client.api.PocketChatClientImpl.fireSent(target, msg);
         return msg;
+    }
+
+    /** В таб-листе текущего Minecraft-сервера ли игрок — единственное, что мод может проверить локально. */
+    private static boolean isPlayerOnlineHere(String name) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        return name != null && client.getNetworkHandler() != null
+                && client.getNetworkHandler().getPlayerListEntry(name) != null;
     }
 
     // ---------- Мета: печатает / прочитано (только между модами) ----------

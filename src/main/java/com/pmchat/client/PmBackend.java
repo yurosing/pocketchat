@@ -1029,6 +1029,50 @@ public final class PmBackend {
         });
     }
 
+    // ---------- почтовый ящик офлайн-сообщений ----------
+
+    /** Сообщение, положенное в ящик, пока получателя не было в таб-листе отправителя. */
+    public static final class MailboxMessage {
+        public final String from;
+        public final String wire;
+        public final long at;
+
+        MailboxMessage(String from, String wire, long at) {
+            this.from = from;
+            this.wire = wire;
+            this.at = at;
+        }
+    }
+
+    /**
+     * Кладёт {@code wire} в ящик {@code target} вместо {@code /m} — вызывается, когда
+     * получателя нет в таб-листе текущего Minecraft-сервера (см. {@code PmChatClient#sendMessage}).
+     */
+    public static void sendMailbox(String target, String wire, Callback<Void> cb) {
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("targetUsername", target);
+        body.addProperty("wire", wire);
+        postJson("/v1/mailbox/send", body, resp -> { }, cb);
+    }
+
+    /** Забирает свои недоставленные сообщения (от старых к новым) и зовёт onEach на игровом потоке. */
+    public static void pollMailbox(java.util.function.Consumer<MailboxMessage> onEach) {
+        if (!isConfigured() || !hasAccount()) return;
+        getJson("/v1/mailbox?token=" + enc(PmChatClient.getConfig().backendToken), json -> {
+            if (json == null || !json.has("messages")) return;
+            for (var el : json.getAsJsonArray("messages")) {
+                JsonObject m = el.getAsJsonObject();
+                String from = m.has("from") ? m.get("from").getAsString() : "";
+                String wire = m.has("wire") ? m.get("wire").getAsString() : "";
+                long at = m.has("at") && !m.get("at").isJsonNull() ? parseIsoMillis(m.get("at").getAsString()) : 0L;
+                if (from.isEmpty() || wire.isEmpty()) continue;
+                MailboxMessage mm = new MailboxMessage(from, wire, at);
+                MinecraftClient.getInstance().execute(() -> onEach.accept(mm));
+            }
+        });
+    }
+
     // ---------- админ-панель ----------
 
     public static void adminBroadcast(String message, Callback<Void> cb) {
