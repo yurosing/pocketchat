@@ -3172,6 +3172,43 @@ public class PmScreen extends Screen {
         selIndicatorH = ROW_H - 1;
     }
 
+    /**
+     * Заголовок секции списка («КАНАЛЫ»/«ПАБЛИКИ»/«ЛИЧНЫЕ») — тонкая линия-разделитель
+     * над всеми секциями, кроме самой первой, чтобы список не сливался в одну стену
+     * текста. Возвращает y для первой строки секции.
+     */
+    private int drawSectionHeader(DrawContext context, int y, String labelKey, boolean divider) {
+        if (divider) {
+            y += 3;
+            context.fill(px + 7, y, px + LEFT_W - 7, y + 1, DIVIDER);
+            y += 4;
+        }
+        context.drawText(textRenderer, Text.translatable(labelKey).getString().toUpperCase(Locale.ROOT),
+                px + 7, y + 1, SUBTLE, false);
+        return y + 10;
+    }
+
+    /**
+     * Строка-действие («＋ Новая группа» и т.п.) — значок «+» в цветном кружке вместо
+     * голого текста, с той же подсветкой при наведении, что и обычные строки списка.
+     * Возвращает прямоугольник для попадания клика (или {@code null}, если строка не
+     * влезла и не была нарисована).
+     */
+    private int[] drawActionRow(DrawContext context, int mouseX, int mouseY, int y, String label, int iconColor, int bottom) {
+        return drawActionRow(context, mouseX, mouseY, y, label, "+", iconColor, bottom);
+    }
+
+    private int[] drawActionRow(DrawContext context, int mouseX, int mouseY, int y, String label, String icon, int iconColor, int bottom) {
+        int h = 15;
+        if (y + h > bottom) return null;
+        boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + h;
+        if (hovered) fillRound(context, px + 4, y, LEFT_W - 8, h - 1, 6, ROW_HOVER);
+        fillCircle(context, px + 11, y + 7, 6, iconColor);
+        context.drawText(textRenderer, icon, px + 11 - textRenderer.getWidth(icon) / 2, y + 3, 0xFFFFFFFF, false);
+        context.drawText(textRenderer, trim(label, LEFT_W - 26), px + 20, y + 4, hovered ? NAME_TEXT : SUBTLE, false);
+        return new int[]{px, y, LEFT_W, h};
+    }
+
     private void renderConversationList(DrawContext context, int mouseX, int mouseY) {
         rowRects.clear();
         selIndicatorTarget = -1; // сбрасываем — заново установит выбранная строка
@@ -3199,10 +3236,9 @@ public class PmScreen extends Screen {
 
         int y = top;
 
-        // Заголовок секции «Каналы» (общий чат, избранное, серверные каналы)
-        context.drawText(textRenderer, Text.translatable("pmchat.section.channels").getString().toUpperCase(Locale.ROOT),
-                px + 7, y + 1, SUBTLE, false);
-        y += 10;
+        // Заголовок секции «Каналы» (общий чат, избранное, серверные каналы) — первая
+        // секция, без разделителя над ней (не с чем разделять).
+        y = drawSectionHeader(context, y, "pmchat.section.channels", false);
 
         // Закреплённый общий чат
         {
@@ -3328,20 +3364,15 @@ public class PmScreen extends Screen {
             y += ROW_H;
         }
         // Строка «＋ Новая группа» (только когда не идёт поиск)
-        if (query.isEmpty() && y + 12 <= bottom) {
-            boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + 12;
-            if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + 11, ROW_HOVER);
-            context.drawText(textRenderer, "＋ " + Text.translatable("pmchat.group.new").getString(),
-                    px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
-            groupNewRect = new int[]{px, y, LEFT_W, 12};
-            y += 14;
+        if (query.isEmpty()) {
+            groupNewRect = drawActionRow(context, mouseX, mouseY, y,
+                    Text.translatable("pmchat.group.new").getString(), 0xFF6FBF8B, bottom);
+            if (groupNewRect != null) y += 16;
         }
 
         // Публичные каналы (3.2): аналог Telegram-каналов — свои + подписки
-        if (!config.broadcasts.isEmpty() && y + 10 <= bottom) {
-            context.drawText(textRenderer, Text.translatable("pmchat.section.broadcasts").getString().toUpperCase(Locale.ROOT),
-                    px + 7, y + 1, SUBTLE, false);
-            y += 10;
+        if (!config.broadcasts.isEmpty() && y + 17 <= bottom) {
+            y = drawSectionHeader(context, y, "pmchat.section.broadcasts", true);
         }
         for (com.pmchat.client.PmConfig.PmBroadcast b : config.broadcasts) {
             if (y + ROW_H > bottom + 2) break;
@@ -3378,28 +3409,20 @@ public class PmScreen extends Screen {
         // Строки «＋ Новый канал» / «Войти по коду» (только когда не идёт поиск)
         broadcastNewRect = null;
         broadcastJoinRect = null;
-        if (query.isEmpty() && y + 12 <= bottom) {
-            boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + 12;
-            if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + 11, ROW_HOVER);
-            context.drawText(textRenderer, "＋ " + Text.translatable("pmchat.broadcast.new").getString(),
-                    px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
-            broadcastNewRect = new int[]{px, y, LEFT_W, 12};
-            y += 14;
+        if (query.isEmpty()) {
+            broadcastNewRect = drawActionRow(context, mouseX, mouseY, y,
+                    Text.translatable("pmchat.broadcast.new").getString(), 0xFFF0C34E, bottom);
+            if (broadcastNewRect != null) y += 16;
         }
-        if (query.isEmpty() && y + 12 <= bottom) {
-            boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + 12;
-            if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + 11, ROW_HOVER);
-            context.drawText(textRenderer, Text.translatable("pmchat.broadcast.joinrow").getString(),
-                    px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
-            broadcastJoinRect = new int[]{px, y, LEFT_W, 12};
-            y += 14;
+        if (query.isEmpty()) {
+            broadcastJoinRect = drawActionRow(context, mouseX, mouseY, y,
+                    Text.translatable("pmchat.broadcast.joinrow").getString(), "→", 0xFF9CC4DC, bottom);
+            if (broadcastJoinRect != null) y += 16;
         }
 
         // Заголовок секции «Личные» (переписки с игроками)
-        if (!names.isEmpty() && y + 10 <= bottom) {
-            context.drawText(textRenderer, Text.translatable("pmchat.section.chats").getString().toUpperCase(Locale.ROOT),
-                    px + 7, y + 1, SUBTLE, false);
-            y += 10;
+        if (!names.isEmpty() && y + 17 <= bottom) {
+            y = drawSectionHeader(context, y, "pmchat.section.chats", true);
         }
 
         for (int i = listScroll; i < names.size() && y + ROW_H <= bottom + 2; i++) {
