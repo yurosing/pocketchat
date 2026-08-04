@@ -52,6 +52,7 @@ public class PmAdminScreen extends Screen {
             "pmchat.admin.tab.support",
             "pmchat.admin.tab.rules",
             "pmchat.admin.tab.shop",
+            "pmchat.admin.tab.roles",
     };
 
     private final Screen parent;
@@ -101,6 +102,16 @@ public class PmAdminScreen extends Screen {
     private final java.util.List<Object[]> shopRowRects = new java.util.ArrayList<>();
     private final java.util.List<Object[]> shopDeleteRects = new java.util.ArrayList<>();
 
+    // ---- Вкладка 7: должности (роли) игроков ----
+    private List<PmBackend.RoleDef> roleDefs = Collections.emptyList();
+    private int roleScroll = 0;
+    private int roleListTop, roleListBottom;
+    private String roleEditingKey = null;
+    private TextFieldWidget roleKeyField, roleNameField, rolePrefixField, roleColorField;
+    private TextFieldWidget roleAssignTargetField;
+    private final java.util.List<Object[]> roleRowRects = new java.util.ArrayList<>();
+    private final java.util.List<Object[]> roleDeleteRects = new java.util.ArrayList<>();
+
     public PmAdminScreen(Screen parent) {
         super(Text.translatable("pmchat.admin.title"));
         this.parent = parent;
@@ -133,6 +144,7 @@ public class PmAdminScreen extends Screen {
             case 4 -> buildList(contentTop, false);
             case 5 -> buildRules(contentTop);
             case 6 -> buildShop(contentTop);
+            case 7 -> buildRoles(contentTop);
             default -> { }
         }
 
@@ -687,6 +699,189 @@ public class PmAdminScreen extends Screen {
         }
     }
 
+    // ---------- вкладка 7: должности (роли) игроков ----------
+
+    private void buildRoles(int y) {
+        int cardW = Math.min(420, width - 40);
+        int cx = width / 2;
+        int fx = cx - cardW / 2 + 12;
+        int fw = cardW - 24;
+
+        roleListTop = y;
+        roleListBottom = y + 4 * ROW_H;
+
+        int formY = roleListBottom + 8;
+        roleKeyField = new TextFieldWidget(textRenderer, fx, formY, fw, 16, Text.translatable("pmchat.admin.role.key"));
+        roleKeyField.setMaxLength(32);
+        placeholder(roleKeyField, "pmchat.admin.role.key");
+        addDrawableChild(roleKeyField);
+
+        roleNameField = new TextFieldWidget(textRenderer, fx, formY + 20, fw, 16, Text.translatable("pmchat.admin.role.name"));
+        roleNameField.setMaxLength(40);
+        placeholder(roleNameField, "pmchat.admin.role.name");
+        addDrawableChild(roleNameField);
+
+        int halfW = (fw - 8) / 2;
+        rolePrefixField = new TextFieldWidget(textRenderer, fx, formY + 40, halfW, 16, Text.translatable("pmchat.admin.role.prefix"));
+        rolePrefixField.setMaxLength(8);
+        placeholder(rolePrefixField, "pmchat.admin.role.prefix");
+        addDrawableChild(rolePrefixField);
+
+        roleColorField = new TextFieldWidget(textRenderer, fx + halfW + 8, formY + 40, halfW, 16, Text.translatable("pmchat.admin.role.color"));
+        roleColorField.setMaxLength(9);
+        placeholder(roleColorField, "pmchat.admin.role.color");
+        addDrawableChild(roleColorField);
+
+        int btnY = formY + 60;
+        int btnW = (fw - 8) / 2;
+        addDrawableChild(FlatButton.centered(textRenderer, fx, btnY, btnW, 16,
+                Text.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
+                btn -> doSaveRole()));
+        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, btnY, btnW, 16,
+                Text.translatable("pmchat.admin.shop.new"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
+                btn -> resetRoleForm()));
+
+        int assignY = btnY + 24;
+        roleAssignTargetField = new TextFieldWidget(textRenderer, fx, assignY, fw, 16, Text.translatable("pmchat.admin.target.hint"));
+        roleAssignTargetField.setMaxLength(32);
+        placeholder(roleAssignTargetField, "pmchat.admin.target.hint");
+        addDrawableChild(roleAssignTargetField);
+
+        addDrawableChild(FlatButton.centered(textRenderer, fx, assignY + 20, btnW, 16,
+                Text.translatable("pmchat.admin.role.assign"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
+                btn -> {
+                    if (roleEditingKey == null) {
+                        setStatus(Text.translatable("pmchat.admin.role.needselect"), BAD);
+                        return;
+                    }
+                    doAssignRole(roleEditingKey);
+                }));
+        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, assignY + 20, btnW, 16,
+                Text.translatable("pmchat.admin.role.unassign"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
+                btn -> doAssignRole(null)));
+
+        loadRoleDefs();
+    }
+
+    private void loadRoleDefs() {
+        status = Text.translatable("pmchat.admin.loading");
+        statusColor = SUBTLE;
+        PmBackend.adminListRoles((ok, list, err) -> {
+            if (ok) {
+                roleDefs = list;
+                roleScroll = 0;
+                status = roleDefs.isEmpty() ? Text.translatable("pmchat.admin.role.empty") : Text.empty();
+            } else {
+                roleDefs = Collections.emptyList();
+                status = Text.translatable("pmchat.admin.fail", String.valueOf(err));
+                statusColor = BAD;
+            }
+        });
+    }
+
+    private void resetRoleForm() {
+        roleEditingKey = null;
+        roleKeyField.setText("");
+        roleNameField.setText("");
+        rolePrefixField.setText("");
+        roleColorField.setText("");
+    }
+
+    private void editRoleDef(PmBackend.RoleDef r) {
+        roleEditingKey = r.key;
+        roleKeyField.setText(r.key);
+        roleNameField.setText(r.name);
+        rolePrefixField.setText(r.prefix);
+        roleColorField.setText(String.format("#%06X", r.color & 0xFFFFFF));
+    }
+
+    private void doSaveRole() {
+        String key = roleKeyField.getText().trim().toLowerCase(java.util.Locale.ROOT);
+        String name = roleNameField.getText().trim();
+        String color = roleColorField.getText().trim();
+        if (key.isEmpty() || !key.matches("[a-z0-9_-]+")) {
+            setStatus(Text.translatable("pmchat.admin.role.needkey"), BAD);
+            return;
+        }
+        if (name.isEmpty()) {
+            setStatus(Text.translatable("pmchat.admin.shop.needname"), BAD);
+            return;
+        }
+        if (color.isEmpty()) color = "#FFFFFF";
+        if (!color.matches("(?i)#[0-9a-f]{6}([0-9a-f]{2})?")) {
+            setStatus(Text.translatable("pmchat.admin.role.badcolor"), BAD);
+            return;
+        }
+        PmBackend.adminUpsertRole(key, name, rolePrefixField.getText().trim(), color, (ok, v, err) -> {
+            if (ok) {
+                setStatus(Text.translatable("pmchat.admin.ok"), OK);
+                resetRoleForm();
+                loadRoleDefs();
+            } else {
+                setStatus(Text.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
+            }
+        });
+    }
+
+    private void deleteRoleDef(String key) {
+        PmBackend.adminDeleteRole(key, (ok, v, err) -> {
+            if (ok) {
+                if (key.equals(roleEditingKey)) resetRoleForm();
+                loadRoleDefs();
+            } else {
+                setStatus(Text.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
+            }
+        });
+    }
+
+    private void doAssignRole(String roleKey) {
+        String target = roleAssignTargetField.getText().trim();
+        if (target.isEmpty()) {
+            setStatus(Text.translatable("pmchat.admin.target.needed"), BAD);
+            return;
+        }
+        PmBackend.adminAssignRole(target, roleKey, (ok, v, err) ->
+                setStatus(ok ? Text.translatable("pmchat.admin.ok") : Text.translatable("pmchat.admin.fail", String.valueOf(err)),
+                        ok ? OK : BAD));
+    }
+
+    private void drawRoles(DrawContext context, int mouseX, int mouseY) {
+        roleRowRects.clear();
+        roleDeleteRects.clear();
+        int cardW = Math.min(420, width - 40);
+        int cx = width / 2;
+        int left = cx - cardW / 2;
+        int right = cx + cardW / 2;
+
+        int y = roleListTop;
+        for (int i = roleScroll; i < roleDefs.size() && y + ROW_H <= roleListBottom; i++) {
+            PmBackend.RoleDef r = roleDefs.get(i);
+            boolean editing = r.key.equals(roleEditingKey);
+            boolean hovered = mouseY >= y && mouseY < y + ROW_H - 2 && mouseX >= left && mouseX < right;
+            context.fill(left, y, right, y + ROW_H - 2, editing ? PANEL_LIGHT : (hovered ? BTN_HOVER : PANEL));
+            context.fill(left, y, left + 2, y + ROW_H - 2, r.color);
+
+            String line = (r.prefix.isEmpty() ? "" : r.prefix + " ") + r.name + " (" + r.key + ")";
+            String trimmed = trim(line, right - left - 60);
+            context.drawText(textRenderer, trimmed, left + 8, y + 6, r.color, false);
+
+            int btnX = right - 46, btnY = y + 2, btnW = 40, btnH = ROW_H - 6;
+            boolean btnHover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
+            context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
+            context.drawStrokedRectangle(btnX, btnY, btnW, btnH, NEON_DIM);
+            Text del = Text.translatable("pmchat.admin.shop.delete");
+            context.drawText(textRenderer, del, btnX + (btnW - textRenderer.getWidth(del)) / 2, btnY + 3, BAD, false);
+            roleDeleteRects.add(new Object[]{btnX, btnY, btnW, btnH, r.key});
+            roleRowRects.add(new Object[]{left, y, right - left - 46, ROW_H - 2, r.key});
+
+            y += ROW_H;
+        }
+
+        if (!status.getString().isEmpty()) {
+            context.drawText(textRenderer, status, left + 8, roleListTop - 10, statusColor, false);
+        }
+    }
+
     // ---------- вкладки 3/4: жалобы и поддержка (общий скроллящийся список) ----------
 
     private void buildList(int y, boolean reportsTab) {
@@ -815,6 +1010,7 @@ public class PmAdminScreen extends Screen {
             case 3 -> drawList(context, mouseX, mouseY, true);
             case 4 -> drawList(context, mouseX, mouseY, false);
             case 6 -> drawShop(context, mouseX, mouseY);
+            case 7 -> drawRoles(context, mouseX, mouseY);
             default -> {
                 if (!status.getString().isEmpty()) {
                     context.drawText(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2,
@@ -872,6 +1068,30 @@ public class PmAdminScreen extends Screen {
                 }
             }
         }
+        if (tab == 7) {
+            double mx = click.x(), my = click.y();
+            for (Object[] rect : roleDeleteRects) {
+                int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
+                String key = (String) rect[4];
+                if (mx >= x && mx < x + w && my >= y && my < y + h) {
+                    deleteRoleDef(key);
+                    return true;
+                }
+            }
+            for (Object[] rect : roleRowRects) {
+                int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
+                String key = (String) rect[4];
+                if (mx >= x && mx < x + w && my >= y && my < y + h) {
+                    for (PmBackend.RoleDef r : roleDefs) {
+                        if (r.key.equals(key)) {
+                            editRoleDef(r);
+                            break;
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
         return super.mouseClicked(click, doubled);
     }
 
@@ -888,6 +1108,12 @@ public class PmAdminScreen extends Screen {
             int visible = Math.max(1, (shopListBottom - shopListTop) / ROW_H);
             int maxScroll = Math.max(0, shopItems.size() - visible);
             shopScroll = Math.max(0, Math.min(maxScroll, shopScroll - (int) Math.signum(verticalAmount)));
+            return true;
+        }
+        if (tab == 7) {
+            int visible = Math.max(1, (roleListBottom - roleListTop) / ROW_H);
+            int maxScroll = Math.max(0, roleDefs.size() - visible);
+            roleScroll = Math.max(0, Math.min(maxScroll, roleScroll - (int) Math.signum(verticalAmount)));
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);

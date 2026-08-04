@@ -3520,13 +3520,13 @@ public class PmScreen extends Screen {
             context.drawText(textRenderer, "●", headerX, py + 8, hasMod ? 0xFF6FBF8B : SUBTLE, false);
             headerX += 9;
         }
-        // Роль-префикс собеседника в шапке (4.5) — определяется из ника автоматически
+        // Роль-префикс собеседника в шапке (4.5) — назначенная админом должность
+        // перекрывает встроенную (определяемую из ника автоматически)
         if (isPlayerTab(selected)) {
-            String rCode = PmRoles.resolve(config, selected);
-            String rIcon = PmRoles.icon(rCode);
-            if (!rIcon.isEmpty()) {
-                context.drawText(textRenderer, rIcon, headerX, py + 8, PmRoles.color(rCode), false);
-                headerX += textRenderer.getWidth(rIcon) + 3;
+            PmRoles.Effective rEff = PmRoles.effective(config, selected);
+            if (!rEff.icon.isEmpty()) {
+                context.drawText(textRenderer, rEff.icon, headerX, py + 8, rEff.color, false);
+                headerX += textRenderer.getWidth(rEff.icon) + 3;
             }
         }
         context.drawText(textRenderer, header, headerX, py + 8, TITLE, false);

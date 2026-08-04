@@ -62,9 +62,11 @@ public final class PmBackend {
         public final boolean banned;
         /** Цена в монетах за входящее ЛС этому игроку (0 — бесплатно/фича paid_dm не активна). */
         public final long dmPrice;
+        /** Ключ должности, назначенной вручную в админ-панели (null — не назначена, см. {@link RoleDef}). */
+        public final String roleKey;
 
         AccountInfo(String username, boolean verified, boolean official, String avatarUrl, long lastSeenAt,
-                    boolean sharePrecise, boolean muted, boolean banned, long dmPrice) {
+                    boolean sharePrecise, boolean muted, boolean banned, long dmPrice, String roleKey) {
             this.username = username;
             this.verified = verified;
             this.official = official;
@@ -74,6 +76,7 @@ public final class PmBackend {
             this.muted = muted;
             this.banned = banned;
             this.dmPrice = dmPrice;
+            this.roleKey = roleKey;
         }
     }
 
@@ -272,23 +275,42 @@ public final class PmBackend {
         public final String name;
         public final String icon;
         public final long price;
+        /** common/rare/epic/legendary — определяет цвет свечения в UI (см. {@link #rarityColor}). */
+        public final String rarity;
 
-        Gift(String id, String name, String icon, long price) {
+        Gift(String id, String name, String icon, long price, String rarity) {
             this.id = id;
             this.name = name;
             this.icon = icon;
             this.price = price;
+            this.rarity = rarity;
         }
     }
 
     public static final class ReceivedGift {
         public final String giftId;
         public final String from;
+        /** Эпоха в мс получения подарка, 0 — неизвестно (старый формат ответа). */
+        public final long at;
+        public final boolean seen;
 
-        ReceivedGift(String giftId, String from) {
+        ReceivedGift(String giftId, String from, long at, boolean seen) {
             this.giftId = giftId;
             this.from = from;
+            this.at = at;
+            this.seen = seen;
         }
+    }
+
+    /** Цвет свечения по редкости подарка — общая для профиля и всплывающей анимации. */
+    public static int rarityColor(String rarity) {
+        if (rarity == null) return 0xFFBFC6CC;
+        return switch (rarity) {
+            case "rare" -> 0xFF5AA0E0;
+            case "epic" -> 0xFFB07AE0;
+            case "legendary" -> 0xFFE0B040;
+            default -> 0xFFBFC6CC;
+        };
     }
 
     private static volatile java.util.List<Gift> cachedCatalog = null;
@@ -309,7 +331,8 @@ public final class PmBackend {
                             g.get("id").getAsString(),
                             g.has("name") ? g.get("name").getAsString() : g.get("id").getAsString(),
                             g.has("icon") ? g.get("icon").getAsString() : "*",
-                            g.get("price").getAsLong()));
+                            g.get("price").getAsLong(),
+                            g.has("rarity") ? g.get("rarity").getAsString() : "common"));
                 }
                 cachedCatalog = list;
             });
@@ -345,7 +368,9 @@ public final class PmBackend {
                 java.util.List<ReceivedGift> list = new java.util.ArrayList<>();
                 for (var el : json.getAsJsonArray("gifts")) {
                     JsonObject g = el.getAsJsonObject();
-                    list.add(new ReceivedGift(g.get("giftId").getAsString(), g.get("from").getAsString()));
+                    list.add(new ReceivedGift(g.get("giftId").getAsString(), g.get("from").getAsString(),
+                            g.has("at") && !g.get("at").isJsonNull() ? parseIsoMillis(g.get("at").getAsString()) : 0L,
+                            !g.has("seen") || g.get("seen").getAsBoolean()));
                 }
                 INBOX_CACHE.put(key, new InboxEntry(list, System.currentTimeMillis()));
             });
@@ -366,6 +391,55 @@ public final class PmBackend {
             if (ok) INBOX_CACHE.remove(target == null ? "" : target.toLowerCase(java.util.Locale.ROOT));
             if (cb != null) cb.onResult(ok, null, err);
         });
+    }
+
+    /** Подарок из каталога по id, или {@code null}, если каталог ещё не подгрузился/id неизвестен. */
+    public static Gift giftById(String id) {
+        if (id == null) return null;
+        for (Gift g : cachedCatalog()) {
+            if (g.id.equals(id)) return g;
+        }
+        return null;
+    }
+
+    /**
+     * Фоновая проверка новых подарков — вызывается периодически из тика клиента
+     * (см. {@code PmChatClient}). Сверяет свежий (по TTL) собственный инбокс с
+     * {@link PmConfig#lastGiftNotifiedAt} и зовёт {@code onNewGift} для каждого
+     * ещё не показанного подарка (от старых к новым), затем сдвигает отметку.
+     */
+    public static void checkNewGifts(BiConsumer<ReceivedGift, Gift> onNewGift) {
+        if (!isConfigured() || !hasAccount()) return;
+        String self = PmChatClient.selfName();
+        if (self.isBlank()) return;
+        java.util.List<ReceivedGift> gifts = cachedGiftInbox(self);
+        if (gifts.isEmpty()) return;
+        PmConfig config = PmChatClient.getConfig();
+        if (config.lastGiftNotifiedAt == 0) {
+            // Первый запуск после обновления: не показываем анимацию для всех подарков,
+            // полученных раньше — просто ставим отметку на самый свежий из уже известных.
+            long baseline = 0;
+            for (ReceivedGift g : gifts) baseline = Math.max(baseline, g.at);
+            config.lastGiftNotifiedAt = Math.max(baseline, System.currentTimeMillis());
+            config.save();
+            return;
+        }
+        long newest = config.lastGiftNotifiedAt;
+        java.util.List<ReceivedGift> fresh = new java.util.ArrayList<>();
+        for (ReceivedGift g : gifts) {
+            if (g.at > config.lastGiftNotifiedAt) {
+                fresh.add(g);
+                if (g.at > newest) newest = g.at;
+            }
+        }
+        if (fresh.isEmpty()) return;
+        config.lastGiftNotifiedAt = newest;
+        config.save();
+        // От старых к новым, как они и пришли бы в реальном времени.
+        for (int i = fresh.size() - 1; i >= 0; i--) {
+            ReceivedGift g = fresh.get(i);
+            onNewGift.accept(g, giftById(g.giftId));
+        }
     }
 
     /** Прямой перевод монет игроку (не подарок — без каталога/иконки). */
@@ -591,6 +665,116 @@ public final class PmBackend {
         postJson("/v1/admin/shop/delete", body, resp -> cachedShop = null, cb);
     }
 
+    // ---------- должности (роли) игроков: назначает админ, отдельно от встроенных C/H/M/E/D ----------
+
+    public static final class RoleDef {
+        public final String key;
+        public final String name;
+        public final String prefix;
+        /** Цвет в формате 0xAARRGGBB, разобранный из hex-строки бэкенда (#RRGGBB). */
+        public final int color;
+
+        RoleDef(String key, String name, String prefix, int color) {
+            this.key = key;
+            this.name = name;
+            this.prefix = prefix;
+            this.color = color;
+        }
+    }
+
+    private static int parseHexColor(String hex) {
+        if (hex == null || hex.isBlank()) return 0xFFFFFFFF;
+        String h = hex.startsWith("#") ? hex.substring(1) : hex;
+        try {
+            return h.length() > 6 ? (int) Long.parseLong(h, 16) : 0xFF000000 | Integer.parseInt(h, 16);
+        } catch (NumberFormatException e) {
+            return 0xFFFFFFFF;
+        }
+    }
+
+    private static volatile java.util.List<RoleDef> cachedRoleDefs = null;
+    private static volatile boolean rolesInFlight = false;
+
+    /** Список должностей, созданных админом — кэшируется один раз за сессию. */
+    public static java.util.List<RoleDef> cachedRoles() {
+        if (!isConfigured()) return java.util.List.of();
+        if (cachedRoleDefs == null && !rolesInFlight) {
+            rolesInFlight = true;
+            getJson("/v1/roles", json -> {
+                rolesInFlight = false;
+                if (json == null || !json.has("roles")) return;
+                java.util.List<RoleDef> list = new java.util.ArrayList<>();
+                for (var el : json.getAsJsonArray("roles")) {
+                    JsonObject o = el.getAsJsonObject();
+                    list.add(new RoleDef(
+                            o.get("key").getAsString(),
+                            o.get("name").getAsString(),
+                            o.has("prefix") ? o.get("prefix").getAsString() : "",
+                            parseHexColor(o.has("color") ? o.get("color").getAsString() : null)));
+                }
+                cachedRoleDefs = list;
+            });
+        }
+        return cachedRoleDefs != null ? cachedRoleDefs : java.util.List.of();
+    }
+
+    /** Должность игрока, назначенная вручную (см. {@link AccountInfo#roleKey}), или {@code null}. */
+    public static RoleDef roleOf(String username) {
+        if (!isConfigured() || username == null || username.isBlank()) return null;
+        AccountInfo info = cachedAccountInfo(username);
+        if (info == null || info.roleKey == null || info.roleKey.isBlank()) return null;
+        for (RoleDef r : cachedRoles()) {
+            if (r.key.equalsIgnoreCase(info.roleKey)) return r;
+        }
+        return null;
+    }
+
+    public static void adminListRoles(Callback<java.util.List<RoleDef>> cb) {
+        String path = "/v1/roles";
+        getJson(path, json -> {
+            if (json == null || !json.has("roles")) {
+                run(cb, false, null, "request failed");
+                return;
+            }
+            java.util.List<RoleDef> list = new java.util.ArrayList<>();
+            for (var el : json.getAsJsonArray("roles")) {
+                JsonObject o = el.getAsJsonObject();
+                list.add(new RoleDef(
+                        o.get("key").getAsString(),
+                        o.get("name").getAsString(),
+                        o.has("prefix") ? o.get("prefix").getAsString() : "",
+                        parseHexColor(o.has("color") ? o.get("color").getAsString() : null)));
+            }
+            run(cb, true, list, null);
+        });
+    }
+
+    public static void adminUpsertRole(String key, String name, String prefix, String colorHex, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("key", key);
+        body.addProperty("name", name);
+        body.addProperty("prefix", prefix);
+        body.addProperty("color", colorHex);
+        postJson("/v1/admin/roles/upsert", body, resp -> cachedRoleDefs = null, cb);
+    }
+
+    public static void adminDeleteRole(String key, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("key", key);
+        postJson("/v1/admin/roles/delete", body, resp -> {
+            cachedRoleDefs = null;
+            ACCOUNT_CACHE.clear();
+        }, cb);
+    }
+
+    public static void adminAssignRole(String username, String roleKey, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("username", username);
+        if (roleKey != null && !roleKey.isBlank()) body.addProperty("roleKey", roleKey);
+        postJson("/v1/admin/roles/assign", body, resp ->
+                ACCOUNT_CACHE.remove(username == null ? "" : username.toLowerCase(java.util.Locale.ROOT)), cb);
+    }
+
     // ---------- публичный профиль: галочка верификации + официальный аккаунт ----------
 
     public static void accountInfo(String username, Callback<AccountInfo> cb) {
@@ -609,7 +793,8 @@ public final class PmBackend {
                     json.has("sharePrecise") && json.get("sharePrecise").getAsBoolean(),
                     json.has("muted") && json.get("muted").getAsBoolean(),
                     json.has("banned") && json.get("banned").getAsBoolean(),
-                    json.has("dmPrice") ? json.get("dmPrice").getAsLong() : 0L);
+                    json.has("dmPrice") ? json.get("dmPrice").getAsLong() : 0L,
+                    json.has("roleKey") && !json.get("roleKey").isJsonNull() ? json.get("roleKey").getAsString() : null);
             run(cb, true, info, null);
         });
     }

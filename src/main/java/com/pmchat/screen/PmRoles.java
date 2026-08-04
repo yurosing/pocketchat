@@ -100,4 +100,37 @@ public final class PmRoles {
     private static String norm(String code) {
         return code == null ? "" : code.trim().toUpperCase(java.util.Locale.ROOT);
     }
+
+    /** Итоговая должность игрока для отрисовки: значок + цвет + название. */
+    public static final class Effective {
+        public final String icon;
+        public final int color;
+        public final String label;
+        /** true — ни назначенной админом, ни встроенной по нику должности нет. */
+        public final boolean none;
+
+        Effective(String icon, int color, String label, boolean none) {
+            this.icon = icon;
+            this.color = color;
+            this.label = label;
+            this.none = none;
+        }
+    }
+
+    /**
+     * Роль игрока для отрисовки: если админ вручную назначил должность в
+     * админ-панели (см. {@link com.pmchat.client.PmBackend#roleOf}), она
+     * полностью перекрывает встроенную (C/H/M/E/D, автоопределяемую по нику).
+     * Без назначенной должности поведение как раньше — {@link #resolve}.
+     */
+    public static Effective effective(PmConfig config, String name) {
+        com.pmchat.client.PmBackend.RoleDef assigned = com.pmchat.client.PmBackend.isConfigured()
+                ? com.pmchat.client.PmBackend.roleOf(name) : null;
+        if (assigned != null) {
+            return new Effective(assigned.prefix, assigned.color, assigned.name, false);
+        }
+        String code = resolve(config, name);
+        return new Effective(icon(code), color(code),
+                net.minecraft.text.Text.translatable(nameKey(code)).getString(), code.isEmpty());
+    }
 }

@@ -136,17 +136,24 @@ public class PmProfileScreen extends Screen {
             addDrawableChild(aliasField);
             contentY += 21;
 
-            // Кнопка ЧС (5.5) + «Пожаловаться» рядом
+            // Кнопка ЧС (5.5) + «Пожаловаться» рядом — официальный аккаунт PocketChat
+            // заблокировать нельзя (иначе теряются рассылки/уведомления администрации).
+            com.pmchat.client.PmBackend.AccountInfo blockAcc = com.pmchat.client.PmBackend.isConfigured()
+                    ? com.pmchat.client.PmBackend.cachedAccountInfo(player) : null;
+            boolean officialAccount = blockAcc != null && blockAcc.official;
             boolean blocked = config.isBlocked(player);
             int halfW = (PANEL_W - 24 - 6) / 2;
-            addDrawableChild(FlatButton.centered(textRenderer, px + 12, contentY, halfW, 16,
-                    Text.translatable(blocked ? "pmchat.profile.unblock" : "pmchat.profile.block"),
-                    blocked ? 0xFF5A2A22 : BTN_BG, blocked ? 0xFF6E332A : BTN_HOVER,
-                    blocked ? 0xFFA0463A : BTN_BORDER, 0xFFE07A6A, btn -> {
-                        PmChatClient.toggleBlocked(player);
-                        reinit();
-                    }));
-            addDrawableChild(FlatButton.centered(textRenderer, px + 12 + halfW + 6, contentY, halfW, 16,
+            if (!officialAccount) {
+                addDrawableChild(FlatButton.centered(textRenderer, px + 12, contentY, halfW, 16,
+                        Text.translatable(blocked ? "pmchat.profile.unblock" : "pmchat.profile.block"),
+                        blocked ? 0xFF5A2A22 : BTN_BG, blocked ? 0xFF6E332A : BTN_HOVER,
+                        blocked ? 0xFFA0463A : BTN_BORDER, 0xFFE07A6A, btn -> {
+                            PmChatClient.toggleBlocked(player);
+                            reinit();
+                        }));
+            }
+            addDrawableChild(FlatButton.centered(textRenderer, officialAccount ? px + 12 : px + 12 + halfW + 6,
+                    contentY, officialAccount ? PANEL_W - 24 : halfW, 16,
                     Text.translatable("pmchat.report.open"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFE0B040,
                     btn -> MinecraftClient.getInstance().setScreen(new PmReportScreen(this, player))));
             contentY += 22;
@@ -211,17 +218,18 @@ public class PmProfileScreen extends Screen {
         drawAvatar(context, avX, avY, avS);
 
         int tx = avX + avS + 12;
-        // Роль определяется по серверному нику; отображаем локальный псевдоним, если задан
-        String role = PmRoles.resolve(config, player);
+        // Должность: назначенная админом перекрывает встроенную (по серверному нику);
+        // отображаем локальный псевдоним, если задан
+        PmRoles.Effective roleEff = PmRoles.effective(config, player);
         net.minecraft.text.Text fullName = config.hasAlias(player)
                 ? Text.literal(config.aliasOf(player))
                 : PmNames.displayText(player);
         int nameX = tx;
-        String icon = PmRoles.icon(role);
+        String icon = roleEff.icon;
         // Значок роли рисуем ОТДЕЛЬНО только когда показываем псевдоним (у него нет
         // префикса). У серверного ника роль уже есть в самом префиксе — иначе дубль.
         if (config.hasAlias(player) && !icon.isEmpty()) {
-            context.drawText(textRenderer, icon, nameX, py + 30, PmRoles.color(role), false);
+            context.drawText(textRenderer, icon, nameX, py + 30, roleEff.color, false);
             nameX += textRenderer.getWidth(icon) + 4;
         }
         int nameMax = px + PANEL_W - 10 - nameX;
@@ -276,12 +284,12 @@ public class PmProfileScreen extends Screen {
         // ---- Подписи полей ----
         int contentY = py + 84;
         context.drawText(textRenderer, Text.translatable("pmchat.profile.role"), px + 12, contentY + 4, LABEL, false);
-        // Значение роли — только для чтения (определяется из ника автоматически)
-        Text roleVal = Text.literal((icon.isEmpty() ? "" : icon + " ")
-                + Text.translatable(PmRoles.nameKey(role)).getString());
+        // Значение роли — только для чтения здесь (назначается в админ-панели или
+        // определяется из ника автоматически)
+        Text roleVal = Text.literal((icon.isEmpty() ? "" : icon + " ") + roleEff.label);
         context.drawText(textRenderer, roleVal,
                 px + PANEL_W - 12 - textRenderer.getWidth(roleVal), contentY + 4,
-                role.isEmpty() ? SUBTLE : PmRoles.color(role), false);
+                roleEff.none ? SUBTLE : roleEff.color, false);
         contentY += 21;
         if (self) {
             context.drawText(textRenderer, Text.translatable("pmchat.profile.birthday"),
@@ -399,10 +407,15 @@ public class PmProfileScreen extends Screen {
         } else {
             int gx = px + 12;
             int shown = 0;
+            long now = System.currentTimeMillis();
             for (int i = got.size() - 1; i >= 0 && shown < 14; i--, shown++) {
                 com.pmchat.client.PmBackend.ReceivedGift g = got.get(i);
-                String ic = g.giftId == null || g.giftId.isEmpty() ? "•" : g.giftId;
-                context.drawText(textRenderer, ic, gx, iy, 0xFFE0A0E0, false);
+                com.pmchat.client.PmBackend.Gift def = com.pmchat.client.PmBackend.giftById(g.giftId);
+                String ic = def != null ? def.icon : (g.giftId == null || g.giftId.isEmpty() ? "•" : g.giftId);
+                // Лёгкая волна-пульсация значков вразнобой (сдвиг фазы по индексу) — живее статичного ряда.
+                float bob = (float) Math.sin(now / 400.0 + shown * 0.9) * 1.5f;
+                context.drawText(textRenderer, ic, gx, iy + (int) bob,
+                        com.pmchat.client.PmBackend.rarityColor(def != null ? def.rarity : null), false);
                 gx += textRenderer.getWidth(ic) + 4;
             }
             if (got.size() > 14) {
@@ -424,11 +437,16 @@ public class PmProfileScreen extends Screen {
                 }
                 boolean hover = mouseX >= cx && mouseX < cx + cellW && mouseY >= cy && mouseY < cy + cellH;
                 boolean afford = selfBal != null && selfBal >= g.price;
+                int rarity = com.pmchat.client.PmBackend.rarityColor(g.rarity);
                 context.fill(cx, cy, cx + cellW, cy + cellH, hover ? BTN_HOVER : BTN_BG);
-                context.drawStrokedRectangle(cx, cy, cellW, cellH, BTN_BORDER);
+                // Рамка цвета редкости — ярче и с лёгким свечением, когда можно себе позволить.
+                context.drawStrokedRectangle(cx, cy, cellW, cellH, afford ? rarity : BTN_BORDER);
+                if (afford && hover) {
+                    context.drawStrokedRectangle(cx - 1, cy - 1, cellW + 2, cellH + 2, (rarity & 0xFFFFFF) | 0x50000000);
+                }
                 String label = g.icon + " " + g.price;
                 context.drawText(textRenderer, trimTo(label, cellW - 6), cx + 4, cy + 4,
-                        afford ? 0xFFE0B040 : 0xFF9A6A6A, false);
+                        afford ? rarity : 0xFF9A6A6A, false);
                 giftRects.add(new Object[]{cx, cy, cellW, cellH, g.id, true});
                 cx += cellW + gap;
             }

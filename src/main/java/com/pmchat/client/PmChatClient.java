@@ -52,6 +52,8 @@ public class PmChatClient implements ClientModInitializer {
     private static long nextBroadcastPollAt = 0;
     /** Следующий "пинг" присутствия на бэкенде — держит lastSeen свежим (см. PmBackend.ping). */
     private static long nextPresencePingAt = 0;
+    /** Следующая проверка новых подарков — показать анимированную всплывашку (см. PmBackend.checkNewGifts). */
+    private static long nextGiftPollAt = 0;
     private static long chatScreenClosedAt = 0;
 
     /** Сентинел «диалога» общего чата. */
@@ -235,6 +237,20 @@ public class PmChatClient implements ClientModInitializer {
                     && PmBackend.isConfigured() && PmBackend.hasAccount()) {
                 nextPresencePingAt = System.currentTimeMillis() + 60_000L;
                 PmBackend.ping();
+            }
+            // Проверка новых подарков — раз в 20 секунд, показываем красивую
+            // анимированную всплывашку (4.2), а не просто тост, если сейчас нет
+            // другого открытого экрана (чтобы ничего не перекрыть).
+            if (client.world != null && System.currentTimeMillis() >= nextGiftPollAt
+                    && PmBackend.isConfigured() && PmBackend.hasAccount()) {
+                nextGiftPollAt = System.currentTimeMillis() + 20_000L;
+                PmBackend.checkNewGifts((g, gift) -> {
+                    if (client.currentScreen == null) {
+                        client.setScreen(new com.pmchat.screen.PmGiftPopupScreen(g.from, gift, g.giftId));
+                    } else {
+                        giftToast(g.from, gift != null ? gift.name : g.giftId, gift != null ? gift.icon : null);
+                    }
+                });
             }
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
@@ -2035,6 +2051,10 @@ public class PmChatClient implements ClientModInitializer {
         if (name == null || name.isBlank()) return;
         MinecraftClient client = MinecraftClient.getInstance();
         if (blocked) {
+            // Официальный аккаунт PocketChat нельзя добавить в чёрный список —
+            // иначе игрок теряет рассылки/уведомления администрации.
+            PmBackend.AccountInfo acc = PmBackend.isConfigured() ? PmBackend.cachedAccountInfo(name) : null;
+            if (acc != null && acc.official) return;
             config.addBlocked(name);
         } else {
             config.removeBlocked(name);
