@@ -83,7 +83,8 @@ public class PmProfileScreen extends Screen {
             if (catalogSize > 0) catalogRows = (catalogSize + 3) / 4;
         }
         PANEL_W = Math.max(160, Math.min(250, width - 24));
-        panelH = Math.min(self ? 214 : 260 + catalogRows * 19, height - 24);
+        int coinsRowH = !self && backendGiftsAvailable() ? 22 : 0;
+        panelH = Math.min(self ? 214 : 260 + coinsRowH + catalogRows * 19, height - 24);
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
@@ -149,6 +150,14 @@ public class PmProfileScreen extends Screen {
                     Text.translatable("pmchat.report.open"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFE0B040,
                     btn -> MinecraftClient.getInstance().setScreen(new PmReportScreen(this, player))));
             contentY += 22;
+
+            // Отправить монеты — только если есть свой аккаунт бэкенда
+            if (backendGiftsAvailable()) {
+                addDrawableChild(FlatButton.centered(textRenderer, px + 12, contentY, PANEL_W - 24, 16,
+                        Text.translatable("pmchat.coins.open"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
+                        btn -> MinecraftClient.getInstance().setScreen(new PmSendCoinsScreen(this, player))));
+                contentY += 22;
+            }
 
             // Личная заметка (4.2+) — как в Discord: видна только тебе, хранится
             // только в pmchat.json, никогда не отправляется собеседнику.

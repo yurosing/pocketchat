@@ -449,7 +449,8 @@ public class PmScreen extends Screen {
     private String amountText = "";
 
     private long planeAt = -1;      // время последней отправки для анимации ➤
-    private long muteShakeAt = -1;  // время последней заблокированной попытки отправки (мут/бан)
+    private long muteShakeAt = -1;  // время последней заблокированной попытки отправки (мут/бан/нехватка монет)
+    private long paymentNeeded = 0; // >0 — та же анимация означает «не хватает монет», а не «нет прав»
 
     // Tab-автодополнение ника (6.6): кандидаты и текущий индекс
     private final List<String> tabMatches = new ArrayList<>();
@@ -1279,6 +1280,16 @@ public class PmScreen extends Screen {
         addDrawableChild(myProfileBtn);
         footerX += 20;
 
+        // Магазин возможностей — оформление/функции за монеты, ограниченный срок
+        if (com.pmchat.client.PmBackend.isConfigured()) {
+            FlatButton shopBtn = FlatButton.centered(textRenderer, footerX, py + PANEL_H - 19, 16, 13,
+                    Text.literal("$"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFF0C34E,
+                    btn -> MinecraftClient.getInstance().setScreen(new PmShopScreen(this)));
+            shopBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.tip.shop")));
+            addDrawableChild(shopBtn);
+            footerX += 20;
+        }
+
         // Красная кнопка входа в админ-панель — видна только аккаунту ADMIN_USERNAME
         // бэкенда (server-pocketchat, по умолчанию tyurvib), прямо у списка чатов.
         // Обязательно требует входа в аккаунт бэкенда (см. canOpenAdminPanel) —
@@ -1730,13 +1741,16 @@ public class PmScreen extends Screen {
             return;
         }
         String replyHash = replyTarget != null ? PmHistory.msgHash(replyTarget.text) : null;
-        PmChatClient.sendMessage(selected, text, replyHash, replyFragStart, replyFragLen, replyFragText);
-        clearReply();
-        emojiMode = false;
-        inputField.setText("");
-        inputText = "";
-        msgScroll = 0;
-        planeAt = System.currentTimeMillis();
+        String target = selected;
+        chargeIfNeeded(target, () -> {
+            PmChatClient.sendMessage(target, text, replyHash, replyFragStart, replyFragLen, replyFragText);
+            clearReply();
+            emojiMode = false;
+            inputField.setText("");
+            inputText = "";
+            msgScroll = 0;
+            planeAt = System.currentTimeMillis();
+        });
     }
 
     private void toggleVoice() {
@@ -1757,9 +1771,12 @@ public class PmScreen extends Screen {
                                     com.pmchat.client.PmVoice.cache(res[0], res[1], Files.readAllBytes(wav));
                                 } catch (Exception ignored) {
                                 }
-                                PmChatClient.sendMessage(target, com.pmchat.client.PmWire.voice(res[0], res[1], secs));
-                                msgScroll = 0;
-                                planeAt = System.currentTimeMillis();
+                                chargeIfNeeded(target, () -> {
+                                    PmChatClient.sendMessage(target, com.pmchat.client.PmWire.voice(res[0], res[1], secs));
+                                    msgScroll = 0;
+                                    planeAt = System.currentTimeMillis();
+                                    rebuild();
+                                });
                             } else {
                                 uploadFailed = true;
                             }
@@ -1930,17 +1947,20 @@ public class PmScreen extends Screen {
         String name = sticker.getFileName().toString();
         config.pushRecentSticker(sticker.toAbsolutePath().toString());
         String cached = config.stickerCache.get(name);
+        String stickerTarget = selected;
         if (cached != null) {
             int sep = cached.indexOf('|');
             String code = sep > 0 ? cached.substring(0, sep) : "c";
             String id = sep > 0 ? cached.substring(sep + 1) : cached;
-            PmChatClient.sendMessage(selected, com.pmchat.client.PmWire.img(code, id));
-            imageMode = false;
-            stickerMode = false;
-            spoilerMode = false;
-            msgScroll = 0;
-            planeAt = System.currentTimeMillis();
-            rebuild();
+            chargeIfNeeded(stickerTarget, () -> {
+                PmChatClient.sendMessage(stickerTarget, com.pmchat.client.PmWire.img(code, id));
+                imageMode = false;
+                stickerMode = false;
+                spoilerMode = false;
+                msgScroll = 0;
+                planeAt = System.currentTimeMillis();
+                rebuild();
+            });
             return;
         }
         uploading = true;
@@ -1955,12 +1975,15 @@ public class PmScreen extends Screen {
                             com.pmchat.client.PmImages.preload(res[0], res[1], Files.readAllBytes(sticker));
                         } catch (Exception ignored) {
                         }
-                        PmChatClient.sendMessage(target, com.pmchat.client.PmWire.img(res[0], res[1]));
-                        imageMode = false;
-                        stickerMode = false;
-                        spoilerMode = false;
-                        msgScroll = 0;
-                        planeAt = System.currentTimeMillis();
+                        chargeIfNeeded(target, () -> {
+                            PmChatClient.sendMessage(target, com.pmchat.client.PmWire.img(res[0], res[1]));
+                            imageMode = false;
+                            stickerMode = false;
+                            spoilerMode = false;
+                            msgScroll = 0;
+                            planeAt = System.currentTimeMillis();
+                            rebuild();
+                        });
                     } else {
                         uploadFailed = true;
                     }
@@ -2094,11 +2117,14 @@ public class PmScreen extends Screen {
                 MinecraftClient.getInstance().execute(() -> {
                     uploading = false;
                     if (err == null && res != null) {
-                        PmChatClient.sendMessage(target, com.pmchat.client.PmWire.vid(res[0], res[1], spoiler));
-                        mediaMode = false;
-                        spoilerMode = false;
-                        msgScroll = 0;
-                        planeAt = System.currentTimeMillis();
+                        chargeIfNeeded(target, () -> {
+                            PmChatClient.sendMessage(target, com.pmchat.client.PmWire.vid(res[0], res[1], spoiler));
+                            mediaMode = false;
+                            spoilerMode = false;
+                            msgScroll = 0;
+                            planeAt = System.currentTimeMillis();
+                            rebuild();
+                        });
                     } else {
                         uploadFailed = true;
                     }
@@ -2124,11 +2150,14 @@ public class PmScreen extends Screen {
                             com.pmchat.client.PmVoice.cache(res[0], res[1], Files.readAllBytes(file));
                         } catch (Exception ignored) {
                         }
-                        PmChatClient.sendMessage(target, com.pmchat.client.PmWire.voice(res[0], res[1], seconds));
-                        mediaMode = false;
-                        spoilerMode = false;
-                        msgScroll = 0;
-                        planeAt = System.currentTimeMillis();
+                        chargeIfNeeded(target, () -> {
+                            PmChatClient.sendMessage(target, com.pmchat.client.PmWire.voice(res[0], res[1], seconds));
+                            mediaMode = false;
+                            spoilerMode = false;
+                            msgScroll = 0;
+                            planeAt = System.currentTimeMillis();
+                            rebuild();
+                        });
                     } else {
                         uploadFailed = true;
                     }
@@ -2152,11 +2181,14 @@ public class PmScreen extends Screen {
                             com.pmchat.client.PmImages.preload(res[0], res[1], Files.readAllBytes(file));
                         } catch (Exception ignored) {
                         }
-                        PmChatClient.sendMessage(target, com.pmchat.client.PmWire.img(res[0], res[1], spoiler));
-                        imageMode = false;
-                        spoilerMode = false;
-                        msgScroll = 0;
-                        planeAt = System.currentTimeMillis();
+                        chargeIfNeeded(target, () -> {
+                            PmChatClient.sendMessage(target, com.pmchat.client.PmWire.img(res[0], res[1], spoiler));
+                            imageMode = false;
+                            spoilerMode = false;
+                            msgScroll = 0;
+                            planeAt = System.currentTimeMillis();
+                            rebuild();
+                        });
                     } else {
                         uploadFailed = true;
                     }
@@ -4681,7 +4713,31 @@ public class PmScreen extends Screen {
     private boolean blockIfMuted() {
         if (!com.pmchat.client.PmBackend.selfRestricted()) return false;
         muteShakeAt = System.currentTimeMillis();
+        paymentNeeded = 0;
         return true;
+    }
+
+    /**
+     * Списывает цену получателя за входящее ЛС (фича «Платные ЛС» из магазина
+     * возможностей), если она у него активна, и только потом зовёт {@code proceed}
+     * (реальную отправку). Бесплатным получателям (нет фичи/цена 0) отправляет
+     * сразу — без сетевого похода. При нехватке монет проигрывает анимацию отказа
+     * вместо отправки.
+     */
+    private void chargeIfNeeded(String target, Runnable proceed) {
+        com.pmchat.client.PmBackend.AccountInfo info = com.pmchat.client.PmBackend.cachedAccountInfo(target);
+        if (info == null || info.dmPrice <= 0) {
+            proceed.run();
+            return;
+        }
+        com.pmchat.client.PmBackend.chargeDm(target, (ok, charged, err) -> {
+            if (ok) {
+                proceed.run();
+            } else {
+                muteShakeAt = System.currentTimeMillis();
+                paymentNeeded = com.pmchat.client.PmBackend.lastChargeRequiredPrice();
+            }
+        });
     }
 
     /** Ладонь ✋ трясётся и гаснет + «у вас нет прав» — как отказ в Telegram. */
@@ -4694,7 +4750,9 @@ public class PmScreen extends Screen {
         float shake = (float) Math.sin(t * Math.PI * 7) * 3f * decay;
         float alpha = t < 0.7f ? 1f : 1f - (t - 0.7f) / 0.3f;
 
-        Text notice = Text.translatable("pmchat.muted.notice");
+        Text notice = paymentNeeded > 0
+                ? Text.translatable("pmchat.dm.needcoins", paymentNeeded)
+                : Text.translatable("pmchat.muted.notice");
         int baseX = px + LEFT_W + (PANEL_W - LEFT_W - (10 + textRenderer.getWidth(notice))) / 2;
         int y = py + PANEL_H - 42;
         int x = baseX + Math.round(shake);

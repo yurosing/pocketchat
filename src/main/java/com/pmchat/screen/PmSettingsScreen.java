@@ -72,7 +72,7 @@ public class PmSettingsScreen extends Screen {
         return switch (t) {
             case 1 -> 10;
             case 2 -> 4;
-            case 3 -> backendConfigured() && !editBackendUrl ? (3 + (isAdminAccount() ? 1 : 0)) : 4;
+            case 3 -> backendConfigured() && !editBackendUrl ? (4 + (isAdminAccount() ? 1 : 0)) : 5;
             case 4 -> 1;
             default -> 11;
         };
@@ -293,6 +293,11 @@ public class PmSettingsScreen extends Screen {
     }
 
     private int buildAccountTab(int y) {
+        y = addOption(y, "pmchat.rules.view",
+                () -> Text.literal("⚙"),
+                () -> LABEL,
+                () -> MinecraftClient.getInstance().setScreen(new PmRulesScreen(this)));
+
         if (!backendConfigured() || editBackendUrl) {
             int fx = px + 16;
             int fw = PANEL_W - 32;

@@ -51,6 +51,7 @@ public class PmAdminScreen extends Screen {
             "pmchat.admin.tab.reports",
             "pmchat.admin.tab.support",
             "pmchat.admin.tab.rules",
+            "pmchat.admin.tab.shop",
     };
 
     private final Screen parent;
@@ -91,6 +92,15 @@ public class PmAdminScreen extends Screen {
     private String rulesHeaderCurrent = "";
     private static final int RULE_LINES = 5;
 
+    // ---- Вкладка 6: магазин возможностей ----
+    private List<PmBackend.ShopItem> shopItems = Collections.emptyList();
+    private int shopScroll = 0;
+    private int shopListTop, shopListBottom;
+    private long shopEditingId = 0;
+    private TextFieldWidget shopNameField, shopDescField, shopFeatureKeyField, shopPriceField, shopDurationField;
+    private final java.util.List<Object[]> shopRowRects = new java.util.ArrayList<>();
+    private final java.util.List<Object[]> shopDeleteRects = new java.util.ArrayList<>();
+
     public PmAdminScreen(Screen parent) {
         super(Text.translatable("pmchat.admin.title"));
         this.parent = parent;
@@ -122,6 +132,7 @@ public class PmAdminScreen extends Screen {
             case 3 -> buildList(contentTop, true);
             case 4 -> buildList(contentTop, false);
             case 5 -> buildRules(contentTop);
+            case 6 -> buildShop(contentTop);
             default -> { }
         }
 
@@ -513,6 +524,169 @@ public class PmAdminScreen extends Screen {
                         ok ? OK : BAD));
     }
 
+    // ---------- вкладка 6: магазин возможностей ----------
+
+    private void buildShop(int y) {
+        int cardW = Math.min(420, width - 40);
+        int cx = width / 2;
+        int fx = cx - cardW / 2 + 12;
+        int fw = cardW - 24;
+
+        shopListTop = y;
+        shopListBottom = y + 5 * ROW_H;
+
+        int formY = shopListBottom + 8;
+        shopNameField = new TextFieldWidget(textRenderer, fx, formY, fw, 16, Text.translatable("pmchat.admin.shop.name"));
+        shopNameField.setMaxLength(64);
+        placeholder(shopNameField, "pmchat.admin.shop.name");
+        addDrawableChild(shopNameField);
+
+        shopDescField = new TextFieldWidget(textRenderer, fx, formY + 20, fw, 16, Text.translatable("pmchat.admin.shop.desc"));
+        shopDescField.setMaxLength(200);
+        placeholder(shopDescField, "pmchat.admin.shop.desc");
+        addDrawableChild(shopDescField);
+
+        shopFeatureKeyField = new TextFieldWidget(textRenderer, fx, formY + 40, fw, 16, Text.translatable("pmchat.admin.shop.featurekey"));
+        shopFeatureKeyField.setMaxLength(64);
+        placeholder(shopFeatureKeyField, "pmchat.admin.shop.featurekey");
+        addDrawableChild(shopFeatureKeyField);
+
+        int halfW = (fw - 8) / 2;
+        shopPriceField = new TextFieldWidget(textRenderer, fx, formY + 60, halfW, 16, Text.translatable("pmchat.admin.shop.price"));
+        shopPriceField.setMaxLength(10);
+        placeholder(shopPriceField, "pmchat.admin.shop.price");
+        addDrawableChild(shopPriceField);
+
+        shopDurationField = new TextFieldWidget(textRenderer, fx + halfW + 8, formY + 60, halfW, 16, Text.translatable("pmchat.admin.shop.duration"));
+        shopDurationField.setMaxLength(5);
+        placeholder(shopDurationField, "pmchat.admin.shop.duration");
+        addDrawableChild(shopDurationField);
+
+        int btnY = formY + 80;
+        int btnW = (fw - 8) / 2;
+        addDrawableChild(FlatButton.centered(textRenderer, fx, btnY, btnW, 16,
+                Text.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
+                btn -> doSaveShopItem()));
+        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, btnY, btnW, 16,
+                Text.translatable("pmchat.admin.shop.new"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
+                btn -> resetShopForm()));
+
+        loadShopItems();
+    }
+
+    private void loadShopItems() {
+        status = Text.translatable("pmchat.admin.loading");
+        statusColor = SUBTLE;
+        PmBackend.adminListShop((ok, list, err) -> {
+            if (ok) {
+                shopItems = list;
+                shopScroll = 0;
+                status = shopItems.isEmpty() ? Text.translatable("pmchat.admin.shop.empty") : Text.empty();
+            } else {
+                shopItems = Collections.emptyList();
+                status = Text.translatable("pmchat.admin.fail", String.valueOf(err));
+                statusColor = BAD;
+            }
+        });
+    }
+
+    private void resetShopForm() {
+        shopEditingId = 0;
+        shopNameField.setText("");
+        shopDescField.setText("");
+        shopFeatureKeyField.setText("");
+        shopPriceField.setText("");
+        shopDurationField.setText("");
+    }
+
+    private void editShopItem(PmBackend.ShopItem item) {
+        shopEditingId = item.id;
+        shopNameField.setText(item.name);
+        shopDescField.setText(item.description);
+        shopFeatureKeyField.setText(item.featureKey != null ? item.featureKey : "");
+        shopPriceField.setText(String.valueOf(item.price));
+        shopDurationField.setText(String.valueOf(item.durationDays));
+    }
+
+    private void doSaveShopItem() {
+        String name = shopNameField.getText().trim();
+        if (name.isEmpty()) {
+            setStatus(Text.translatable("pmchat.admin.shop.needname"), BAD);
+            return;
+        }
+        long price;
+        int duration;
+        try {
+            price = Long.parseLong(shopPriceField.getText().trim());
+            duration = Integer.parseInt(shopDurationField.getText().trim());
+        } catch (NumberFormatException e) {
+            setStatus(Text.translatable("pmchat.admin.badamount"), BAD);
+            return;
+        }
+        if (price < 0 || duration <= 0) {
+            setStatus(Text.translatable("pmchat.admin.badamount"), BAD);
+            return;
+        }
+        PmBackend.adminUpsertShopItem(shopEditingId, name, shopDescField.getText().trim(),
+                shopFeatureKeyField.getText().trim(), price, duration, (ok, v, err) -> {
+                    if (ok) {
+                        setStatus(Text.translatable("pmchat.admin.ok"), OK);
+                        resetShopForm();
+                        loadShopItems();
+                    } else {
+                        setStatus(Text.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
+                    }
+                });
+    }
+
+    private void deleteShopItem(long id) {
+        PmBackend.adminDeleteShopItem(id, (ok, v, err) -> {
+            if (ok) {
+                if (shopEditingId == id) resetShopForm();
+                loadShopItems();
+            } else {
+                setStatus(Text.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
+            }
+        });
+    }
+
+    private void drawShop(DrawContext context, int mouseX, int mouseY) {
+        shopRowRects.clear();
+        shopDeleteRects.clear();
+        int cardW = Math.min(420, width - 40);
+        int cx = width / 2;
+        int left = cx - cardW / 2;
+        int right = cx + cardW / 2;
+
+        int y = shopListTop;
+        for (int i = shopScroll; i < shopItems.size() && y + ROW_H <= shopListBottom; i++) {
+            PmBackend.ShopItem item = shopItems.get(i);
+            boolean editing = item.id == shopEditingId;
+            boolean hovered = mouseY >= y && mouseY < y + ROW_H - 2 && mouseX >= left && mouseX < right;
+            context.fill(left, y, right, y + ROW_H - 2, editing ? PANEL_LIGHT : (hovered ? BTN_HOVER : PANEL));
+            context.fill(left, y, left + 2, y + ROW_H - 2, NEON_DIM);
+
+            String line = item.name + " — " + item.price + "/" + item.durationDays + "d";
+            String trimmed = trim(line, right - left - 60);
+            context.drawText(textRenderer, trimmed, left + 8, y + 6, TEXT_MAIN, false);
+
+            int btnX = right - 46, btnY = y + 2, btnW = 40, btnH = ROW_H - 6;
+            boolean btnHover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
+            context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
+            context.drawStrokedRectangle(btnX, btnY, btnW, btnH, NEON_DIM);
+            Text del = Text.translatable("pmchat.admin.shop.delete");
+            context.drawText(textRenderer, del, btnX + (btnW - textRenderer.getWidth(del)) / 2, btnY + 3, BAD, false);
+            shopDeleteRects.add(new Object[]{btnX, btnY, btnW, btnH, item.id});
+            shopRowRects.add(new Object[]{left, y, right - left - 46, ROW_H - 2, item.id});
+
+            y += ROW_H;
+        }
+
+        if (!status.getString().isEmpty()) {
+            context.drawText(textRenderer, status, left + 8, shopListTop - 10, statusColor, false);
+        }
+    }
+
     // ---------- вкладки 3/4: жалобы и поддержка (общий скроллящийся список) ----------
 
     private void buildList(int y, boolean reportsTab) {
@@ -640,6 +814,7 @@ public class PmAdminScreen extends Screen {
             case 0 -> drawDashboard(context, mouseX, mouseY);
             case 3 -> drawList(context, mouseX, mouseY, true);
             case 4 -> drawList(context, mouseX, mouseY, false);
+            case 6 -> drawShop(context, mouseX, mouseY);
             default -> {
                 if (!status.getString().isEmpty()) {
                     context.drawText(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2,
@@ -673,6 +848,30 @@ public class PmAdminScreen extends Screen {
                 }
             }
         }
+        if (tab == 6) {
+            double mx = click.x(), my = click.y();
+            for (Object[] rect : shopDeleteRects) {
+                int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
+                long id = (long) rect[4];
+                if (mx >= x && mx < x + w && my >= y && my < y + h) {
+                    deleteShopItem(id);
+                    return true;
+                }
+            }
+            for (Object[] rect : shopRowRects) {
+                int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
+                long id = (long) rect[4];
+                if (mx >= x && mx < x + w && my >= y && my < y + h) {
+                    for (PmBackend.ShopItem item : shopItems) {
+                        if (item.id == id) {
+                            editShopItem(item);
+                            break;
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
         return super.mouseClicked(click, doubled);
     }
 
@@ -683,6 +882,12 @@ public class PmAdminScreen extends Screen {
             int visible = Math.max(1, (listBottom - listTop) / ROW_H);
             int maxScroll = Math.max(0, count - visible);
             listScroll = Math.max(0, Math.min(maxScroll, listScroll - (int) Math.signum(verticalAmount)));
+            return true;
+        }
+        if (tab == 6) {
+            int visible = Math.max(1, (shopListBottom - shopListTop) / ROW_H);
+            int maxScroll = Math.max(0, shopItems.size() - visible);
+            shopScroll = Math.max(0, Math.min(maxScroll, shopScroll - (int) Math.signum(verticalAmount)));
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);

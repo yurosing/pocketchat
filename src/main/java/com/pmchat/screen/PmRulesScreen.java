@@ -35,6 +35,8 @@ public class PmRulesScreen extends Screen {
     private int PANEL_W = 260;
 
     private final Runnable onAccept;
+    private final Screen returnTo;
+    private final boolean viewOnly;
     private final PmConfig config = PmChatClient.getConfig();
     private final int acceptVersion;
 
@@ -52,7 +54,21 @@ public class PmRulesScreen extends Screen {
     public PmRulesScreen(Runnable onAccept) {
         super(Text.translatable("pmchat.rules.title"));
         this.onAccept = onAccept;
+        this.returnTo = null;
+        this.viewOnly = false;
+        acceptVersion = loadContent();
+    }
 
+    /** Просмотр правил из настроек — без принятия/отклонения, просто «Закрыть». */
+    public PmRulesScreen(Screen returnTo) {
+        super(Text.translatable("pmchat.rules.title"));
+        this.onAccept = null;
+        this.returnTo = returnTo;
+        this.viewOnly = true;
+        acceptVersion = loadContent();
+    }
+
+    private int loadContent() {
         PmBackend.RulesContent fetched = PmBackend.cachedRules();
         PmBackend.RuleLocale active = fetched != null ? fetched.active() : null;
         if (active != null && !active.rules.isEmpty()) {
@@ -61,7 +77,7 @@ public class PmRulesScreen extends Screen {
             header = active.header;
             rules = active.rules;
             footer = active.footer;
-            acceptVersion = fetched.version;
+            return fetched.version;
         } else {
             eula = Text.translatable("pmchat.rules.eula").getString();
             freedom = Text.translatable("pmchat.rules.freedom").getString();
@@ -71,7 +87,7 @@ public class PmRulesScreen extends Screen {
                     Text.translatable("pmchat.rules.rule2").getString(),
                     Text.translatable("pmchat.rules.rule3").getString());
             footer = Text.translatable("pmchat.rules.footer").getString();
-            acceptVersion = 1;
+            return 1;
         }
     }
 
@@ -118,12 +134,18 @@ public class PmRulesScreen extends Screen {
         px = (width - PANEL_W) / 2;
         py = Math.max(4, (height - panelH) / 2);
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + 12, py + panelH - 22, (PANEL_W - 32) / 2, 16,
-                Text.translatable("pmchat.rules.decline"), BTN_BG, BTN_HOVER, BTN_BORDER, SUBTLE,
-                btn -> close()));
-        addDrawableChild(FlatButton.centered(textRenderer, px + 20 + (PANEL_W - 32) / 2, py + panelH - 22, (PANEL_W - 32) / 2, 16,
-                Text.translatable("pmchat.rules.accept"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA,
-                btn -> accept()));
+        if (viewOnly) {
+            addDrawableChild(FlatButton.centered(textRenderer, px + (PANEL_W - 80) / 2, py + panelH - 22, 80, 16,
+                    Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, LABEL,
+                    btn -> close()));
+        } else {
+            addDrawableChild(FlatButton.centered(textRenderer, px + 12, py + panelH - 22, (PANEL_W - 32) / 2, 16,
+                    Text.translatable("pmchat.rules.decline"), BTN_BG, BTN_HOVER, BTN_BORDER, SUBTLE,
+                    btn -> close()));
+            addDrawableChild(FlatButton.centered(textRenderer, px + 20 + (PANEL_W - 32) / 2, py + panelH - 22, (PANEL_W - 32) / 2, 16,
+                    Text.translatable("pmchat.rules.accept"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA,
+                    btn -> accept()));
+        }
     }
 
     private int lineCount(String text, int maxW) {
@@ -192,7 +214,7 @@ public class PmRulesScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(null);
+        MinecraftClient.getInstance().setScreen(viewOnly ? returnTo : null);
     }
 
     @Override
