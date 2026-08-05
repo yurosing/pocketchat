@@ -938,7 +938,8 @@ public class PmScreen extends Screen {
         int cx = x + d / 2;
         int cy = topY + 4;
         fillCircle(ctx, cx, cy, d / 2, 0xFF1E9E5A);
-        PmIcons.draw(ctx, PmIcons.CHECK, cx - 4, cy - 4, 8, 8, 0xFFFFFFFF);
+        // Галочка 7×7, отцентрованная по кружку — целиком внутри рамки, не вылезает.
+        PmIcons.draw(ctx, PmIcons.CHECK, cx - 3, cy - 3, 7, 7, 0xFFFFFFFF);
         return d;
     }
 
@@ -1321,8 +1322,10 @@ public class PmScreen extends Screen {
         // Обязательно требует входа в аккаунт бэкенда (см. canOpenAdminPanel) —
         // совпадения ника Minecraft одного недостаточно.
         if (PmChatClient.canOpenAdminPanel()) {
-            FlatButton adminBtn = FlatButton.centered(textRenderer, footerX, py + PANEL_H - 19, 16, 13,
-                    Text.literal("⚑"), 0xFF5A1418, 0xFF7A1C22, 0xFFE0203C, 0xFFFF4D63,
+            Text adminLabel = Text.translatable("pmchat.admin.label");
+            int adminW = textRenderer.getWidth(adminLabel) + 12;
+            FlatButton adminBtn = FlatButton.centered(textRenderer, footerX, py + PANEL_H - 19, adminW, 13,
+                    adminLabel, 0xFF5A1418, 0xFF7A1C22, 0xFFE0203C, 0xFFFF4D63,
                     btn -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));
             adminBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.admin.open")));
             addDrawableChild(adminBtn);
@@ -2281,9 +2284,13 @@ public class PmScreen extends Screen {
         } else if (statsMode) {
             renderStats(context);
         } else if (selected == null) {
-            Text hint = Text.translatable("pmchat.empty.chat");
+            boolean noChats = history.conversationNames().isEmpty();
+            // Совсем нет диалогов — подсказку пишем внизу по центру (как в Telegram
+            // на пустом экране), иначе «выберите диалог слева» по центру области.
+            Text hint = Text.translatable(noChats ? "pmchat.empty.nochats" : "pmchat.empty.chat");
             int hx = px + LEFT_W + (PANEL_W - LEFT_W - textRenderer.getWidth(hint)) / 2;
-            context.drawText(textRenderer, hint, hx, py + PANEL_H / 2 - 4, SUBTLE, false);
+            int hy = noChats ? py + PANEL_H - 40 : py + PANEL_H / 2 - 4;
+            context.drawText(textRenderer, hint, hx, hy, SUBTLE, false);
         } else {
             renderChat(context, mouseX, mouseY);
         }

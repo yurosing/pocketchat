@@ -168,24 +168,17 @@ public final class PmBackend {
         body.addProperty("password", password);
         postJson("/v1/register", body, resp -> {
             if (resp == null) return;
+            // Свежий аккаунт не должен разом получить всю историю прошлых рассылок:
+            // baseline выставляем ДО токена (в этом же ответе), чтобы не было гонки
+            // с опросом рассылок в тике — раньше id брался отдельным запросом уже
+            // после того, как hasAccount() становился true, и всё успевало прийти.
+            if (resp.has("broadcastBaseline") && !resp.get("broadcastBaseline").isJsonNull()) {
+                PmChatClient.getConfig().lastBroadcastId = resp.get("broadcastBaseline").getAsLong();
+            }
             if (resp.has("token")) PmChatClient.getConfig().backendToken = resp.get("token").getAsString();
             PmChatClient.getConfig().save();
-            // Свежий аккаунт не должен разом получить всю историю прошлых рассылок —
-            // стартуем опрос с текущего "последнего" id, а не с нуля.
-            skipBroadcastHistory();
+            applySelfStatus(resp);
         }, cb);
-    }
-
-    /** Ставит lastBroadcastId на текущий максимум, чтобы не присылать старые рассылки. */
-    private static void skipBroadcastHistory() {
-        getJson("/v1/broadcast/latest", json -> {
-            if (json == null || !json.has("id")) return;
-            long id = json.get("id").getAsLong();
-            MinecraftClient.getInstance().execute(() -> {
-                PmChatClient.getConfig().lastBroadcastId = id;
-                PmChatClient.getConfig().save();
-            });
-        });
     }
 
     public static void login(String username, String password, Callback<Void> cb) {
@@ -194,6 +187,13 @@ public final class PmBackend {
         body.addProperty("password", password);
         postJson("/v1/login", body, resp -> {
             if (resp == null) return;
+            // На свежей установке (lastBroadcastId ещё 0) вход в существующий
+            // аккаунт тоже не должен вывалить всю историю рассылок — стартуем с
+            // текущего baseline. Уже настроенный клиент своё значение не трогаем.
+            if (PmChatClient.getConfig().lastBroadcastId <= 0
+                    && resp.has("broadcastBaseline") && !resp.get("broadcastBaseline").isJsonNull()) {
+                PmChatClient.getConfig().lastBroadcastId = resp.get("broadcastBaseline").getAsLong();
+            }
             if (resp.has("token")) PmChatClient.getConfig().backendToken = resp.get("token").getAsString();
             PmChatClient.getConfig().save();
             applySelfStatus(resp);
@@ -205,6 +205,10 @@ public final class PmBackend {
     private static volatile boolean selfMuted = false;
     private static volatile long selfMutedUntilAt = 0L;
     private static volatile boolean selfBanned = false;
+    /** Является ли ЗАЛОГИНЕННЫЙ аккаунт бэкенда админом — проверено сервером по токену,
+     *  а не по нику Minecraft (см. server-pocketchat ADMIN_USERNAME). Обновляется на
+     *  login/register/ping. */
+    private static volatile boolean selfAdmin = false;
 
     private static void applySelfStatus(JsonObject resp) {
         if (resp == null) return;
@@ -215,6 +219,7 @@ public final class PmBackend {
             selfMutedUntilAt = parseIsoMillis(resp.get("mutedUntil").getAsString());
         }
         if (resp.has("banned")) selfBanned = resp.get("banned").getAsBoolean();
+        if (resp.has("admin")) selfAdmin = resp.get("admin").getAsBoolean();
         // Уведомляем только на переходе false→true — иначе на каждом пинге (раз в
         // минуту, пока мут/бан ещё активен) сообщение сыпалось бы заново.
         if (!wasBanned && selfBanned) {
@@ -233,6 +238,16 @@ public final class PmBackend {
     public static boolean selfRestricted() {
         if (!isConfigured() || !hasAccount()) return false;
         return selfBanned || (selfMuted && selfMutedUntilAt > System.currentTimeMillis());
+    }
+
+    /**
+     * Подтверждён ли ЭТОТ клиент сервером как админ: залогинен в аккаунт бэкенда
+     * {@code ADMIN_USERNAME} (нужен пароль — т.е. регистрация/вход), а не просто
+     * зашёл в Minecraft под ником админа. Именно это, а не совпадение ника,
+     * должно открывать админ-панель.
+     */
+    public static boolean isSelfAdmin() {
+        return isConfigured() && hasAccount() && selfAdmin;
     }
 
     public static void setPassword(String password, Callback<Void> cb) {
