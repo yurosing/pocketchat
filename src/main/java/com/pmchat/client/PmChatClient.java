@@ -2032,7 +2032,11 @@ public class PmChatClient implements ClientModInitializer {
         // сообщение в почтовый ящик на бэкенде вместо этого — заберёт при опросе
         // (см. nextMailboxPollAt в тике), как только откроет мессенджер где угодно.
         boolean online = isPlayerOnlineHere(target);
-        if (online || !(PmBackend.isConfigured() && PmBackend.hasAccount())) {
+        if (PmBackend.isConfigured() && PmBackend.hasAccount() && PmBackend.isBot(target)) {
+            // Собеседник — бот: он не игрок, /m ему не дойдёт. Кладём в очередь
+            // входящих бота через Bot API — бот заберёт это своим getUpdates.
+            PmBackend.sendToBot(target, wire, null);
+        } else if (online || !(PmBackend.isConfigured() && PmBackend.hasAccount())) {
             pmDeliver(target, wire);
             synchronized (pendingEcho) {
                 pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});

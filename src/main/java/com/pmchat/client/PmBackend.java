@@ -64,9 +64,11 @@ public final class PmBackend {
         public final long dmPrice;
         /** Ключ должности, назначенной вручную в админ-панели (null — не назначена, см. {@link RoleDef}). */
         public final String roleKey;
+        /** Это бот (см. таблицу bots) — ЛС ему идут через Bot API бэкенда, а не через /m. */
+        public final boolean bot;
 
         AccountInfo(String username, boolean verified, boolean official, String avatarUrl, long lastSeenAt,
-                    boolean sharePrecise, boolean muted, boolean banned, long dmPrice, String roleKey) {
+                    boolean sharePrecise, boolean muted, boolean banned, long dmPrice, String roleKey, boolean bot) {
             this.username = username;
             this.verified = verified;
             this.official = official;
@@ -77,6 +79,7 @@ public final class PmBackend {
             this.banned = banned;
             this.dmPrice = dmPrice;
             this.roleKey = roleKey;
+            this.bot = bot;
         }
     }
 
@@ -827,9 +830,84 @@ public final class PmBackend {
                     json.has("muted") && json.get("muted").getAsBoolean(),
                     json.has("banned") && json.get("banned").getAsBoolean(),
                     json.has("dmPrice") ? json.get("dmPrice").getAsLong() : 0L,
-                    json.has("roleKey") && !json.get("roleKey").isJsonNull() ? json.get("roleKey").getAsString() : null);
+                    json.has("roleKey") && !json.get("roleKey").isJsonNull() ? json.get("roleKey").getAsString() : null,
+                    json.has("bot") && json.get("bot").getAsBoolean());
             run(cb, true, info, null);
         });
+    }
+
+    // ---------- боты (как в Telegram): владелец создаёт/удаляет, ЛС боту идут сюда ----------
+
+    /** Бот, принадлежащий текущему аккаунту (см. server-pocketchat, таблица bots). */
+    public static final class BotInfo {
+        public final String username;
+        public final String name;
+        /** Bot-токен — показываем владельцу, он вставляет его в свою программу-бота. */
+        public final String token;
+
+        BotInfo(String username, String name, String token) {
+            this.username = username;
+            this.name = name;
+            this.token = token;
+        }
+    }
+
+    /** Это бот (по кэшу публичного профиля) — ЛС ему шлём через Bot API, а не через /m. */
+    public static boolean isBot(String username) {
+        AccountInfo info = cachedAccountInfo(username);
+        return info != null && info.bot;
+    }
+
+    public static void createBot(String botUsername, String name, Callback<BotInfo> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("botUsername", botUsername);
+        body.addProperty("name", name);
+        postJson("/v1/bots/create", body,
+                resp -> {
+                    if (resp != null && resp.has("token")) {
+                        run(cb, true, new BotInfo(
+                                resp.has("botUsername") ? resp.get("botUsername").getAsString() : botUsername,
+                                name, resp.get("token").getAsString()), null);
+                    }
+                },
+                (ok, v, err) -> { if (!ok) run(cb, false, null, err); });
+    }
+
+    public static void listBots(Callback<java.util.List<BotInfo>> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        getJson("/v1/bots?token=" + enc(PmChatClient.getConfig().backendToken), json -> {
+            java.util.List<BotInfo> list = new java.util.ArrayList<>();
+            if (json != null && json.has("bots")) {
+                for (com.google.gson.JsonElement el : json.getAsJsonArray("bots")) {
+                    JsonObject o = el.getAsJsonObject();
+                    list.add(new BotInfo(
+                            o.get("username").getAsString(),
+                            o.has("name") ? o.get("name").getAsString() : "",
+                            o.has("token") ? o.get("token").getAsString() : ""));
+                }
+            }
+            run(cb, json != null, list, json == null ? "request failed" : null);
+        });
+    }
+
+    public static void deleteBot(String botUsername, Callback<Void> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("botUsername", botUsername);
+        postJson("/v1/bots/delete", body, null, cb);
+    }
+
+    /** ЛС от игрока боту — уходит в очередь входящих бота (bot_updates), а не через /m. */
+    public static void sendToBot(String botUsername, String wire, Callback<Void> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("botUsername", botUsername);
+        body.addProperty("wire", wire);
+        postJson("/v1/bots/message", body, null, cb);
     }
 
     /**
