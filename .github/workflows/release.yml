@@ -49,11 +49,15 @@ jobs:
             echo "name=v$version" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Extract current version's release notes
+        run: |
+          awk '/^## PocketChat/{if(++n==2) exit} {print}' RELEASE_NOTES.md > CURRENT_RELEASE_NOTES.md
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.name }}
           target_commitish: ${{ github.sha }}
-          body_path: RELEASE_NOTES.md
+          body_path: CURRENT_RELEASE_NOTES.md
           files: |
             ${{ steps.jar.outputs.path }}
