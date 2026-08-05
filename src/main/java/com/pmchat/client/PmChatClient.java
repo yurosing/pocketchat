@@ -1233,6 +1233,9 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     private static int onIncoming(String sender, String text) {
+        // Диалог с самим собой не заводим — это либо эхо своего же /m себе, либо
+        // фаззи-совпадение ника. Для заметок себе есть Избранное (SAVED).
+        if (sender != null && sender.equalsIgnoreCase(selfName())) return 0;
         // Служебные метки от чужого мода
         if (PmWire.isHi(text)) {
             config.addModUser(sender);
@@ -1828,6 +1831,8 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Эхо нашей отправки через мод пропускаем, чужие (набранные руками /m) — записываем. */
     private static int onOutgoingEcho(String target, String text) {
+        // /m самому себе — не заводим диалог с собой (для заметок есть Избранное).
+        if (target != null && target.equalsIgnoreCase(selfName())) return 0;
         if (PmWire.isTyping(text) || PmWire.isSeen(text) || PmWire.isHi(text)
                 || PmWire.parseReaction(text) != null || PmWire.isPinMeta(text)
                 || PmWire.isVoteMeta(text) || PmWire.isEditMeta(text) || PmWire.isUnpinMeta(text)
@@ -1996,6 +2001,9 @@ public class PmChatClient implements ClientModInitializer {
                                         int fragStart, int fragLen, String fragText) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || target.isBlank() || text.isBlank()) return null;
+        // Самому себе писать нельзя (/m самому себе на сервере уходит в никуда) —
+        // для заметок «себе» есть отдельное Избранное (SAVED). Тихо гасим отправку.
+        if (!isLocalChat(target) && target.equalsIgnoreCase(selfName())) return null;
         // Другие моды могут запретить отправку через API-слушателей.
         if (!com.pmchat.client.api.PocketChatClientImpl.allowOutgoing(target, text)) return null;
         boolean hasFrag = replyToHash != null && fragStart >= 0 && fragText != null;
@@ -2024,7 +2032,11 @@ public class PmChatClient implements ClientModInitializer {
         // сообщение в почтовый ящик на бэкенде вместо этого — заберёт при опросе
         // (см. nextMailboxPollAt в тике), как только откроет мессенджер где угодно.
         boolean online = isPlayerOnlineHere(target);
-        if (online || !(PmBackend.isConfigured() && PmBackend.hasAccount())) {
+        if (PmBackend.isConfigured() && PmBackend.hasAccount() && PmBackend.isBot(target)) {
+            // Собеседник — бот: он не игрок, /m ему не дойдёт. Кладём в очередь
+            // входящих бота через Bot API — бот заберёт это своим getUpdates.
+            PmBackend.sendToBot(target, wire, null);
+        } else if (online || !(PmBackend.isConfigured() && PmBackend.hasAccount())) {
             pmDeliver(target, wire);
             synchronized (pendingEcho) {
                 pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
@@ -2211,7 +2223,10 @@ public class PmChatClient implements ClientModInitializer {
      * подтвердив, что он действительно владеет тем аккаунтом.
      */
     public static boolean canOpenAdminPanel() {
-        return isAdminAccount() && PmBackend.isConfigured() && PmBackend.hasAccount();
+        // Только сервер-подтверждённый админ (залогинен в аккаунт ADMIN_USERNAME по
+        // паролю). Совпадения ника Minecraft недостаточно — иначе на офлайн/пиратском
+        // сервере любой, зашедший под ником tyurvib, видел бы админку без регистрации.
+        return PmBackend.isSelfAdmin();
     }
 
     public static boolean isRussian() {
