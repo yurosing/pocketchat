@@ -54,8 +54,6 @@ public class PmChatClient implements ClientModInitializer {
     private static long nextPresencePingAt = 0;
     /** Следующая проверка новых подарков — показать анимированную всплывашку (см. PmBackend.checkNewGifts). */
     private static long nextGiftPollAt = 0;
-    /** Следующий опрос почтового ящика офлайн-сообщений (см. PmBackend.pollMailbox). */
-    private static long nextMailboxPollAt = 0;
     /** Следующая проверка ролей всех игроков в таб-листе (см. cacheOnlineRoles). */
     private static long nextRoleCacheAt = 0;
     private static long chatScreenClosedAt = 0;
@@ -256,20 +254,13 @@ public class PmChatClient implements ClientModInitializer {
                     }
                 });
             }
-            // Опрос почтового ящика офлайн-сообщений — раз в 25 секунд, доставляет
-            // отложенные ЛС (см. PmChatClient#sendMessage) так же, как обычное входящее.
-            if (client.world != null && System.currentTimeMillis() >= nextMailboxPollAt
-                    && PmBackend.isConfigured() && PmBackend.hasAccount()) {
-                nextMailboxPollAt = System.currentTimeMillis() + 25_000L;
-                PmBackend.pollMailbox(m -> onIncoming(m.from, m.wire));
-            }
             // Кэшируем роль КАЖДОГО игрока в таб-листе, а не только того, чей чат/профиль
             // сейчас открыт — иначе после выхода игрока, чей ник мы ни разу не посмотрели,
             // значок его должности пропадал бы вовсе (казалось бы «нет роли»).
             if (client.getNetworkHandler() != null && System.currentTimeMillis() >= nextRoleCacheAt) {
                 nextRoleCacheAt = System.currentTimeMillis() + 3000L;
                 for (net.minecraft.client.network.PlayerListEntry e : client.getNetworkHandler().getPlayerList()) {
-                    String name = e.getProfile().getName();
+                    String name = e.getProfile().name();
                     String code = com.pmchat.screen.PmRoles.detect(com.pmchat.screen.PmNames.displayString(name));
                     config.cacheRole(name, code);
                 }
