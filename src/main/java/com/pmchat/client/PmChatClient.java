@@ -54,6 +54,10 @@ public class PmChatClient implements ClientModInitializer {
     private static long nextPresencePingAt = 0;
     /** Следующая проверка новых подарков — показать анимированную всплывашку (см. PmBackend.checkNewGifts). */
     private static long nextGiftPollAt = 0;
+    /** Следующий опрос почтового ящика офлайн-сообщений (см. PmBackend.pollMailbox). */
+    private static long nextMailboxPollAt = 0;
+    /** Следующая проверка ролей всех игроков в таб-листе (см. cacheOnlineRoles). */
+    private static long nextRoleCacheAt = 0;
     private static long chatScreenClosedAt = 0;
 
     /** Сентинел «диалога» общего чата. */
@@ -251,6 +255,24 @@ public class PmChatClient implements ClientModInitializer {
                         giftToast(g.from, gift != null ? gift.name : g.giftId, gift != null ? gift.icon : null);
                     }
                 });
+            }
+            // Опрос почтового ящика офлайн-сообщений — раз в 25 секунд, доставляет
+            // отложенные ЛС (см. PmChatClient#sendMessage) так же, как обычное входящее.
+            if (client.world != null && System.currentTimeMillis() >= nextMailboxPollAt
+                    && PmBackend.isConfigured() && PmBackend.hasAccount()) {
+                nextMailboxPollAt = System.currentTimeMillis() + 25_000L;
+                PmBackend.pollMailbox(m -> onIncoming(m.from, m.wire));
+            }
+            // Кэшируем роль КАЖДОГО игрока в таб-листе, а не только того, чей чат/профиль
+            // сейчас открыт — иначе после выхода игрока, чей ник мы ни разу не посмотрели,
+            // значок его должности пропадал бы вовсе (казалось бы «нет роли»).
+            if (client.getNetworkHandler() != null && System.currentTimeMillis() >= nextRoleCacheAt) {
+                nextRoleCacheAt = System.currentTimeMillis() + 3000L;
+                for (net.minecraft.client.network.PlayerListEntry e : client.getNetworkHandler().getPlayerList()) {
+                    String name = e.getProfile().getName();
+                    String code = com.pmchat.screen.PmRoles.detect(com.pmchat.screen.PmNames.displayString(name));
+                    config.cacheRole(name, code);
+                }
             }
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
@@ -533,10 +555,18 @@ public class PmChatClient implements ClientModInitializer {
             return 0; // строку в ванильном чате не прячем
         }
         // Общий чат: копим у себя, но строку из ванильного чата никогда не прячем.
-        // Discord-строки исключаем — иначе они попадали и в общий чат мода, а
-        // значит озвучивались TTS и пинговали упоминания звуком наравне с игроками.
-        boolean isDiscordLine = discord != null && discord.matcher(plain).find();
-        if (global != null && !isDiscordLine) {
+        // Discord-строки раньше обрабатывались через (более общий, "чужой") паттерн
+        // global — из-за случайного совпадения формата они дублировались и озвучивались
+        // TTS/пинговали упоминания наравне с игроками. Теперь ловим их отдельным,
+        // предназначенным паттерном discord (со своими группами автор/текст) и всё
+        // равно добавляем в общий чат — просто с явной пометкой fromDiscord, чтобы
+        // в интерфейсе был виден значок Discord рядом с автором.
+        Matcher dm = discord != null ? discord.matcher(plain) : null;
+        if (dm != null && dm.find() && dm.groupCount() >= 2) {
+            addGlobal(dm.group(1), dm.group(2).trim(), true);
+            return 0;
+        }
+        if (global != null) {
             Matcher m = global.matcher(plain);
             if (m.find()) {
                 addGlobal(m.group(1), m.group(2).trim());
@@ -1149,8 +1179,13 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     private static void addGlobal(String sender, String text) {
+        addGlobal(sender, text, false);
+    }
+
+    private static void addGlobal(String sender, String text, boolean fromDiscord) {
         PmMessage msg = new PmMessage(sender.equalsIgnoreCase(selfName()), text, System.currentTimeMillis(), 0);
         msg.sender = sender;
+        msg.fromDiscord = fromDiscord;
         globalChat.add(msg);
         while (globalChat.size() > GLOBAL_LIMIT) {
             globalChat.remove(0);
@@ -2083,6 +2118,30 @@ public class PmChatClient implements ClientModInitializer {
 
     public static void setKnownBalance(String value) {
         knownBalance = value;
+    }
+
+    /**
+     * Объявляет замучивание/бан тостом сразу, как только пинг присутствия (раз в
+     * минуту, см. {@link PmBackend#ping}) его обнаружит — раньше об этом узнавали
+     * только постфактум, при попытке отправить сообщение (анимация отказа ✋).
+     */
+    public static void announceRestriction(boolean banned, long mutedUntilAtMs) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        Text notice = banned
+                ? Text.translatable("pmchat.restrict.banned")
+                : Text.translatable("pmchat.restrict.muted", formatMuteDuration(mutedUntilAtMs));
+        client.execute(() -> {
+            client.getToastManager().add(new PmToast(Text.translatable("pmchat.restrict.title").getString(),
+                    notice.getString()));
+            playNotifySound(client);
+        });
+    }
+
+    private static String formatMuteDuration(long untilAtMs) {
+        long minutes = Math.max(1, (untilAtMs - System.currentTimeMillis()) / 60_000L);
+        if (minutes < 60) return minutes + " " + Text.translatable("pmchat.restrict.minutes").getString();
+        long hours = minutes / 60;
+        return hours + " " + Text.translatable("pmchat.restrict.hours").getString();
     }
 
     /** Всплывашка о полученном подарке (4.2). */

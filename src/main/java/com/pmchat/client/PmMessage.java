@@ -20,6 +20,9 @@ public class PmMessage {
     /** Автор (только для общего чата; в ЛС null). */
     public String sender;
 
+    /** Пришло из Discord-бриджа сервера (только общий чат) — рисуем значок рядом с автором. */
+    public boolean fromDiscord;
+
     /** Прочитано собеседником (по метке seen, только между модами). */
     public boolean read;
 
