@@ -661,6 +661,18 @@ public class PmScreen extends Screen {
                         sendCircleSnapshot();
                     }));
         }
+        // «Медиа и файлы» с этим собеседником (как shared-media в Telegram) —
+        // отдельное окно с вкладками Все/ГС/Медиа поверх всей истории переписки.
+        if (isPlayerTab(selected)) {
+            String peer = selected;
+            y += rowH + 2;
+            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                    Text.literal("▦ " + Text.translatable("pmchat.sharedmedia.open").getString()),
+                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
+                        moreMenuOpen = false;
+                        MinecraftClient.getInstance().setScreen(new PmContactMediaScreen(this, peer));
+                    }));
+        }
         // Заглушить уведомления этого личного диалога (как в Telegram) — у каналов
         // и групп для этого есть отдельный колокольчик в шапке (см. isFeedTab),
         // личным диалогам его не хватало вовсе.
@@ -926,9 +938,7 @@ public class PmScreen extends Screen {
         int cx = x + d / 2;
         int cy = topY + 4;
         fillCircle(ctx, cx, cy, d / 2, 0xFF1E9E5A);
-        String check = "✓";
-        int tw = tr.getWidth(check);
-        ctx.drawText(tr, check, cx - tw / 2, cy - 4, 0xFFFFFFFF, false);
+        PmIcons.draw(ctx, PmIcons.CHECK, cx - 4, cy - 4, 8, 8, 0xFFFFFFFF);
         return d;
     }
 
