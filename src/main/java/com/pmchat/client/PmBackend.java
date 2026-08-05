@@ -208,11 +208,20 @@ public final class PmBackend {
 
     private static void applySelfStatus(JsonObject resp) {
         if (resp == null) return;
+        boolean wasMuted = selfMuted;
+        boolean wasBanned = selfBanned;
         if (resp.has("muted")) selfMuted = resp.get("muted").getAsBoolean();
         if (resp.has("mutedUntil") && !resp.get("mutedUntil").isJsonNull()) {
             selfMutedUntilAt = parseIsoMillis(resp.get("mutedUntil").getAsString());
         }
         if (resp.has("banned")) selfBanned = resp.get("banned").getAsBoolean();
+        // Уведомляем только на переходе false→true — иначе на каждом пинге (раз в
+        // минуту, пока мут/бан ещё активен) сообщение сыпалось бы заново.
+        if (!wasBanned && selfBanned) {
+            PmChatClient.announceRestriction(true, 0L);
+        } else if (!wasMuted && selfMuted && selfMutedUntilAt > System.currentTimeMillis()) {
+            PmChatClient.announceRestriction(false, selfMutedUntilAt);
+        }
     }
 
     /**

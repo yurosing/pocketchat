@@ -1,5 +1,7 @@
 package com.pmchat.screen;
 
+import com.pmchat.client.PmChatClient;
+import com.pmchat.client.PmConfig;
 import com.pmchat.client.PmMedia;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Click;
@@ -19,17 +21,13 @@ import java.util.List;
  * из {@code config/pmchat-music} (и отдельные аудиофайлы): клик по папке
  * запускает её как плейлист, клик по треку — играет с него. Сверху —
  * то же свёрнутое окошко с управлением, что и в углу (PmMedia.renderMini),
- * так что паузой/перемоткой/следующим можно рулить прямо отсюда.
+ * так что паузой/перемоткой/следующим можно рулить прямо отсюда. Палитра —
+ * общая тема мода (3.8), а не свой зашитый зелёный цвет.
  */
 public class PmMediaScreen extends Screen {
 
-    private static final int BG = 0xF00B120F;
-    private static final int PANEL = 0xFF101A16;
-    private static final int BORDER = 0xFF2E5C48;
-    private static final int ROW = 0xFF16241E;
-    private static final int ROW_HOVER = 0xFF23423A;
-    private static final int TEXT = 0xFFEDF3F0;
-    private static final int SUBTLE = 0xFF7FA694;
+    private final PmConfig config = PmChatClient.getConfig();
+    private int BG, PANEL, BORDER, ROW, ROW_HOVER, TEXT, SUBTLE;
 
     private int px, py, pw, ph;
     private int scroll = 0;
@@ -40,8 +38,20 @@ public class PmMediaScreen extends Screen {
         super(Text.translatable("pmchat.media.title"));
     }
 
+    private void applyTheme() {
+        PmTheme t = PmTheme.dialog(config.theme);
+        BG = (t.bg & 0xFFFFFF) | 0xC0000000;
+        PANEL = t.bg;
+        BORDER = t.border;
+        ROW = t.btnBg;
+        ROW_HOVER = t.btnHover;
+        TEXT = t.title;
+        SUBTLE = t.label;
+    }
+
     @Override
     protected void init() {
+        applyTheme();
         pw = Math.min(360, width - 40);
         ph = Math.min(300, height - 60);
         px = (width - pw) / 2;
@@ -52,7 +62,7 @@ public class PmMediaScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         // Тёмная заливка вместо renderBackground(): его блюр падает
         // «Can only blur once per frame», если кадр уже размывался.
-        ctx.fill(0, 0, width, height, 0xC00B120F);
+        ctx.fill(0, 0, width, height, BG);
         // Панель
         ctx.fill(px, py, px + pw, py + ph, PANEL);
         ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);

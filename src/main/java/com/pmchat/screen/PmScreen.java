@@ -661,6 +661,21 @@ public class PmScreen extends Screen {
                         sendCircleSnapshot();
                     }));
         }
+        // Заглушить уведомления этого личного диалога (как в Telegram) — у каналов
+        // и групп для этого есть отдельный колокольчик в шапке (см. isFeedTab),
+        // личным диалогам его не хватало вовсе.
+        if (isPlayerTab(selected)) {
+            String convId = selected;
+            boolean muted = config.isMutedThread(convId);
+            y += rowH + 2;
+            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                    Text.literal("♪ " + Text.translatable(muted ? "pmchat.tip.unmute" : "pmchat.tip.mute").getString()),
+                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, muted ? WBTN_TEXT : 0xFF8FD8A8, btn -> {
+                        config.toggleMutedThread(convId);
+                        moreMenuOpen = false;
+                        rebuild();
+                    }));
+        }
     }
 
     /** «Кружок», шаг 1: захватывает текущий кадр так же, как F2, и сразу отправляет. */
@@ -3932,8 +3947,14 @@ public class PmScreen extends Screen {
                     context.drawText(textRenderer, "●", nx, y + dy + 3, applyAlpha(0xFF6FBF8B, alpha), false);
                     nx += 9;
                 }
-                context.drawText(textRenderer, trim(senderName, bx + dx + bw - 4 - nx), nx, y + dy + 3,
+                String shownSender = trim(senderName, bx + dx + bw - 4 - nx - (msg.fromDiscord ? 11 : 0));
+                context.drawText(textRenderer, shownSender, nx, y + dy + 3,
                         applyAlpha(nameColor(senderName), alpha), false);
+                // Значок Discord — сообщение пришло через бридж сервера, а не от игрока напрямую.
+                if (msg.fromDiscord) {
+                    PmIcons.draw(context, PmIcons.DISCORD, nx + textRenderer.getWidth(shownSender) + 3,
+                            y + dy + 2, 9, 9, applyAlpha(0xFF7289DA, alpha));
+                }
                 // 6.8: кнопка ⚠ «предупредить» в общем чате/каналах (staff-функции).
                 // Показываем только при наведении на пузырь — иначе значки засоряют
                 // общий чат.
