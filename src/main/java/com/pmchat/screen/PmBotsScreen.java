@@ -63,7 +63,8 @@ public class PmBotsScreen extends Screen {
         layout();
     }
 
-    private void loadBots() {
+    /** Package-visible: {@link PmBotEditScreen} calls this on the way back to refresh the list. */
+    void loadBots() {
         PmBackend.listBots((ok, list, err) -> {
             bots = ok && list != null ? list : new ArrayList<>();
             if (client != null) layout();
@@ -114,7 +115,7 @@ public class PmBotsScreen extends Screen {
                 if (y + rowH > py + ph - 44) break; // не влезает — прячем остаток
                 int bw = fw;
                 int actY = y + 13;
-                int actW = (bw - 8) / 3;
+                int actW = (bw - 12) / 4;
                 addDrawableChild(FlatButton.centered(textRenderer, fx, actY, actW, 13,
                         Text.translatable("pmchat.bots.copytoken"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
                         btn -> {
@@ -126,7 +127,10 @@ public class PmBotsScreen extends Screen {
                         Text.translatable("pmchat.bots.openchat"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF8FD8A8,
                         btn -> MinecraftClient.getInstance().setScreen(new PmScreen(b.username))));
                 addDrawableChild(FlatButton.centered(textRenderer, fx + 2 * (actW + 4), actY, actW, 13,
-                        Text.translatable("pmchat.bots.delete"), 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A,
+                        Text.literal("✎"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
+                        btn -> MinecraftClient.getInstance().setScreen(new PmBotEditScreen(this, b))));
+                addDrawableChild(FlatButton.centered(textRenderer, fx + 3 * (actW + 4), actY, actW, 13,
+                        Text.literal("✖"), 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A,
                         btn -> deleteBot(b.username)));
                 y += rowH;
                 shown++;

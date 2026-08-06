@@ -900,6 +900,33 @@ public final class PmBackend {
         postJson("/v1/bots/delete", body, null, cb);
     }
 
+    /**
+     * Редактирует своего бота: любое из {@code newUsername}/{@code name} можно
+     * оставить null/пустым, чтобы не менять — меняется только присланное.
+     * {@code regenerateToken} — перевыпустить токен (старый сразу перестаёт
+     * работать, как «Revoke token» в BotFather).
+     */
+    public static void editBot(String botUsername, String newUsername, String name,
+                                boolean regenerateToken, Callback<BotInfo> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("botUsername", botUsername);
+        if (newUsername != null && !newUsername.isBlank()) body.addProperty("newBotUsername", newUsername);
+        if (name != null) body.addProperty("name", name);
+        if (regenerateToken) body.addProperty("regenerateToken", true);
+        postJson("/v1/bots/edit", body,
+                resp -> {
+                    if (resp != null && resp.has("token") && resp.has("botUsername")) {
+                        run(cb, true, new BotInfo(
+                                resp.get("botUsername").getAsString(),
+                                resp.has("name") ? resp.get("name").getAsString() : "",
+                                resp.get("token").getAsString()), null);
+                    }
+                },
+                (ok, v, err) -> { if (!ok) run(cb, false, null, err); });
+    }
+
     /** ЛС от игрока боту — уходит в очередь входящих бота (bot_updates), а не через /m. */
     public static void sendToBot(String botUsername, String wire, Callback<Void> cb) {
         if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
