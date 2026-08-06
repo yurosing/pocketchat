@@ -1317,6 +1317,14 @@ public class PmScreen extends Screen {
             footerX += 20;
         }
 
+        // Свои боты (как в Telegram) — раньше жили в Настройках, вынесены сюда как
+        // отдельный первоклассный пункт, наравне с магазином. Нужен аккаунт бэкенда.
+        if (com.pmchat.client.PmBackend.hasAccount()) {
+            addDrawableChild(icon(footerX, py + PANEL_H - 19, 16, 13, PmIcons.BOT, 0xFF8FA7E0, "pmchat.bots.open",
+                    btn -> MinecraftClient.getInstance().setScreen(new PmBotsScreen(this))));
+            footerX += 20;
+        }
+
         // Красная кнопка входа в админ-панель — видна только аккаунту ADMIN_USERNAME
         // бэкенда (server-pocketchat, по умолчанию tyurvib), прямо у списка чатов.
         // Обязательно требует входа в аккаунт бэкенда (см. canOpenAdminPanel) —
