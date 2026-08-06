@@ -115,6 +115,7 @@ public class PmAdminScreen extends Screen {
 
     // ---- Вкладка 8: боты — цены + заявки в магазин ботов ----
     private TextFieldWidget botCreatePriceField, botstoreSubmitPriceField;
+    private TextFieldWidget botVerifyTargetField;
     private List<PmBackend.BotListingPending> botPending = Collections.emptyList();
     private int botScroll = 0;
     private int botListTop, botListBottom;
@@ -925,13 +926,35 @@ public class PmAdminScreen extends Screen {
                 Text.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doSavePrices()));
 
-        int listY = y + 68;
+        int verifyY = y + 66;
+        section("pmchat.admin.bots.section.verify", fx, verifyY - 2);
+        botVerifyTargetField = labeledField(fx, verifyY + 12, fw, "pmchat.admin.bots.username", 32);
+        int vbtnW = (fw - 8) / 2;
+        addDrawableChild(FlatButton.centered(textRenderer, fx, verifyY + 42, vbtnW, 16,
+                Text.translatable("pmchat.admin.bots.verify.on"), BTN_BG, BTN_HOVER, OK, OK,
+                btn -> doSetBotVerified(true)));
+        addDrawableChild(FlatButton.centered(textRenderer, fx + vbtnW + 8, verifyY + 42, vbtnW, 16,
+                Text.translatable("pmchat.admin.bots.verify.off"), BTN_BG, BTN_HOVER, BAD, BAD,
+                btn -> doSetBotVerified(false)));
+
+        int listY = verifyY + 68;
         section("pmchat.admin.bots.section.pending", fx, listY - 2);
         botListTop = listY + 12;
         botListBottom = height - 32;
 
         loadPrices();
         loadBotPending();
+    }
+
+    private void doSetBotVerified(boolean verified) {
+        String botUsername = botVerifyTargetField.getText().trim();
+        if (botUsername.isEmpty()) {
+            setStatus(Text.translatable("pmchat.admin.target.needed"), BAD);
+            return;
+        }
+        PmBackend.adminSetBotVerified(botUsername, verified, (ok, v, err) ->
+                setStatus(ok ? Text.translatable("pmchat.admin.ok") : Text.translatable("pmchat.admin.fail", String.valueOf(err)),
+                        ok ? OK : BAD));
     }
 
     private void loadPrices() {

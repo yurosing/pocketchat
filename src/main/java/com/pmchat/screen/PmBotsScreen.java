@@ -264,7 +264,11 @@ public class PmBotsScreen extends Screen {
             for (PmBackend.BotInfo b : bots) {
                 if (y + rowH > listBottom) break;
                 String head = "@" + b.username + (b.name.isBlank() ? "" : "  " + b.name);
-                ctx.drawText(textRenderer, trim(head, fw), fx, y, VALUE, false);
+                String headTrimmed = trim(head, b.verified ? fw - 10 : fw);
+                ctx.drawText(textRenderer, headTrimmed, fx, y, VALUE, false);
+                if (b.verified) {
+                    PmScreen.drawVerifiedBadge(ctx, textRenderer, fx + textRenderer.getWidth(headTrimmed) + 3, y - 1);
+                }
                 y += rowH;
             }
         }

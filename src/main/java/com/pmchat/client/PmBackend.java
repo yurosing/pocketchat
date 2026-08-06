@@ -844,11 +844,18 @@ public final class PmBackend {
         public final String name;
         /** Bot-токен — показываем владельцу, он вставляет его в свою программу-бота. */
         public final String token;
+        /** Галочка верификации — ставит только админ, см. adminSetBotVerified. */
+        public final boolean verified;
 
         BotInfo(String username, String name, String token) {
+            this(username, name, token, false);
+        }
+
+        BotInfo(String username, String name, String token, boolean verified) {
             this.username = username;
             this.name = name;
             this.token = token;
+            this.verified = verified;
         }
     }
 
@@ -885,7 +892,8 @@ public final class PmBackend {
                     list.add(new BotInfo(
                             o.get("username").getAsString(),
                             o.has("name") ? o.get("name").getAsString() : "",
-                            o.has("token") ? o.get("token").getAsString() : ""));
+                            o.has("token") ? o.get("token").getAsString() : "",
+                            o.has("verified") && o.get("verified").getAsBoolean()));
                 }
             }
             run(cb, json != null, list, json == null ? "request failed" : null);
@@ -1633,6 +1641,14 @@ public final class PmBackend {
         body.addProperty("listingId", listingId);
         body.addProperty("approve", approve);
         postJson("/v1/admin/botstore/review", body, null, cb);
+    }
+
+    /** Галочка верификации бота (аналог adminVerify для игроков, но у ботов своя таблица). */
+    public static void adminSetBotVerified(String botUsername, boolean verified, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("botUsername", botUsername);
+        body.addProperty("verified", verified);
+        postJson("/v1/admin/bots/verify", body, null, cb);
     }
 
     // ---------- публикации на страничке профиля (стена) ----------
