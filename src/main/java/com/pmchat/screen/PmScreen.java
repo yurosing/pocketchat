@@ -1317,6 +1317,14 @@ public class PmScreen extends Screen {
             footerX += 20;
         }
 
+        // Свои боты (как в Telegram) — раньше жили в Настройках, вынесены сюда как
+        // отдельный первоклассный пункт, наравне с магазином. Нужен аккаунт бэкенда.
+        if (com.pmchat.client.PmBackend.hasAccount()) {
+            addDrawableChild(icon(footerX, py + PANEL_H - 19, 16, 13, PmIcons.BOT, 0xFF8FA7E0, "pmchat.bots.open",
+                    btn -> MinecraftClient.getInstance().setScreen(new PmBotsScreen(this))));
+            footerX += 20;
+        }
+
         // Красная кнопка входа в админ-панель — видна только аккаунту ADMIN_USERNAME
         // бэкенда (server-pocketchat, по умолчанию tyurvib), прямо у списка чатов.
         // Обязательно требует входа в аккаунт бэкенда (см. canOpenAdminPanel) —
@@ -3231,6 +3239,10 @@ public class PmScreen extends Screen {
 
         int y = top;
 
+        // Пока идёт поиск — прячем закреплённые каналы/избранное/группы/рассылки
+        // целиком (а не просто перестаём их фильтровать): иначе они остаются на
+        // месте поверх результатов поиска и всё визуально слипается в один ком.
+        if (query.isEmpty()) {
         // Заголовок секции «Каналы» (общий чат, избранное, серверные каналы)
         context.drawText(textRenderer, Text.translatable("pmchat.section.channels").getString().toUpperCase(Locale.ROOT),
                 px + 7, y + 1, SUBTLE, false);
@@ -3425,6 +3437,13 @@ public class PmScreen extends Screen {
                     px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
             broadcastJoinRect = new int[]{px, y, LEFT_W, 12};
             y += 14;
+        }
+        } else {
+            // Идёт поиск — эти строки не рисуются, значит и кликать по их старым
+            // координатам нельзя (иначе можно случайно попасть на «+Новая группа» и т.п.).
+            groupNewRect = null;
+            broadcastNewRect = null;
+            broadcastJoinRect = null;
         }
 
         // Заголовок секции «Личные» (переписки с игроками)

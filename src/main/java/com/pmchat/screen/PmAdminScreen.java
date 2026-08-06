@@ -53,6 +53,7 @@ public class PmAdminScreen extends Screen {
             "pmchat.admin.tab.rules",
             "pmchat.admin.tab.shop",
             "pmchat.admin.tab.roles",
+            "pmchat.admin.tab.bots",
     };
 
     private final Screen parent;
@@ -112,6 +113,14 @@ public class PmAdminScreen extends Screen {
     private final java.util.List<Object[]> roleRowRects = new java.util.ArrayList<>();
     private final java.util.List<Object[]> roleDeleteRects = new java.util.ArrayList<>();
 
+    // ---- Вкладка 8: боты — цены + заявки в магазин ботов ----
+    private TextFieldWidget botCreatePriceField, botstoreSubmitPriceField;
+    private List<PmBackend.BotListingPending> botPending = Collections.emptyList();
+    private int botScroll = 0;
+    private int botListTop, botListBottom;
+    private final java.util.List<Object[]> botApproveRects = new java.util.ArrayList<>();
+    private final java.util.List<Object[]> botRejectRects = new java.util.ArrayList<>();
+
     /** Подписи над полями форм (ключ локализации, x, y) — рисуются в render() поверх полей ниже них. */
     private final java.util.List<Object[]> formLabels = new java.util.ArrayList<>();
     /** Секции-заголовки форм (ключ локализации, x, y). */
@@ -165,6 +174,7 @@ public class PmAdminScreen extends Screen {
             case 5 -> buildRules(contentTop);
             case 6 -> buildShop(contentTop);
             case 7 -> buildRoles(contentTop);
+            case 8 -> buildBots(contentTop);
             default -> { }
         }
 
@@ -899,6 +909,121 @@ public class PmAdminScreen extends Screen {
         }
     }
 
+    // ---------- вкладка 8: боты — цены + заявки в магазин ----------
+
+    private void buildBots(int y) {
+        int cardW = Math.min(420, width - 40);
+        int cx = width / 2;
+        int fx = cx - cardW / 2 + 12;
+        int fw = cardW - 24;
+
+        section("pmchat.admin.bots.section.prices", fx, y - 2);
+        int halfW = (fw - 8) / 2;
+        botCreatePriceField = labeledField(fx, y + 12, halfW, "pmchat.admin.bots.createprice", 9);
+        botstoreSubmitPriceField = labeledField(fx + halfW + 8, y + 12, halfW, "pmchat.admin.bots.submitprice", 9);
+        addDrawableChild(FlatButton.centered(textRenderer, fx, y + 42, fw, 16,
+                Text.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
+                btn -> doSavePrices()));
+
+        int listY = y + 68;
+        section("pmchat.admin.bots.section.pending", fx, listY - 2);
+        botListTop = listY + 12;
+        botListBottom = height - 32;
+
+        loadPrices();
+        loadBotPending();
+    }
+
+    private void loadPrices() {
+        PmBackend.adminGetPrices((ok, prices, err) -> {
+            if (ok && prices != null) {
+                botCreatePriceField.setText(String.valueOf(prices.botCreatePrice));
+                botstoreSubmitPriceField.setText(String.valueOf(prices.botstoreSubmitPrice));
+            }
+        });
+    }
+
+    private void doSavePrices() {
+        long createPrice, submitPrice;
+        try {
+            createPrice = Long.parseLong(botCreatePriceField.getText().trim());
+            submitPrice = Long.parseLong(botstoreSubmitPriceField.getText().trim());
+        } catch (NumberFormatException e) {
+            setStatus(Text.translatable("pmchat.admin.badamount"), BAD);
+            return;
+        }
+        if (createPrice < 0 || submitPrice < 0) {
+            setStatus(Text.translatable("pmchat.admin.badamount"), BAD);
+            return;
+        }
+        PmBackend.adminSetPrices(createPrice, submitPrice, (ok, v, err) ->
+                setStatus(ok ? Text.translatable("pmchat.admin.ok") : Text.translatable("pmchat.admin.fail", String.valueOf(err)),
+                        ok ? OK : BAD));
+    }
+
+    private void loadBotPending() {
+        PmBackend.adminBotstorePending((ok, list, err) -> {
+            if (ok) {
+                botPending = list;
+                botScroll = 0;
+            } else {
+                botPending = Collections.emptyList();
+                setStatus(Text.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
+            }
+        });
+    }
+
+    private void reviewBotListing(long id, boolean approve) {
+        PmBackend.adminReviewBotListing(id, approve, (ok, v, err) -> {
+            if (ok) loadBotPending();
+            else setStatus(Text.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
+        });
+    }
+
+    private void drawBots(DrawContext context, int mouseX, int mouseY) {
+        botApproveRects.clear();
+        botRejectRects.clear();
+        int cardW = Math.min(420, width - 40);
+        int cx = width / 2;
+        int left = cx - cardW / 2;
+        int right = cx + cardW / 2;
+
+        if (botPending.isEmpty()) {
+            context.drawText(textRenderer, Text.translatable("pmchat.admin.bots.pending.empty"),
+                    left, botListTop, SUBTLE, false);
+            return;
+        }
+
+        int y = botListTop;
+        for (int i = botScroll; i < botPending.size() && y + ROW_H <= botListBottom; i++) {
+            PmBackend.BotListingPending p = botPending.get(i);
+            boolean hovered = mouseY >= y && mouseY < y + ROW_H - 2 && mouseX >= left && mouseX < right;
+            context.fill(left, y, right, y + ROW_H - 2, hovered ? PANEL_LIGHT : PANEL);
+            context.fill(left, y, left + 2, y + ROW_H - 2, NEON_DIM);
+
+            String line = p.owner + ": " + p.name + " (" + p.price + ")";
+            context.drawText(textRenderer, trim(line, right - left - 100), left + 8, y + 6, TEXT_MAIN, false);
+
+            int btnW = 44, btnH = ROW_H - 6, btnY = y + 2;
+            int rejX = right - btnW - 2, apprX = rejX - btnW - 4;
+            boolean apprHover = mouseX >= apprX && mouseX < apprX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
+            boolean rejHover = mouseX >= rejX && mouseX < rejX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
+            context.fill(apprX, btnY, apprX + btnW, btnY + btnH, apprHover ? BTN_HOVER : BTN_BG);
+            context.drawStrokedRectangle(apprX, btnY, btnW, btnH, OK);
+            Text approve = Text.translatable("pmchat.admin.bots.approve");
+            context.drawText(textRenderer, approve, apprX + (btnW - textRenderer.getWidth(approve)) / 2, btnY + 3, OK, false);
+            context.fill(rejX, btnY, rejX + btnW, btnY + btnH, rejHover ? BTN_HOVER : BTN_BG);
+            context.drawStrokedRectangle(rejX, btnY, btnW, btnH, BAD);
+            Text reject = Text.translatable("pmchat.admin.bots.reject");
+            context.drawText(textRenderer, reject, rejX + (btnW - textRenderer.getWidth(reject)) / 2, btnY + 3, BAD, false);
+
+            botApproveRects.add(new Object[]{apprX, btnY, btnW, btnH, p.id});
+            botRejectRects.add(new Object[]{rejX, btnY, btnW, btnH, p.id});
+
+            y += ROW_H;
+        }
+    }
+
     // ---------- вкладки 3/4: жалобы и поддержка (общий скроллящийся список) ----------
 
     private void buildList(int y, boolean reportsTab) {
@@ -1041,6 +1166,7 @@ public class PmAdminScreen extends Screen {
             case 4 -> drawList(context, mouseX, mouseY, false);
             case 6 -> drawShop(context, mouseX, mouseY);
             case 7 -> drawRoles(context, mouseX, mouseY);
+            case 8 -> drawBots(context, mouseX, mouseY);
             default -> {
                 if (!status.getString().isEmpty()) {
                     context.drawText(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2,
@@ -1122,6 +1248,25 @@ public class PmAdminScreen extends Screen {
                 }
             }
         }
+        if (tab == 8) {
+            double mx = click.x(), my = click.y();
+            for (Object[] rect : botApproveRects) {
+                int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
+                long id = (long) rect[4];
+                if (mx >= x && mx < x + w && my >= y && my < y + h) {
+                    reviewBotListing(id, true);
+                    return true;
+                }
+            }
+            for (Object[] rect : botRejectRects) {
+                int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
+                long id = (long) rect[4];
+                if (mx >= x && mx < x + w && my >= y && my < y + h) {
+                    reviewBotListing(id, false);
+                    return true;
+                }
+            }
+        }
         return super.mouseClicked(click, doubled);
     }
 
@@ -1144,6 +1289,12 @@ public class PmAdminScreen extends Screen {
             int visible = Math.max(1, (roleListBottom - roleListTop) / ROW_H);
             int maxScroll = Math.max(0, roleDefs.size() - visible);
             roleScroll = Math.max(0, Math.min(maxScroll, roleScroll - (int) Math.signum(verticalAmount)));
+            return true;
+        }
+        if (tab == 8) {
+            int visible = Math.max(1, (botListBottom - botListTop) / ROW_H);
+            int maxScroll = Math.max(0, botPending.size() - visible);
+            botScroll = Math.max(0, Math.min(maxScroll, botScroll - (int) Math.signum(verticalAmount)));
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);

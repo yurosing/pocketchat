@@ -937,6 +937,167 @@ public final class PmBackend {
         postJson("/v1/bots/message", body, null, cb);
     }
 
+    /** Сколько монет стоит создать бота (0 — бесплатно), задаёт админ. */
+    public static void getBotCreatePrice(Callback<Long> cb) {
+        getJson("/v1/bots/createprice", json -> {
+            long price = json != null && json.has("price") ? json.get("price").getAsLong() : 0L;
+            run(cb, json != null, price, json == null ? "request failed" : null);
+        });
+    }
+
+    /** Публичный поиск ботов по подстроке @username (без токенов/владельцев). */
+    public static void searchBots(String query, Callback<java.util.List<BotInfo>> cb) {
+        getJson("/v1/bots/search?q=" + enc(query), json -> {
+            java.util.List<BotInfo> list = new java.util.ArrayList<>();
+            if (json != null && json.has("bots")) {
+                for (com.google.gson.JsonElement el : json.getAsJsonArray("bots")) {
+                    JsonObject o = el.getAsJsonObject();
+                    list.add(new BotInfo(o.get("username").getAsString(),
+                            o.has("name") ? o.get("name").getAsString() : "", ""));
+                }
+            }
+            run(cb, json != null, list, json == null ? "request failed" : null);
+        });
+    }
+
+    // ---------- магазин готовых ботов-файлов ----------
+
+    public static final class BotListing {
+        public final long id;
+        public final String owner;
+        public final String name;
+        public final String description;
+        public final long price;
+        public final String status;    // pending/approved/rejected — только в "мои заявки"
+
+        BotListing(long id, String owner, String name, String description, long price, String status) {
+            this.id = id;
+            this.owner = owner;
+            this.name = name;
+            this.description = description;
+            this.price = price;
+            this.status = status;
+        }
+    }
+
+    public static void getBotstoreSubmitPrice(Callback<Long> cb) {
+        getJson("/v1/botstore/price", json -> {
+            long price = json != null && json.has("price") ? json.get("price").getAsLong() : 0L;
+            run(cb, json != null, price, json == null ? "request failed" : null);
+        });
+    }
+
+    /** Загружает произвольный файл на бэкенд (POST /v1/media) — для заявки в магазин ботов. */
+    public static void uploadBotFile(java.nio.file.Path file, Callback<String> cb) {
+        if (!isConfigured()) { run(cb, false, null, "backend not configured"); return; }
+        Thread t = new Thread(() -> {
+            String fileId = null;
+            String error = null;
+            try {
+                byte[] data = java.nio.file.Files.readAllBytes(file);
+                String filename = file.getFileName().toString();
+                String boundary = "----pmchat" + System.nanoTime();
+                java.io.ByteArrayOutputStream body = new java.io.ByteArrayOutputStream();
+                String head = "--" + boundary + "\r\n"
+                        + "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n"
+                        + "Content-Type: application/octet-stream\r\n\r\n";
+                body.write(head.getBytes(StandardCharsets.UTF_8));
+                body.write(data);
+                body.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(base() + "/v1/media"))
+                        .timeout(Duration.ofSeconds(60))
+                        .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray()))
+                        .build();
+                HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() / 100 == 2) {
+                    JsonObject json = JsonParser.parseString(resp.body()).getAsJsonObject();
+                    if (json.has("id")) fileId = json.get("id").getAsString();
+                    else error = "no file id in response";
+                } else {
+                    error = "HTTP " + resp.statusCode();
+                }
+            } catch (Exception e) {
+                error = e.toString();
+            }
+            String finalFileId = fileId;
+            String finalError = error;
+            run(cb, finalFileId != null, finalFileId, finalError);
+        }, "pmchat-botstore-upload");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    public static void submitBotListing(String name, String description, String fileId, long price, Callback<Long> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("name", name);
+        body.addProperty("description", description);
+        body.addProperty("fileId", fileId);
+        body.addProperty("price", price);
+        postJson("/v1/botstore/submit", body,
+                resp -> {
+                    if (resp != null && resp.has("id")) run(cb, true, resp.get("id").getAsLong(), null);
+                },
+                (ok, v, err) -> { if (!ok) run(cb, false, null, err); });
+    }
+
+    /** Мои заявки (любого статуса — pending/approved/rejected). */
+    public static void myBotListings(Callback<java.util.List<BotListing>> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        getJson("/v1/botstore/mine?token=" + enc(PmChatClient.getConfig().backendToken), json -> {
+            java.util.List<BotListing> list = new java.util.ArrayList<>();
+            if (json != null && json.has("listings")) {
+                for (com.google.gson.JsonElement el : json.getAsJsonArray("listings")) {
+                    JsonObject o = el.getAsJsonObject();
+                    list.add(new BotListing(o.get("id").getAsLong(), null,
+                            o.get("name").getAsString(),
+                            o.has("description") ? o.get("description").getAsString() : "",
+                            o.get("price").getAsLong(), o.get("status").getAsString()));
+                }
+            }
+            run(cb, json != null, list, json == null ? "request failed" : null);
+        });
+    }
+
+    /** Открытый рынок — только одобренные. query — необязательный поиск по названию/автору. */
+    public static void botstoreMarket(String query, Callback<java.util.List<BotListing>> cb) {
+        String q = query == null ? "" : query.trim();
+        getJson("/v1/botstore/market" + (q.isEmpty() ? "" : "?q=" + enc(q)), json -> {
+            java.util.List<BotListing> list = new java.util.ArrayList<>();
+            if (json != null && json.has("listings")) {
+                for (com.google.gson.JsonElement el : json.getAsJsonArray("listings")) {
+                    JsonObject o = el.getAsJsonObject();
+                    list.add(new BotListing(o.get("id").getAsLong(), o.get("owner").getAsString(),
+                            o.get("name").getAsString(),
+                            o.has("description") ? o.get("description").getAsString() : "",
+                            o.get("price").getAsLong(), null));
+                }
+            }
+            run(cb, json != null, list, json == null ? "request failed" : null);
+        });
+    }
+
+    /** Покупка (или получение бесплатного) листинга — cb отдаёт fileId для скачивания. */
+    public static void buyBotListing(long listingId, Callback<String> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("listingId", listingId);
+        postJson("/v1/botstore/buy", body,
+                resp -> {
+                    if (resp != null && resp.has("fileId")) run(cb, true, resp.get("fileId").getAsString(), null);
+                },
+                (ok, v, err) -> { if (!ok) run(cb, false, null, err); });
+    }
+
+    /** URL для скачивания купленного файла (браузером) — GET /v1/media/:id отдаёт сырые байты. */
+    public static String botFileUrl(String fileId) {
+        return base() + "/v1/media/" + fileId;
+    }
+
     /**
      * Переключает свой точный статус «был(а) N часов/дней назад» (взаимно — см.
      * {@link #humanizeLastSeen}). Сбрасывает свой кэш, чтобы UI сразу подхватил.
@@ -1399,6 +1560,126 @@ public final class PmBackend {
         body.addProperty("token", PmChatClient.getConfig().backendToken);
         body.addProperty("adminSecret", PmChatClient.getConfig().backendAdminSecret);
         return body;
+    }
+
+    /** {botCreatePrice, botstoreSubmitPrice} — цены, настраиваемые из этой же панели. */
+    public static final class AdminPrices {
+        public final long botCreatePrice;
+        public final long botstoreSubmitPrice;
+
+        AdminPrices(long botCreatePrice, long botstoreSubmitPrice) {
+            this.botCreatePrice = botCreatePrice;
+            this.botstoreSubmitPrice = botstoreSubmitPrice;
+        }
+    }
+
+    public static void adminGetPrices(Callback<AdminPrices> cb) {
+        getJson("/v1/admin/settings/prices?token=" + enc(PmChatClient.getConfig().backendToken)
+                + "&adminSecret=" + enc(PmChatClient.getConfig().backendAdminSecret), json -> {
+            if (json == null) { run(cb, false, null, "request failed"); return; }
+            run(cb, true, new AdminPrices(
+                    json.has("botCreatePrice") ? json.get("botCreatePrice").getAsLong() : 0L,
+                    json.has("botstoreSubmitPrice") ? json.get("botstoreSubmitPrice").getAsLong() : 0L), null);
+        });
+    }
+
+    public static void adminSetPrices(long botCreatePrice, long botstoreSubmitPrice, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("botCreatePrice", botCreatePrice);
+        body.addProperty("botstoreSubmitPrice", botstoreSubmitPrice);
+        postJson("/v1/admin/settings/prices", body, null, cb);
+    }
+
+    /** Заявка в магазин ботов, ожидающая решения админа. */
+    public static final class BotListingPending {
+        public final long id;
+        public final String owner;
+        public final String name;
+        public final String description;
+        public final String fileId;
+        public final long price;
+        public final long feePaid;
+
+        BotListingPending(long id, String owner, String name, String description, String fileId, long price, long feePaid) {
+            this.id = id;
+            this.owner = owner;
+            this.name = name;
+            this.description = description;
+            this.fileId = fileId;
+            this.price = price;
+            this.feePaid = feePaid;
+        }
+    }
+
+    public static void adminBotstorePending(Callback<java.util.List<BotListingPending>> cb) {
+        getJson("/v1/admin/botstore/pending?token=" + enc(PmChatClient.getConfig().backendToken)
+                + "&adminSecret=" + enc(PmChatClient.getConfig().backendAdminSecret), json -> {
+            java.util.List<BotListingPending> list = new java.util.ArrayList<>();
+            if (json != null && json.has("listings")) {
+                for (com.google.gson.JsonElement el : json.getAsJsonArray("listings")) {
+                    JsonObject o = el.getAsJsonObject();
+                    list.add(new BotListingPending(o.get("id").getAsLong(), o.get("owner").getAsString(),
+                            o.get("name").getAsString(),
+                            o.has("description") ? o.get("description").getAsString() : "",
+                            o.get("fileId").getAsString(), o.get("price").getAsLong(), o.get("feePaid").getAsLong()));
+                }
+            }
+            run(cb, json != null, list, json == null ? "request failed" : null);
+        });
+    }
+
+    public static void adminReviewBotListing(long listingId, boolean approve, Callback<Void> cb) {
+        JsonObject body = adminBody();
+        body.addProperty("listingId", listingId);
+        body.addProperty("approve", approve);
+        postJson("/v1/admin/botstore/review", body, null, cb);
+    }
+
+    // ---------- публикации на страничке профиля (стена) ----------
+
+    public static final class ProfilePost {
+        public final long id;
+        public final String author;
+        public final String content;
+        public final long at;
+
+        ProfilePost(long id, String author, String content, long at) {
+            this.id = id;
+            this.author = author;
+            this.content = content;
+            this.at = at;
+        }
+    }
+
+    public static void createProfilePost(String content, Callback<Void> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("content", content);
+        postJson("/v1/profile/posts", body, null, cb);
+    }
+
+    public static void profilePosts(String username, Callback<java.util.List<ProfilePost>> cb) {
+        getJson("/v1/profile/posts/" + enc(username), json -> {
+            java.util.List<ProfilePost> list = new java.util.ArrayList<>();
+            if (json != null && json.has("posts")) {
+                for (com.google.gson.JsonElement el : json.getAsJsonArray("posts")) {
+                    JsonObject o = el.getAsJsonObject();
+                    list.add(new ProfilePost(o.get("id").getAsLong(), o.get("author").getAsString(),
+                            o.get("content").getAsString(),
+                            o.has("at") && !o.get("at").isJsonNull() ? parseIsoMillis(o.get("at").getAsString()) : 0L));
+                }
+            }
+            run(cb, json != null, list, json == null ? "request failed" : null);
+        });
+    }
+
+    public static void deleteProfilePost(long postId, Callback<Void> cb) {
+        if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("postId", postId);
+        postJson("/v1/profile/posts/delete", body, null, cb);
     }
 
     public static final class AdminAccount {

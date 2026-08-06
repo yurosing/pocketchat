@@ -73,7 +73,7 @@ public class PmSettingsScreen extends Screen {
             case 1 -> 10;
             case 2 -> 4;
             case 3 -> backendConfigured() && !editBackendUrl
-                    ? (4 + (isAdminAccount() ? 1 : 0) + (com.pmchat.client.PmBackend.hasAccount() ? 1 : 0)) : 5;
+                    ? (4 + (isAdminAccount() ? 1 : 0)) : 5;
             case 4 -> 1 + (backendConfigured() && com.pmchat.client.PmBackend.hasAccount()
                     ? (com.pmchat.client.PmBackend.hasActiveFeature("paid_dm") ? 2 : 3) : 0);
             default -> 11;
@@ -346,14 +346,6 @@ public class PmSettingsScreen extends Screen {
                     () -> Text.literal("⚙"),
                     () -> 0xFFF0C34E,
                     () -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));
-        }
-
-        // Свои боты (как в Telegram) — создать/удалить, скопировать токен. Нужен аккаунт.
-        if (com.pmchat.client.PmBackend.hasAccount()) {
-            y = addOption(y, "pmchat.bots.open",
-                    () -> Text.literal("⚙"),
-                    () -> 0xFF8FA7E0,
-                    () -> MinecraftClient.getInstance().setScreen(new PmBotsScreen(this)));
         }
 
         y = addOption(y, "pmchat.support.open",

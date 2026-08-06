@@ -82,7 +82,9 @@ public class PmProfileScreen extends Screen {
         }
         PANEL_W = Math.max(160, Math.min(250, width - 24));
         int coinsRowH = !self && backendGiftsAvailable() ? 22 : 0;
-        panelH = Math.min(self ? 214 : 260 + coinsRowH + catalogRows * 19, height - 24);
+        // +34 под строку «Публикации → Открыть» у самого низа панели (см. renderPostsLink) —
+        // с запасом, чтобы не наехать на хвост раздела подарков выше.
+        panelH = Math.min((self ? 214 : 260 + coinsRowH + catalogRows * 19) + 34, height - 24);
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
@@ -310,7 +312,26 @@ public class PmProfileScreen extends Screen {
         // ---- Раздел подарков (4.2) ----
         renderGifts(context, mouseX, mouseY, contentY);
 
+        // ---- Публикации на страничке (стена) — открываются отдельным окном,
+        // список может расти и не влезает в компактный профиль (как PmGiftsScreen).
+        renderPostsLink(context, mouseX, mouseY);
+
         super.render(context, mouseX, mouseY, delta);
+    }
+
+    private int[] openPostsRect = null;
+
+    private void renderPostsLink(DrawContext context, int mouseX, int mouseY) {
+        // Готово-кнопка занимает py+panelH-24..py+panelH-6 — оставляем зазор над ней.
+        int top = py + panelH - 42;
+        context.fill(px + 8, top, px + PANEL_W - 8, top + 1, BORDER);
+        Text postsTitle = Text.translatable("pmchat.posts.section");
+        boolean hover = mouseX >= px + 12 && mouseX < px + 12 + textRenderer.getWidth(postsTitle) + 60
+                && mouseY >= top + 4 && mouseY < top + 15;
+        context.drawText(textRenderer, postsTitle, px + 12, top + 5, hover ? VALUE : TITLE, false);
+        Text openHint = Text.translatable("pmchat.posts.openhint");
+        context.drawText(textRenderer, openHint, px + 12 + textRenderer.getWidth(postsTitle) + 6, top + 5, SUBTLE, false);
+        openPostsRect = new int[]{px + 8, top + 4, textRenderer.getWidth(postsTitle) + textRenderer.getWidth(openHint) + 20, 11};
     }
 
     private final java.util.List<Object[]> giftRects = new java.util.ArrayList<>(); // x,y,w,h,giftId
@@ -468,6 +489,13 @@ public class PmProfileScreen extends Screen {
             int rx = openCatalogRect[0], ry = openCatalogRect[1], rw = openCatalogRect[2], rh = openCatalogRect[3];
             if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
                 MinecraftClient.getInstance().setScreen(new PmGiftsScreen(this, player, true));
+                return true;
+            }
+        }
+        if (openPostsRect != null) {
+            int rx = openPostsRect[0], ry = openPostsRect[1], rw = openPostsRect[2], rh = openPostsRect[3];
+            if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
+                MinecraftClient.getInstance().setScreen(new PmProfilePostsScreen(this, player));
                 return true;
             }
         }
