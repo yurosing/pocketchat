@@ -83,9 +83,12 @@ public class PmSendCoinsScreen extends Screen {
             return;
         }
         if (amount <= 0) return;
+        long sentAmount = amount;
         PmBackend.sendCoins(target, amount, (ok, v, err) -> {
             if (ok) {
-                status = Text.translatable("pmchat.coins.ok");
+                // Раньше сообщение не называло сумму, а поле сразу очищалось —
+                // не было видно, сколько отправлено (только общий текст «Отправлено»).
+                status = Text.translatable("pmchat.coins.ok", PmBackend.formatCoins(sentAmount));
                 statusColor = 0xFF8FD8A8;
                 amountField.setText("");
             } else {
@@ -109,10 +112,17 @@ public class PmSendCoinsScreen extends Screen {
         context.drawText(textRenderer, balStr, px + 16, py + 20, PmBackend.CURRENCY_COLOR, false);
 
         if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 34, statusColor, false);
+            String s = trim(status.getString(), PANEL_W - 16);
+            context.drawText(textRenderer, s, px + (PANEL_W - textRenderer.getWidth(s)) / 2, py + PANEL_H - 34, statusColor, false);
         }
 
         super.render(context, mouseX, mouseY, delta);
+    }
+
+    private String trim(String s, int maxW) {
+        if (textRenderer.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        return s + "…";
     }
 
     @Override

@@ -553,7 +553,7 @@
   "pmchat.coins.title": "Send coins to %s",
   "pmchat.coins.hint": "How many coins",
   "pmchat.coins.send": "Send",
-  "pmchat.coins.ok": "Coins sent",
+  "pmchat.coins.ok": "Sent %s coins",
   "pmchat.report.open": "Report",
   "pmchat.report.title": "Report %s",
   "pmchat.report.hint": "What's wrong?",

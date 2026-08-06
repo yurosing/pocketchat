@@ -299,11 +299,17 @@ public class PmProfileScreen extends Screen {
                     px + 12, contentY, LABEL, false);
             contentY += 33;
         } else {
-            // Подпись поля переименования + место под кнопку ЧС
+            // Подпись поля переименования + место под кнопку ЧС/«Пожаловаться»
             context.drawText(textRenderer, Text.translatable("pmchat.profile.rename"),
                     px + 12, contentY + 4, LABEL, false);
             contentY += 21;
             contentY += 22;
+            // Место под кнопку «Отправить монеты» — раньше этот сдвиг не учитывался
+            // здесь (только в init()), из-за чего заметка и раздел подарков рисовались
+            // на 22px выше своих настоящих виджетов и наезжали на кнопки над ними.
+            if (backendGiftsAvailable()) {
+                contentY += 22;
+            }
             context.drawText(textRenderer, Text.translatable("pmchat.profile.note"),
                     px + 12, contentY, LABEL, false);
             contentY += 33;

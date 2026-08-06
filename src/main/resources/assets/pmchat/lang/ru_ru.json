@@ -553,7 +553,7 @@
   "pmchat.coins.title": "Отправить монеты %s",
   "pmchat.coins.hint": "Сколько монет",
   "pmchat.coins.send": "Отправить",
-  "pmchat.coins.ok": "Монеты отправлены",
+  "pmchat.coins.ok": "Отправлено %s монет",
   "pmchat.report.open": "Пожаловаться",
   "pmchat.report.title": "Жалоба на %s",
   "pmchat.report.hint": "В чём проблема?",
