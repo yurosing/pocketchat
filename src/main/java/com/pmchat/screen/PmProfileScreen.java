@@ -304,6 +304,10 @@ public class PmProfileScreen extends Screen {
                     px + 12, contentY + 4, LABEL, false);
             contentY += 21;
             contentY += 22;
+            // Кнопка «Отправить монеты» (см. init()) — если она есть, резервируем под
+            // неё столько же места здесь, иначе подпись «Заметка» и раздел подарков
+            // рисуются на 22px выше настоящего noteField и оказываются под кнопкой.
+            if (backendGiftsAvailable()) contentY += 22;
             context.drawText(textRenderer, Text.translatable("pmchat.profile.note"),
                     px + 12, contentY, LABEL, false);
             contentY += 33;
