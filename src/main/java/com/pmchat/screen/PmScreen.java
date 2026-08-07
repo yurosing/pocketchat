@@ -521,6 +521,8 @@ public class PmScreen extends Screen {
     private final List<Object[]> pollOptRects = new ArrayList<>(); // x,y,w,h,msg,optIndex
     private final List<Object[]> envelopeRects = new ArrayList<>(); // x,y,w,h,msg,env — клик открывает конверт (5.7)
     private int[] vibeIndicatorRect; // x,y,w,h индикатора «общего вайба» в шапке — клик останавливает (5.8)
+    private int[] vibeAcceptRect;  // x,y,w,h кнопки «Принять» приглашения на общий вайб (5.8)
+    private int[] vibeDeclineRect; // x,y,w,h кнопки «Отклонить» приглашения на общий вайб (5.8)
     private final List<Object[]> emojiRects = new ArrayList<>(); // x,y,w,h,emoji
     private final List<Object[]> emojiCatRects = new ArrayList<>(); // x,y,w,h,catIndex
     private int replyCancelX = -1, replyCancelY = -1;
@@ -3674,22 +3676,57 @@ public class PmScreen extends Screen {
             }
         }
 
-        // Общий вайб (5.8): маленький индикатор в шапке, пока играет для этого диалога —
-        // клик гасит и у себя, и у собеседника (см. mouseClicked).
+        // Общий вайб (5.8): отдельная полоска НАД списком сообщений, а не в шапке —
+        // там и так плотно (стикеры/голос/фото/звонок/⋮ занимают весь правый край
+        // на той же строке, индикатор рисовался прямо под ними).
         vibeIndicatorRect = null;
-        if (isPlayerTab(selected) && !isGlobal && !localChat && com.pmchat.client.PmVibe.isActiveFor(selected)) {
-            String vLabel = "♪ " + com.pmchat.client.PmVibe.activeTrackLabel();
-            String vShown = trim(vLabel, PANEL_W - LEFT_W - 40);
+        vibeAcceptRect = null;
+        vibeDeclineRect = null;
+        com.pmchat.client.PmVibe.Invite vibeInvite = (isPlayerTab(selected) && !isGlobal && !localChat)
+                ? com.pmchat.client.PmVibe.pendingInviteFor(selected) : null;
+        boolean vibeBarActive = vibeInvite == null && isPlayerTab(selected) && !isGlobal && !localChat
+                && com.pmchat.client.PmVibe.isActiveFor(selected);
+        int headerDividerY = py + 31;
+        if (vibeInvite != null) {
+            // Приглашение от собеседника — играть не начинаем, пока не нажмут «Принять».
+            int barTop = py + 32;
+            int barBottom = barTop + 12;
+            context.fill(px + LEFT_W + 1, barTop, px + PANEL_W - 2, barBottom, DIVIDER);
+            String ask = "♪ " + trim(Text.translatable("pmchat.vibe.invite.ask").getString() + " " + vibeInvite.fileId,
+                    PANEL_W - LEFT_W - 100);
+            context.drawText(textRenderer, ask, px + LEFT_W + 4, barTop + 2, 0xFF6FBF8B, false);
+            Text acceptT = Text.translatable("pmchat.vibe.invite.accept");
+            Text declineT = Text.translatable("pmchat.vibe.invite.decline");
+            int declineW = textRenderer.getWidth(declineT) + 6;
+            int acceptW = textRenderer.getWidth(acceptT) + 6;
+            int declineX = px + PANEL_W - 3 - declineW;
+            int acceptX = declineX - 4 - acceptW;
+            boolean accHov = mouseX >= acceptX && mouseX < acceptX + acceptW && mouseY >= barTop && mouseY < barBottom;
+            boolean decHov = mouseX >= declineX && mouseX < declineX + declineW && mouseY >= barTop && mouseY < barBottom;
+            context.drawText(textRenderer, acceptT, acceptX + 3, barTop + 2, accHov ? 0xFFCFEEDA : 0xFF8FD8A8, false);
+            context.drawText(textRenderer, declineT, declineX + 3, barTop + 2, decHov ? 0xFFF0B0A8 : 0xFFE0574C, false);
+            vibeAcceptRect = new int[]{acceptX, barTop, acceptW, barBottom - barTop};
+            vibeDeclineRect = new int[]{declineX, barTop, declineW, barBottom - barTop};
+            headerDividerY = barBottom;
+        } else if (vibeBarActive) {
+            int barTop = py + 32;
+            int barBottom = barTop + 12;
+            context.fill(px + LEFT_W + 1, barTop, px + PANEL_W - 2, barBottom, DIVIDER);
+            String vLabel = "♪ " + com.pmchat.client.PmVibe.activeTrackLabel()
+                    + "  ·  " + Text.translatable("pmchat.vibe.stophint").getString();
+            String vShown = trim(vLabel, PANEL_W - LEFT_W - 20);
             int vw = textRenderer.getWidth(vShown);
-            int vx = px + PANEL_W - 12 - vw;
-            boolean vHov = mouseX >= vx - 3 && mouseX < vx + vw + 3 && mouseY >= py + 4 && mouseY < py + 14;
-            context.drawText(textRenderer, vShown, vx, py + 8, vHov ? 0xFF8FD8A8 : 0xFF6FBF8B, false);
-            vibeIndicatorRect = new int[]{vx - 3, py + 4, vw + 6, 10};
+            int vx = px + LEFT_W + (PANEL_W - LEFT_W - vw) / 2;
+            boolean vHov = mouseX >= px + LEFT_W + 1 && mouseX < px + PANEL_W - 2
+                    && mouseY >= barTop && mouseY < barBottom;
+            context.drawText(textRenderer, vShown, vx, barTop + 2, vHov ? 0xFF8FD8A8 : 0xFF6FBF8B, false);
+            vibeIndicatorRect = new int[]{px + LEFT_W + 1, barTop, PANEL_W - LEFT_W - 3, barBottom - barTop};
+            headerDividerY = barBottom;
         }
 
-        context.fill(px + LEFT_W + 1, py + 31, px + PANEL_W - 2, py + 32, DIVIDER);
+        context.fill(px + LEFT_W + 1, headerDividerY, px + PANEL_W - 2, headerDividerY + 1, DIVIDER);
 
-        int areaTop = py + 35;
+        int areaTop = headerDividerY + 4;
         int areaBottom = py + PANEL_H - 30;
 
         // Закреплённые сообщения — полоска сверху (несколько, как в Telegram)
@@ -5503,6 +5540,15 @@ public class PmScreen extends Screen {
                     return true;
                 }
             }
+        }
+        // Приглашение на общий вайб (5.8) — принять/отклонить, не играет до явного согласия.
+        if (vibeAcceptRect != null && click.button() == 0 && hit(click, vibeAcceptRect)) {
+            com.pmchat.client.PmVibe.acceptInvite(selected);
+            return true;
+        }
+        if (vibeDeclineRect != null && click.button() == 0 && hit(click, vibeDeclineRect)) {
+            com.pmchat.client.PmVibe.declineInvite(selected);
+            return true;
         }
         // Клик по индикатору «общего вайба» в шапке — остановить (у себя и у собеседника).
         if (vibeIndicatorRect != null && click.button() == 0 && hit(click, vibeIndicatorRect)) {
