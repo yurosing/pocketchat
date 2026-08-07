@@ -164,6 +164,9 @@ public class PmChatClient implements ClientModInitializer {
         // видео — иначе плеер продолжал играть «в пустоте» после дисконнекта.
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> client.execute(() -> PmMedia.get().stop()));
+        // То же для «общего вайба» (5.8) — не должен звучать после выхода с сервера.
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) -> client.execute(PmVibe::stop));
 
         // Канал pmchat:media — релей фото/голосовых/видео через сервер, если на нём
         // стоит плагин PocketChatMedia. Регистрируем типы пейлоада и приёмник,
@@ -1260,6 +1263,17 @@ public class PmChatClient implements ClientModInitializer {
             onIncomingCall(sender);
             return 2;
         }
+        // Общий вайб (5.8) — собеседник включил/выключил синхронный эмбиент.
+        Object[] vibe = PmWire.parseVibe(text);
+        if (vibe != null) {
+            config.addModUser(sender);
+            if ((Boolean) vibe[2]) {
+                PmVibe.onIncoming(sender, (String) vibe[0], (String) vibe[1]);
+            } else {
+                PmVibe.onIncomingStop(sender);
+            }
+            return 2;
+        }
         String[] rx = PmWire.parseReaction(text);
         if (rx != null) {
             config.addModUser(sender);
@@ -1900,7 +1914,19 @@ public class PmChatClient implements ClientModInitializer {
      */
     public static String commandTarget(String conv) {
         if (conv != null && config.aliasAsTarget && config.hasAlias(conv)) {
-            return config.aliasOf(conv);
+            String alias = config.aliasOf(conv);
+            // Алиас — свободный текст, который игрок сам вводит как заметку/переименование
+            // (см. PmProfileScreen «Переименовать») — может быть чем угодно: с пробелами,
+            // кириллицей, эмодзи. Слать его сырьём как аргумент серверной /m-команды опасно:
+            // сервер режет аргументы по пробелам и может докрутить «похожий» ник неточным
+            // совпадением — сообщение (в т.ч. служебные «печатает»/«прочитано», которые
+            // уходят без явного действия игрока) в итоге улетает случайному другому игроку.
+            // Разрешаем замену только когда алиас САМ похож на настоящий ник Minecraft
+            // (буквы/цифры/подчёркивание, 1-16 символов) — единственный случай, для
+            // которого эта настройка вообще задумывалась («сервер обращается по нику»).
+            if (alias.matches("[A-Za-z0-9_]{1,16}")) {
+                return alias;
+            }
         }
         return conv;
     }
@@ -1948,7 +1974,7 @@ public class PmChatClient implements ClientModInitializer {
         return PmWire.isTyping(wire) || PmWire.isSeen(wire) || PmWire.isHi(wire)
                 || PmWire.parseReaction(wire) != null || PmWire.isPinMeta(wire)
                 || PmWire.isVoteMeta(wire) || PmWire.isEditMeta(wire) || PmWire.isUnpinMeta(wire)
-                || PmWire.isCallMeta(wire) || PmWire.isBcControlMeta(wire);
+                || PmWire.isCallMeta(wire) || PmWire.isBcControlMeta(wire) || PmWire.isVibeMeta(wire);
     }
 
     /** Читаемый текст для /tell не-мод получателю (пусто — не отправлять вовсе). */

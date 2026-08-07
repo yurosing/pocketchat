@@ -520,6 +520,7 @@ public class PmScreen extends Screen {
     private final List<Object[]> warnBtnRects = new ArrayList<>(); // x,y,w,h,nick (6.8 кнопка преда)
     private final List<Object[]> pollOptRects = new ArrayList<>(); // x,y,w,h,msg,optIndex
     private final List<Object[]> envelopeRects = new ArrayList<>(); // x,y,w,h,msg,env — клик открывает конверт (5.7)
+    private int[] vibeIndicatorRect; // x,y,w,h индикатора «общего вайба» в шапке — клик останавливает (5.8)
     private final List<Object[]> emojiRects = new ArrayList<>(); // x,y,w,h,emoji
     private final List<Object[]> emojiCatRects = new ArrayList<>(); // x,y,w,h,catIndex
     private int replyCancelX = -1, replyCancelY = -1;
@@ -631,6 +632,22 @@ public class PmScreen extends Screen {
                     WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF7E9AAB, btn -> {
                         moreMenuOpen = false;
                         MinecraftClient.getInstance().setScreen(new PmEnvelopeComposeScreen(this, selected));
+                    }));
+        }
+        // Общий вайб (5.8): синхронный фоновый эмбиент на двоих, пока идёт переписка.
+        if (isPlayerTab(selected)) {
+            boolean vibeActive = com.pmchat.client.PmVibe.isActiveFor(selected);
+            y += rowH + 2;
+            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                    Text.literal("♪ " + Text.translatable(vibeActive
+                            ? "pmchat.vibe.stop" : "pmchat.vibe.open").getString()),
+                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, vibeActive ? 0xFF8FD8A8 : 0xFF6FBF8B, btn -> {
+                        moreMenuOpen = false;
+                        if (vibeActive) {
+                            com.pmchat.client.PmVibe.stopAndNotify();
+                        } else {
+                            MinecraftClient.getInstance().setScreen(new PmVibeScreen(this, selected));
+                        }
                     }));
         }
         y += rowH + 2;
@@ -3657,6 +3674,19 @@ public class PmScreen extends Screen {
             }
         }
 
+        // Общий вайб (5.8): маленький индикатор в шапке, пока играет для этого диалога —
+        // клик гасит и у себя, и у собеседника (см. mouseClicked).
+        vibeIndicatorRect = null;
+        if (isPlayerTab(selected) && !isGlobal && !localChat && com.pmchat.client.PmVibe.isActiveFor(selected)) {
+            String vLabel = "♪ " + com.pmchat.client.PmVibe.activeTrackLabel();
+            String vShown = trim(vLabel, PANEL_W - LEFT_W - 40);
+            int vw = textRenderer.getWidth(vShown);
+            int vx = px + PANEL_W - 12 - vw;
+            boolean vHov = mouseX >= vx - 3 && mouseX < vx + vw + 3 && mouseY >= py + 4 && mouseY < py + 14;
+            context.drawText(textRenderer, vShown, vx, py + 8, vHov ? 0xFF8FD8A8 : 0xFF6FBF8B, false);
+            vibeIndicatorRect = new int[]{vx - 3, py + 4, vw + 6, 10};
+        }
+
         context.fill(px + LEFT_W + 1, py + 31, px + PANEL_W - 2, py + 32, DIVIDER);
 
         int areaTop = py + 35;
@@ -5473,6 +5503,11 @@ public class PmScreen extends Screen {
                     return true;
                 }
             }
+        }
+        // Клик по индикатору «общего вайба» в шапке — остановить (у себя и у собеседника).
+        if (vibeIndicatorRect != null && click.button() == 0 && hit(click, vibeIndicatorRect)) {
+            com.pmchat.client.PmVibe.stopAndNotify();
+            return true;
         }
         // Клик по разблокированному (таймер вышел) конверту — открыть, либо сперва
         // спросить пароль-вопрос, если он задан (5.7).

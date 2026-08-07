@@ -626,5 +626,10 @@
   "pmchat.envelope.tapopen": "Tap to open",
   "pmchat.envelope.unlock.title": "Envelope locked by a question",
   "pmchat.envelope.unlock.open": "Open",
-  "pmchat.envelope.unlock.wrong": "Wrong answer, try again"
+  "pmchat.envelope.unlock.wrong": "Wrong answer, try again",
+
+  "pmchat.vibe.open": "Shared vibe",
+  "pmchat.vibe.stop": "Stop shared vibe",
+  "pmchat.vibe.title": "Shared vibe — pick a track",
+  "pmchat.vibe.empty": "Empty. Drop WAV/AU/AIFF files into config/pmchat-vibe"
 }

@@ -78,6 +78,11 @@ public final class PmWire {
     private static final Pattern ENVELOPE = Pattern.compile(
             "^pmc env ([a-z]) (\\d+) ([01]) ([0-9a-f]+|-) ([0-9a-f]+|-) (.+)$", Pattern.DOTALL);
 
+    // Общий вайб (5.8): pmc vibe <хост|-> <имя|-> <расширение|-> <включить 0/1>
+    // «-» вместо хоста/имени/расширения — команда «выключить» без ссылки на файл.
+    private static final Pattern VIBE = Pattern.compile(
+            "^pmc vibe ([a-z]|-) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+|-) ([01])$");
+
     public static final String POLL_DELIM = " // ";
 
     public static final String TYPING = "pmc typ";
@@ -531,6 +536,33 @@ public final class PmWire {
             case "g" -> "pmchat.envelope.skin.g";
             default -> "pmchat.envelope.skin.n";
         };
+    }
+
+    // ---------- Общий вайб (5.8): синхронный фоновый эмбиент на двоих ----------
+
+    /** «Включить» — hostCode/fileId такие же, как у голосового/фото (см. PmImages.upload). */
+    public static String vibe(String hostCode, String fileId, boolean on) {
+        int dot = fileId.lastIndexOf('.');
+        String name = dot > 0 ? fileId.substring(0, dot) : fileId;
+        String ext = dot > 0 ? fileId.substring(dot + 1) : "wav";
+        return "pmc vibe " + hostCode + " " + name + " " + ext + " " + (on ? "1" : "0");
+    }
+
+    /** «Выключить» — без ссылки на файл, собеседник просто гасит воспроизведение у себя. */
+    public static String vibeStop() {
+        return "pmc vibe - - - 0";
+    }
+
+    /** {hostCode, fileId("имя.расширение"), включить(Boolean)} или null. */
+    public static Object[] parseVibe(String text) {
+        if (text == null) return null;
+        Matcher m = VIBE.matcher(text.trim());
+        if (!m.matches()) return null;
+        return new Object[]{m.group(1), m.group(2) + "." + m.group(3), "1".equals(m.group(4))};
+    }
+
+    public static boolean isVibeMeta(String text) {
+        return parseVibe(text) != null;
     }
 
     // ---------- Разбор ----------

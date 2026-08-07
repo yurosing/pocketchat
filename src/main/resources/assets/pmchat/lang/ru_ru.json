@@ -626,5 +626,10 @@
   "pmchat.envelope.tapopen": "Нажмите, чтобы открыть",
   "pmchat.envelope.unlock.title": "Конверт заперт вопросом",
   "pmchat.envelope.unlock.open": "Открыть",
-  "pmchat.envelope.unlock.wrong": "Неверный ответ, попробуйте ещё раз"
+  "pmchat.envelope.unlock.wrong": "Неверный ответ, попробуйте ещё раз",
+
+  "pmchat.vibe.open": "Общий вайб",
+  "pmchat.vibe.stop": "Остановить вайб",
+  "pmchat.vibe.title": "Общий вайб — выберите трек",
+  "pmchat.vibe.empty": "Пусто. Положите WAV/AU/AIFF в config/pmchat-vibe"
 }
