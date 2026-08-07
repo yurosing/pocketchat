@@ -31,7 +31,7 @@ import java.util.Locale;
 @Environment(EnvType.CLIENT)
 public class PmGiftsScreen extends Screen {
 
-    private static final int CELL = 110;
+    private static final int CELL = 140;
     private static final int GAP = 12;
     private static final int SPARKLES = 4;
     private static final int RAYS = 7;
@@ -40,8 +40,8 @@ public class PmGiftsScreen extends Screen {
     private final java.util.Map<Integer, Float> hoverAnim = new java.util.HashMap<>();
     private long lastFrameMs = 0L;
 
-    private int PANEL_W = 420;
-    private int PANEL_H = 340;
+    private int PANEL_W = 460;
+    private int PANEL_H = 400;
 
     private final Screen parent;
     private final String player;
@@ -87,8 +87,8 @@ public class PmGiftsScreen extends Screen {
         applyTheme();
         clearChildren();
 
-        PANEL_W = Math.max(220, Math.min(420, width - 24));
-        PANEL_H = Math.max(160, Math.min(380, height - 24));
+        PANEL_W = Math.max(220, Math.min(460, width - 24));
+        PANEL_H = Math.max(160, Math.min(400, height - 24));
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 
@@ -149,6 +149,7 @@ public class PmGiftsScreen extends Screen {
         long now = System.currentTimeMillis();
         double t = now / 1000.0 + index * 0.37;
         int cx = x + CELL / 2, cy = y + CELL / 2 - 6;
+        float sc = CELL / 100f; // масштаб свечения/значка относительно размера карточки
 
         // Плавный «поп» при наведении — как у FlatButton, но по индексу карточки.
         float hAnim = hoverAnim.getOrDefault(index, 0f);
@@ -165,7 +166,7 @@ public class PmGiftsScreen extends Screen {
             int glowBase = 30 + (int) (hAnim * 22);
             for (int ring = 3; ring >= 1; ring--) {
                 float pulse = (float) (0.6 + 0.4 * Math.sin(t * 2 + ring));
-                int r = 14 + ring * 9;
+                int r = (int) ((14 + ring * 9) * sc);
                 fillCircleClamped(context, cx, cy, r, (rarity & 0xFFFFFF) | (((int) (glowBase / ring * pulse)) << 24),
                         x, y, x + CELL, y + CELL);
             }
@@ -189,7 +190,7 @@ public class PmGiftsScreen extends Screen {
         }
 
         float breathe = 1f + 0.12f * (float) Math.sin(t * 2.2);
-        float scale = (3.6f + hAnim * 0.5f) * breathe;
+        float scale = (3.6f * sc + hAnim * 0.5f) * breathe;
         drawScaledCentered(context, icon, cx, cy, scale, dim ? 0xFFB0B0B0 : 0xFFFFFFFF);
 
         if (hover && !dim) {
