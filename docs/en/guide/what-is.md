@@ -40,6 +40,10 @@ expects by default. Easy to fix — see
   wallpaper.
 - 🟢 **Mod indicator** — a dot shows whether the other person also has
   PocketChat.
+- ✉️ **Envelopes** — a message locked behind a timer (+ optionally a password
+  question), openable by the recipient only once it unlocks.
+- 🎧 **Shared vibe** — a background ambient loop (your own file from
+  `config/pmchat-vibe`), playing in sync for both of you while you chat.
 
 ## What you need to install it
 

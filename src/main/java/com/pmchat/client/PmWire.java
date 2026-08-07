@@ -73,6 +73,16 @@ public final class PmWire {
     // делает команда сервера /voicechat invite, у неё нет параметров группы/пароля)
     private static final String CALL = "pmc call";
 
+    // Конверт (5.7): pmc env <скин> <unlockAt секунд-эпохи> <естьВопрос 0/1> <вопросHex|-> <хэшОтветаHex|-> <содержимое>
+    // Таймер обязателен всегда (unlockAt); вопрос-пароль — опциональная вторая проверка поверх него.
+    private static final Pattern ENVELOPE = Pattern.compile(
+            "^pmc env ([a-z]) (\\d+) ([01]) ([0-9a-f]+|-) ([0-9a-f]+|-) (.+)$", Pattern.DOTALL);
+
+    // Общий вайб (5.8): pmc vibe <хост|-> <имя|-> <расширение|-> <включить 0/1>
+    // «-» вместо хоста/имени/расширения — команда «выключить» без ссылки на файл.
+    private static final Pattern VIBE = Pattern.compile(
+            "^pmc vibe ([a-z]|-) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+|-) ([01])$");
+
     public static final String POLL_DELIM = " // ";
 
     public static final String TYPING = "pmc typ";
@@ -450,6 +460,109 @@ public final class PmWire {
 
     public static boolean isCallMeta(String text) {
         return isCall(text);
+    }
+
+    // ---------- Конверты (5.7): текст под таймером +опциональным вопросом-паролем ----------
+
+    /** Коды доступных «скинов» конверта (см. PmScreen.envelope* для иконки/цвета/подписи). */
+    public static final String[] ENVELOPE_SKINS = {"n", "d", "v", "g"};
+
+    /** Собирает конверт. question/answer могут быть null/пустыми — тогда открытие только по таймеру. */
+    public static String envelope(String skin, long unlockAtEpochSec, String question, String answer, String content) {
+        boolean hasQ = question != null && !question.isBlank();
+        String qHex = hasQ ? hex(question) : "-";
+        String ansHash = hasQ && answer != null && !answer.isBlank()
+                ? String.format("%08x", normalizeAnswer(answer).hashCode()) : "-";
+        return "pmc env " + skin + " " + unlockAtEpochSec + " " + (hasQ ? "1" : "0") + " " + qHex + " " + ansHash + " " + content;
+    }
+
+    private static String normalizeAnswer(String s) {
+        return s == null ? "" : s.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** true — ответ (без учёта регистра/пробелов по краям) совпадает с хэшем из конверта. */
+    public static boolean checkEnvelopeAnswer(String answer, String expectedHashHex) {
+        if (expectedHashHex == null || expectedHashHex.isEmpty() || expectedHashHex.equals("-")) return true;
+        return String.format("%08x", normalizeAnswer(answer).hashCode()).equalsIgnoreCase(expectedHashHex);
+    }
+
+    /** {скин, unlockAt(Long, эпоха-сек), естьВопрос(Boolean), вопрос, хэшОтвета, содержимое} или null. */
+    public static Object[] parseEnvelope(String text) {
+        if (text == null) return null;
+        Matcher m = ENVELOPE.matcher(text.trim());
+        if (!m.matches()) return null;
+        try {
+            return new Object[]{
+                    m.group(1),
+                    Long.parseLong(m.group(2)),
+                    "1".equals(m.group(3)),
+                    "-".equals(m.group(4)) ? "" : unhex(m.group(4)),
+                    "-".equals(m.group(5)) ? "" : m.group(5),
+                    m.group(6)
+            };
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    public static boolean isEnvelopeMeta(String text) {
+        return parseEnvelope(text) != null;
+    }
+
+    /** Значок скина конверта (BMP-символ, есть в шрифте игры — как у {@link #REACTIONS}). */
+    public static String envelopeIcon(String skin) {
+        return switch (skin == null ? "n" : skin) {
+            case "d" -> "☠";
+            case "v" -> "♥";
+            case "g" -> "▣";
+            default -> "✉";
+        };
+    }
+
+    public static int envelopeColor(String skin) {
+        return switch (skin == null ? "n" : skin) {
+            case "d" -> 0xFFE0574C;
+            case "v" -> 0xFFE07AA0;
+            case "g" -> 0xFFE0B040;
+            default -> 0xFF7E9AAB;
+        };
+    }
+
+    /** Ключ локализации названия скина конверта. */
+    public static String envelopeLabelKey(String skin) {
+        return switch (skin == null ? "n" : skin) {
+            case "d" -> "pmchat.envelope.skin.d";
+            case "v" -> "pmchat.envelope.skin.v";
+            case "g" -> "pmchat.envelope.skin.g";
+            default -> "pmchat.envelope.skin.n";
+        };
+    }
+
+    // ---------- Общий вайб (5.8): синхронный фоновый эмбиент на двоих ----------
+
+    /** «Включить» — hostCode/fileId такие же, как у голосового/фото (см. PmImages.upload). */
+    public static String vibe(String hostCode, String fileId, boolean on) {
+        int dot = fileId.lastIndexOf('.');
+        String name = dot > 0 ? fileId.substring(0, dot) : fileId;
+        String ext = dot > 0 ? fileId.substring(dot + 1) : "wav";
+        return "pmc vibe " + hostCode + " " + name + " " + ext + " " + (on ? "1" : "0");
+    }
+
+    /** «Выключить» — без ссылки на файл, собеседник просто гасит воспроизведение у себя. */
+    public static String vibeStop() {
+        return "pmc vibe - - - 0";
+    }
+
+    /** {hostCode, fileId("имя.расширение"), включить(Boolean)} или null. */
+    public static Object[] parseVibe(String text) {
+        if (text == null) return null;
+        Matcher m = VIBE.matcher(text.trim());
+        if (!m.matches()) return null;
+        return new Object[]{m.group(1), m.group(2) + "." + m.group(3), "1".equals(m.group(4))};
+    }
+
+    public static boolean isVibeMeta(String text) {
+        return parseVibe(text) != null;
     }
 
     // ---------- Разбор ----------

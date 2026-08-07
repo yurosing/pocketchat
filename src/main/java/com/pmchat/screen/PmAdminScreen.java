@@ -113,6 +113,16 @@ public class PmAdminScreen extends Screen {
     private final java.util.List<Object[]> roleRowRects = new java.util.ArrayList<>();
     private final java.util.List<Object[]> roleDeleteRects = new java.util.ArrayList<>();
 
+    // Должность «только префикс» по умолчанию (значок-бейдж без отдельного названия) —
+    // заводится в списке сама при первом открытии вкладки, чтобы админу не пришлось
+    // руками набирать значения, чтобы выдать её игрокам. Флаг — static на класс, чтобы
+    // не долбить бэкенд повторной попыткой при каждом открытии вкладки за сессию клиента.
+    private static final String DEFAULT_ROLE_KEY = "pocketchat";
+    private static final String DEFAULT_ROLE_NAME = "PocketChat";
+    private static final String DEFAULT_ROLE_PREFIX = "💬";
+    private static final String DEFAULT_ROLE_COLOR = "#25D366";
+    private static boolean defaultRoleSeedAttempted = false;
+
     // ---- Вкладка 8: боты — цены + заявки в магазин ботов ----
     private TextFieldWidget botCreatePriceField, botstoreSubmitPriceField;
     private List<PmBackend.BotListingPending> botPending = Collections.emptyList();
@@ -784,12 +794,29 @@ public class PmAdminScreen extends Screen {
                 roleDefs = list;
                 roleScroll = 0;
                 status = roleDefs.isEmpty() ? Text.translatable("pmchat.admin.role.empty") : Text.empty();
+                maybeSeedDefaultRole();
             } else {
                 roleDefs = Collections.emptyList();
                 status = Text.translatable("pmchat.admin.fail", String.valueOf(err));
                 statusColor = BAD;
             }
         });
+    }
+
+    /** Заводит DEFAULT_ROLE_* один раз за сессию, если её ещё нет в списке должностей. */
+    private void maybeSeedDefaultRole() {
+        if (defaultRoleSeedAttempted) return;
+        for (PmBackend.RoleDef r : roleDefs) {
+            if (r.key.equalsIgnoreCase(DEFAULT_ROLE_KEY)) {
+                defaultRoleSeedAttempted = true;
+                return;
+            }
+        }
+        defaultRoleSeedAttempted = true;
+        PmBackend.adminUpsertRole(DEFAULT_ROLE_KEY, DEFAULT_ROLE_NAME, DEFAULT_ROLE_PREFIX, DEFAULT_ROLE_COLOR,
+                (ok, v, err) -> {
+                    if (ok) loadRoleDefs();
+                });
     }
 
     private void resetRoleForm() {
@@ -811,21 +838,25 @@ public class PmAdminScreen extends Screen {
     private void doSaveRole() {
         String key = roleKeyField.getText().trim().toLowerCase(java.util.Locale.ROOT);
         String name = roleNameField.getText().trim();
+        String prefix = rolePrefixField.getText().trim();
         String color = roleColorField.getText().trim();
         if (key.isEmpty() || !key.matches("[a-z0-9_-]+")) {
             setStatus(Text.translatable("pmchat.admin.role.needkey"), BAD);
             return;
         }
-        if (name.isEmpty()) {
-            setStatus(Text.translatable("pmchat.admin.shop.needname"), BAD);
+        // Должность «только префикс» (5.6): полное название необязательно, если задан
+        // значок-префикс — на профиле в качестве подписи используется он же.
+        if (name.isEmpty() && prefix.isEmpty()) {
+            setStatus(Text.translatable("pmchat.admin.role.needprefix"), BAD);
             return;
         }
+        if (name.isEmpty()) name = prefix;
         if (color.isEmpty()) color = "#FFFFFF";
         if (!color.matches("(?i)#[0-9a-f]{6}([0-9a-f]{2})?")) {
             setStatus(Text.translatable("pmchat.admin.role.badcolor"), BAD);
             return;
         }
-        PmBackend.adminUpsertRole(key, name, rolePrefixField.getText().trim(), color, (ok, v, err) -> {
+        PmBackend.adminUpsertRole(key, name, prefix, color, (ok, v, err) -> {
             if (ok) {
                 setStatus(Text.translatable("pmchat.admin.ok"), OK);
                 resetRoleForm();
