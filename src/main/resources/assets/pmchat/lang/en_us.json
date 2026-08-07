@@ -631,5 +631,10 @@
   "pmchat.vibe.open": "Shared vibe",
   "pmchat.vibe.stop": "Stop shared vibe",
   "pmchat.vibe.title": "Shared vibe — pick a track",
-  "pmchat.vibe.empty": "Empty. Drop WAV/AU/AIFF files into config/pmchat-vibe"
+  "pmchat.vibe.empty": "Empty. Drop WAV/AU/AIFF files into config/pmchat-vibe",
+  "pmchat.vibe.stophint": "tap to stop",
+  "pmchat.vibe.invite.toast": "invites you to a shared vibe",
+  "pmchat.vibe.invite.ask": "invites you to a shared vibe:",
+  "pmchat.vibe.invite.accept": "Accept",
+  "pmchat.vibe.invite.decline": "Decline"
 }

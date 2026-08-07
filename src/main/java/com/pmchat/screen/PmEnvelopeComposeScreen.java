@@ -98,11 +98,15 @@ public class PmEnvelopeComposeScreen extends Screen {
         minutesField.setText(minutesText);
         addDrawableChild(minutesField);
 
+        // Ширина пресетов — по числу кнопок; FlatButton текст не обрезает сам (см. render()
+        // без scissor), поэтому подписи вроде «15м» на совсем узкой кнопке лезли бы за её
+        // границы и наплывали на соседние. trimToButton() режет подпись под реальную ширину.
         int pw = (fw - 64 - 6) / PRESETS_MIN.length;
         int px2 = fx + 64 + 6;
         for (int m : PRESETS_MIN) {
+            String label = trimToButton(presetLabel(m), pw - 4);
             addDrawableChild(FlatButton.centered(textRenderer, px2, y, pw - 2, 16,
-                    Text.literal(presetLabel(m)), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
+                    Text.literal(label), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                     btn -> minutesField.setText(String.valueOf(m))));
             px2 += pw;
         }
@@ -140,6 +144,12 @@ public class PmEnvelopeComposeScreen extends Screen {
                 btn -> send()));
         addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
                 Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+    }
+
+    private String trimToButton(String s, int maxW) {
+        if (textRenderer.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        return s + "…";
     }
 
     private String presetLabel(int minutes) {
@@ -202,6 +212,7 @@ public class PmEnvelopeComposeScreen extends Screen {
             context.drawStrokedRectangle(skinRect[0], skinRect[1], skinRect[2], skinRect[3], BTN_BORDER);
             String label = PmWire.envelopeIcon(skin) + "  " + Text.translatable(PmWire.envelopeLabelKey(skin)).getString()
                     + "  (" + Text.translatable("pmchat.envelope.skin.next").getString() + ")";
+            label = trimToButton(label, skinRect[2] - 6);
             context.drawText(textRenderer, label,
                     skinRect[0] + (skinRect[2] - textRenderer.getWidth(label)) / 2, skinRect[1] + 4,
                     PmWire.envelopeColor(skin), false);

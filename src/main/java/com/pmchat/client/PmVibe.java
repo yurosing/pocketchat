@@ -38,6 +38,23 @@ public final class PmVibe {
     private static volatile String activeConversation;
     private static volatile String activeTrackName;
 
+    /** Ждущее решения игрока приглашение от собеседника (5.8) — не играет, пока не принято. */
+    public static final class Invite {
+        public final String sender;
+        public final String hostCode;
+        public final String fileId;
+        public final long at;
+
+        Invite(String sender, String hostCode, String fileId, long at) {
+            this.sender = sender;
+            this.hostCode = hostCode;
+            this.fileId = fileId;
+            this.at = at;
+        }
+    }
+
+    private static volatile Invite pendingInvite;
+
     public static Path dir() {
         Path d = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("pmchat-vibe");
         try {
@@ -90,36 +107,69 @@ public final class PmVibe {
         }));
     }
 
-    /** Собеседник включил вайб у себя — скачиваем (или берём из кэша) тот же файл и зацикливаем. */
+    /**
+     * Собеседник зовёт включить вайб у себя — НЕ скачиваем и не играем сразу
+     * (чужой звук без спроса — плохо), а откладываем приглашение: игрок сам
+     * решает через {@link #acceptInvite} / {@link #declineInvite} (см. полоску
+     * над списком сообщений в PmScreen, и тост — если мессенджер сейчас закрыт).
+     */
     public static void onIncoming(String sender, String hostCode, String fileId) {
+        if (sender == null) return;
+        pendingInvite = new Invite(sender, hostCode, fileId, System.currentTimeMillis());
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (!PmChatClient.getConfig().dnd) {
+            client.getToastManager().add(new PmToast(sender,
+                    net.minecraft.text.Text.translatable("pmchat.vibe.invite.toast").getString()));
+        }
+    }
+
+    public static Invite pendingInviteFor(String conversation) {
+        Invite inv = pendingInvite;
+        return inv != null && conversation != null && inv.sender.equalsIgnoreCase(conversation) ? inv : null;
+    }
+
+    /** Игрок принял приглашение — только теперь качаем (или берём из кэша) файл и зацикливаем. */
+    public static void acceptInvite(String conversation) {
+        Invite inv = pendingInviteFor(conversation);
+        if (inv == null) return;
+        pendingInvite = null;
         CompletableFuture.runAsync(() -> {
             try {
-                Path cached = PmImages.mediaFile(hostCode, fileId);
+                Path cached = PmImages.mediaFile(inv.hostCode, inv.fileId);
                 byte[] bytes;
                 if (Files.exists(cached)) {
                     bytes = Files.readAllBytes(cached);
                 } else {
                     HttpResponse<byte[]> resp = HTTP.send(HttpRequest.newBuilder()
-                                    .uri(URI.create(PmHosts.baseUrl(hostCode) + fileId))
+                                    .uri(URI.create(PmHosts.baseUrl(inv.hostCode) + inv.fileId))
                                     .timeout(Duration.ofSeconds(15))
                                     .header("User-Agent", "pmchat-mod/1.0")
                                     .GET().build(),
                             HttpResponse.BodyHandlers.ofByteArray());
                     if (resp.statusCode() != 200) return;
                     bytes = resp.body();
-                    PmImages.saveToDisk(hostCode, fileId, bytes);
+                    PmImages.saveToDisk(inv.hostCode, inv.fileId, bytes);
                 }
                 byte[] fBytes = bytes;
-                MinecraftClient.getInstance().execute(() -> playBytes(fBytes, sender, fileId));
+                MinecraftClient.getInstance().execute(() -> playBytes(fBytes, inv.sender, inv.fileId));
             } catch (Exception e) {
                 PmChatClient.LOGGER.warn("Vibe fetch failed: {}", e.toString());
             }
         });
     }
 
-    /** Собеседник выключил у себя — гасим и у нас, если это был тот же диалог. */
+    /** Игрок отклонил приглашение — просто гасим его, собеседнику специально не сообщаем. */
+    public static void declineInvite(String conversation) {
+        Invite inv = pendingInviteFor(conversation);
+        if (inv != null) pendingInvite = null;
+    }
+
+    /** Собеседник выключил у себя — гасим (активный вайб или неотвеченное приглашение) у нас. */
     public static void onIncomingStop(String sender) {
-        if (activeConversation != null && sender != null && activeConversation.equalsIgnoreCase(sender)) stop();
+        if (sender == null) return;
+        if (activeConversation != null && activeConversation.equalsIgnoreCase(sender)) stop();
+        Invite inv = pendingInvite;
+        if (inv != null && inv.sender.equalsIgnoreCase(sender)) pendingInvite = null;
     }
 
     private static void playBytes(byte[] bytes, String conversation, String trackName) {
@@ -154,6 +204,7 @@ public final class PmVibe {
         stopClipOnly();
         activeConversation = null;
         activeTrackName = null;
+        pendingInvite = null;
     }
 
     /** Явная остановка игроком — гасит у себя и шлёт «стоп» собеседнику. */

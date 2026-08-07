@@ -631,5 +631,10 @@
   "pmchat.vibe.open": "Общий вайб",
   "pmchat.vibe.stop": "Остановить вайб",
   "pmchat.vibe.title": "Общий вайб — выберите трек",
-  "pmchat.vibe.empty": "Пусто. Положите WAV/AU/AIFF в config/pmchat-vibe"
+  "pmchat.vibe.empty": "Пусто. Положите WAV/AU/AIFF в config/pmchat-vibe",
+  "pmchat.vibe.stophint": "клик — выключить",
+  "pmchat.vibe.invite.toast": "зовёт включить общий вайб",
+  "pmchat.vibe.invite.ask": "приглашает включить общий вайб:",
+  "pmchat.vibe.invite.accept": "Принять",
+  "pmchat.vibe.invite.decline": "Отклонить"
 }
