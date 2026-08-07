@@ -54,6 +54,9 @@ public class PmMessage {
     /** спойлер-фото/видео открыто кликом — запоминается, как в Telegram. */
     public boolean spoilerRevealed;
 
+    /** Конверт (5.7) вскрыт получателем — запоминается навсегда, как спойлер. */
+    public boolean envelopeOpened;
+
     /** Голосов за вариант i (я + собеседник). */
     public int pollCount(int i) {
         int c = 0;

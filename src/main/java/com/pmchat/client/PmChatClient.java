@@ -1456,6 +1456,9 @@ public class PmChatClient implements ClientModInitializer {
         if (PmWire.parseVid(text) != null) {
             return Text.translatable("pmchat.video.label").getString();
         }
+        if (PmWire.parseEnvelope(text) != null) {
+            return "✉ " + Text.translatable("pmchat.envelope.label").getString();
+        }
         String[] poll = PmWire.parsePoll(text);
         if (poll != null) {
             return "▤ " + poll[1];

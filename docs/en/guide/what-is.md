@@ -40,6 +40,8 @@ expects by default. Easy to fix — see
   wallpaper.
 - 🟢 **Mod indicator** — a dot shows whether the other person also has
   PocketChat.
+- ✉️ **Envelopes** — a message locked behind a timer (+ optionally a password
+  question), openable by the recipient only once it unlocks.
 
 ## What you need to install it
 

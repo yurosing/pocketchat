@@ -519,6 +519,7 @@ public class PmScreen extends Screen {
     private final List<Object[]> spoilerRects = new ArrayList<>(); // x,y,w,h,msg — клик открывает спойлер
     private final List<Object[]> warnBtnRects = new ArrayList<>(); // x,y,w,h,nick (6.8 кнопка преда)
     private final List<Object[]> pollOptRects = new ArrayList<>(); // x,y,w,h,msg,optIndex
+    private final List<Object[]> envelopeRects = new ArrayList<>(); // x,y,w,h,msg,env — клик открывает конверт (5.7)
     private final List<Object[]> emojiRects = new ArrayList<>(); // x,y,w,h,emoji
     private final List<Object[]> emojiCatRects = new ArrayList<>(); // x,y,w,h,catIndex
     private int replyCancelX = -1, replyCancelY = -1;
@@ -621,6 +622,17 @@ public class PmScreen extends Screen {
                     pollMode = true;
                     rebuild();
                 }));
+        // Сообщение-конверт (5.7): текст, вскрывается по таймеру (+опционально вопросу-паролю).
+        // Только в личном диалоге — глобальный чат/каналы/группы такое не поддерживают.
+        if (isPlayerTab(selected)) {
+            y += rowH + 2;
+            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                    Text.literal("✉ " + Text.translatable("pmchat.envelope.compose").getString()),
+                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF7E9AAB, btn -> {
+                        moreMenuOpen = false;
+                        MinecraftClient.getInstance().setScreen(new PmEnvelopeComposeScreen(this, selected));
+                    }));
+        }
         y += rowH + 2;
         addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
                 Text.literal("$ " + Text.translatable("pmchat.tip.money").getString()),
@@ -3775,13 +3787,16 @@ public class PmScreen extends Screen {
         warnBtnRects.clear();
         pinOffsets.clear();
         pollOptRects.clear();
+        envelopeRects.clear();
         context.enableScissor(px + LEFT_W + 1, areaTop, px + PANEL_W, areaBottom + 2);
         SimpleDateFormat timeFmt = new SimpleDateFormat("HH:mm");
         SimpleDateFormat dateFmt = new SimpleDateFormat("dd.MM.yyyy");
         int y = areaBottom + msgScroll;
         int contentH = 0;
+        long nowSec = now / 1000L;
         for (int i = shown.size() - 1; i >= 0; i--) {
             PmMessage msg = shown.get(i);
+            Object[] env = envelopeOf(msg);
             String[] imgRef = imageIdOf(msg);
             PmImages.Entry img = imgRef != null ? PmImages.get(imgRef[0], imgRef[1]) : null;
             String[] voice = voiceOf(msg);
@@ -3807,7 +3822,28 @@ public class PmScreen extends Screen {
             int bh;
             // СЕКРЕТНО: расшифровка голосового (ПКМ → «Расшифровать»), строки под пузырём
             List<String> voiceTranscriptLines = List.of();
-            if (msg.isPoll()) {
+            List<String> envOpenedLines = List.of();
+            if (env != null) {
+                lines = List.of();
+                String envSkin = (String) env[0];
+                long envUnlockAt = (Long) env[1];
+                boolean envHasQ = (Boolean) env[2];
+                boolean envLocked = nowSec < envUnlockAt;
+                String skinLabel = com.pmchat.client.PmWire.envelopeIcon(envSkin) + " "
+                        + Text.translatable(com.pmchat.client.PmWire.envelopeLabelKey(envSkin)).getString();
+                if (msg.envelopeOpened) {
+                    envOpenedLines = wrapText((String) env[5], BUBBLE_MAX_TEXT_W);
+                    textW = Math.max(textRenderer.getWidth(skinLabel),
+                            envOpenedLines.stream().mapToInt(textRenderer::getWidth).max().orElse(10));
+                    bh = 12 + envOpenedLines.size() * lineH() + 5;
+                } else {
+                    String line2 = envLocked
+                            ? "⌛ " + Text.translatable("pmchat.envelope.opensin", formatCountdown(envUnlockAt - nowSec)).getString()
+                            : Text.translatable(envHasQ ? "pmchat.envelope.tapquestion" : "pmchat.envelope.tapopen").getString();
+                    textW = Math.max(textRenderer.getWidth(skinLabel), textRenderer.getWidth(line2));
+                    bh = 12 + 11 + 6;
+                }
+            } else if (msg.isPoll()) {
                 lines = List.of();
                 textW = BUBBLE_MAX_TEXT_W;
                 bh = 12 + msg.pollOptions.size() * 13 + 10;
@@ -4016,7 +4052,34 @@ public class PmScreen extends Screen {
             }
 
             // Содержимое
-            if (msg.isPoll()) {
+            if (env != null) {
+                int fg = msg.out ? OUT_TEXT : IN_TEXT;
+                String envSkin = (String) env[0];
+                long envUnlockAt = (Long) env[1];
+                boolean envHasQ = (Boolean) env[2];
+                boolean envLocked = nowSec < envUnlockAt;
+                int skinColor = com.pmchat.client.PmWire.envelopeColor(envSkin);
+                String skinLabel = com.pmchat.client.PmWire.envelopeIcon(envSkin) + " "
+                        + Text.translatable(com.pmchat.client.PmWire.envelopeLabelKey(envSkin)).getString();
+                int eyy = y + dy + quoteShift + 3;
+                context.drawText(textRenderer, trim(skinLabel, bw - 12), bx + dx + 6, eyy, applyAlpha(skinColor, alpha), false);
+                eyy += 11;
+                if (msg.envelopeOpened) {
+                    for (String line : envOpenedLines) {
+                        context.drawText(textRenderer, line, bx + dx + 6, eyy, applyAlpha(fg, alpha), false);
+                        eyy += lineH();
+                    }
+                } else {
+                    String line2 = envLocked
+                            ? "⌛ " + Text.translatable("pmchat.envelope.opensin", formatCountdown(envUnlockAt - nowSec)).getString()
+                            : Text.translatable(envHasQ ? "pmchat.envelope.tapquestion" : "pmchat.envelope.tapopen").getString();
+                    context.drawText(textRenderer, trim(line2, bw - 12), bx + dx + 6, eyy,
+                            applyAlpha(envLocked ? SUBTLE : fg, alpha), false);
+                    if (!envLocked) {
+                        envelopeRects.add(new Object[]{bx + dx, y + dy, bw, bh, msg, env});
+                    }
+                }
+            } else if (msg.isPoll()) {
                 int fg = msg.out ? OUT_TEXT : IN_TEXT;
                 int pyy = y + dy + quoteShift + 3;
                 context.drawText(textRenderer, "▤ " + trim(msg.pollQuestion, bw - 16), bx + dx + 6, pyy, applyAlpha(fg, alpha), false);
@@ -4246,6 +4309,23 @@ public class PmScreen extends Screen {
     static String[] vidOf(PmMessage msg) {
         if (msg.text == null || msg.money > 0) return null;
         return com.pmchat.client.PmWire.parseVid(msg.text);
+    }
+
+    /** {skin, unlockAt(Long), hasQuestion(Boolean), question, ansHash, содержимое} или null. */
+    static Object[] envelopeOf(PmMessage msg) {
+        if (msg.text == null || msg.money > 0) return null;
+        return com.pmchat.client.PmWire.parseEnvelope(msg.text);
+    }
+
+    /** «Откроется через» — компактно: мм:сс до часа, часы:минуты до суток, иначе дни. */
+    private static String formatCountdown(long secs) {
+        if (secs <= 0) return "0:00";
+        long h = secs / 3600;
+        long m = (secs % 3600) / 60;
+        long s = secs % 60;
+        if (h >= 24) return (h / 24) + "д " + (h % 24) + "ч";
+        if (h > 0) return h + "ч " + m + "м";
+        return String.format(Locale.ROOT, "%d:%02d", m, s);
     }
 
     private String quotedTextOf(PmMessage msg) {
@@ -5390,6 +5470,26 @@ public class PmScreen extends Screen {
                     PmMessage msg = (PmMessage) r[4];
                     msg.spoilerRevealed = true;
                     history.save();
+                    return true;
+                }
+            }
+        }
+        // Клик по разблокированному (таймер вышел) конверту — открыть, либо сперва
+        // спросить пароль-вопрос, если он задан (5.7).
+        if (!imageMode && !statsMode && click.button() == 0) {
+            for (Object[] r : envelopeRects) {
+                int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
+                if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
+                    PmMessage msg = (PmMessage) r[4];
+                    Object[] env = (Object[]) r[5];
+                    boolean hasQ = (Boolean) env[2];
+                    if (hasQ) {
+                        MinecraftClient.getInstance().setScreen(new PmEnvelopeUnlockScreen(this, msg,
+                                (String) env[3], (String) env[4]));
+                    } else {
+                        msg.envelopeOpened = true;
+                        history.save();
+                    }
                     return true;
                 }
             }
