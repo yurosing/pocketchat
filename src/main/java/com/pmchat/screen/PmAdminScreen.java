@@ -60,6 +60,8 @@ public class PmAdminScreen extends Screen {
     private final PmConfig config = PmChatClient.getConfig();
     private static int lastTab = 0;
     private int tab = lastTab;
+    /** Число строк панели вкладок — считается в init() под ширину окна (9 вкладок часто не влезают в одну). */
+    private int tabRows = 1;
 
     private Text status = Text.empty();
     private int statusColor = SUBTLE;
@@ -162,10 +164,18 @@ public class PmAdminScreen extends Screen {
         lastTab = tab;
         status = Text.empty();
 
-        int tabW = width / TAB_KEYS.length;
+        // 9 вкладок в одну строку на узком окне (GUI Scale 4 и т.п.) не влезают — подписи
+        // вылезали за края экрана (FlatButton текст не обрезает). Переносим лишние вкладки
+        // на вторую (и далее) строку вместо этого.
+        int minTabW = 0;
+        for (String k : TAB_KEYS) minTabW = Math.max(minTabW, textRenderer.getWidth(Text.translatable(k)) + 16);
+        int cols = Math.max(1, Math.min(TAB_KEYS.length, width / Math.max(1, minTabW)));
+        tabRows = (int) Math.ceil(TAB_KEYS.length / (double) cols);
+        int tabW = width / cols;
         for (int i = 0; i < TAB_KEYS.length; i++) {
             int ti = i;
-            addDrawableChild(FlatButton.centered(textRenderer, ti * tabW, HEADER_H, tabW, TAB_H,
+            int row = i / cols, col = i % cols;
+            addDrawableChild(FlatButton.centered(textRenderer, col * tabW, HEADER_H + row * TAB_H, tabW, TAB_H,
                     Text.translatable(TAB_KEYS[i]),
                     ti == tab ? PANEL_LIGHT : PANEL, BTN_HOVER, NEON_DIM, ti == tab ? TITLE : TEXT_MAIN,
                     btn -> {
@@ -174,7 +184,7 @@ public class PmAdminScreen extends Screen {
                     }));
         }
 
-        int contentTop = HEADER_H + TAB_H + 10;
+        int contentTop = HEADER_H + TAB_H * tabRows + 10;
         switch (tab) {
             case 0 -> buildDashboard(contentTop);
             case 1 -> buildBroadcast(contentTop);
@@ -245,7 +255,7 @@ public class PmAdminScreen extends Screen {
     }
 
     private void drawDashboard(DrawContext context, int mouseX, int mouseY) {
-        int top = HEADER_H + TAB_H + 14;
+        int top = HEADER_H + TAB_H * tabRows + 14;
         int cx = width / 2;
 
         if (System.currentTimeMillis() - lastDashLoadAt > 5000) loadDashboard();
