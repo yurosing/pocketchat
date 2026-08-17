@@ -423,14 +423,19 @@ public class PmChatClient implements ClientModInitializer {
         if (plain.isEmpty()) return false;
 
         // Свои исходящие ЛС не фильтруем НИКОГДА.
-        if (outgoing != null && outgoing.matcher(plain).find()) return false;
+        // lookingAt(), а не find(): паттерн ЛС должен совпасть от НАЧАЛА строки.
+        // Иначе если кто-то скопирует чужое полученное ЛС («(ЛС) Ник -> я » текст»)
+        // и вставит его как обычное сообщение в общий чат («<Копипастер> (ЛС) Ник ->
+        // я » текст»), find() найдёт этот кусок ГДЕ УГОДНО в строке и подделка
+        // придёт в PocketChat как настоящее новое ЛС от Ника.
+        if (outgoing != null && outgoing.matcher(plain).lookingAt()) return false;
         // Входящие ЛС (фича 5, «ник » текст», где ник — отправитель):
         // применяем список заблокированных игроков и текстовые правила с
         // областью «везде» (SCOPE_BOTH). Глобальный/Discord-тумблеры к личкам
         // НЕ относятся — иначе «отключить глобальный чат» съел бы все ЛС.
         if (incoming != null) {
             Matcher pm = incoming.matcher(plain);
-            if (pm.find()) {
+            if (pm.lookingAt()) {
                 String pmAuthor = pm.groupCount() >= 1 ? pm.group(1) : null;
                 String self0 = selfName();
                 if (!self0.isBlank() && self0.equalsIgnoreCase(pmAuthor)) return false;
@@ -525,13 +530,16 @@ public class PmChatClient implements ClientModInitializer {
 
         if (incoming != null) {
             Matcher m = incoming.matcher(plain);
-            if (m.find()) {
+            // lookingAt() — см. комментарий в shouldFilter(): без анкера к началу
+            // строки скопированный/вставленный текст чужого ЛС подделывался бы под
+            // новое входящее сообщение.
+            if (m.lookingAt()) {
                 return onIncoming(m.group(1), m.group(2).trim());
             }
         }
         if (outgoing != null) {
             Matcher m = outgoing.matcher(plain);
-            if (m.find()) {
+            if (m.lookingAt()) {
                 return onOutgoingEcho(m.group(1), m.group(2).trim());
             }
         }
