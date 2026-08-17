@@ -24,8 +24,11 @@ public class PmConfig {
      * Регэкспы для перехвата строк ЛС из чата. Группа 1 — ник, группа 2 — текст.
      * По умолчанию — формат Essentials на vanilla-box: "(ЛС) я -> ник » текст".
      */
-    public String incomingPattern = "\\(ЛС\\)\\s*\\W*([A-Za-z0-9_]{2,16})\\s*->\\s*я\\s*»\\s*(.+)";
-    public String outgoingPattern = "\\(ЛС\\)\\s*я\\s*->\\s*\\W*([A-Za-z0-9_]{2,16})\\s*»\\s*(.+)";
+    public String incomingPattern = "\\(ЛС\\)\\s*\\W*([^\\s].{0,23}?)\\s*->\\s*я\\s*»\\s*(.+)";
+    public String outgoingPattern = "\\(ЛС\\)\\s*я\\s*->\\s*\\W*([^\\s].{0,23}?)\\s*»\\s*(.+)";
+    /** Прежние значения по умолчанию — для миграции в {@link #load()} (5.9). */
+    private static final String OLD_INCOMING_PATTERN = "\\(ЛС\\)\\s*\\W*([A-Za-z0-9_]{2,16})\\s*->\\s*я\\s*»\\s*(.+)";
+    private static final String OLD_OUTGOING_PATTERN = "\\(ЛС\\)\\s*я\\s*->\\s*\\W*([A-Za-z0-9_]{2,16})\\s*»\\s*(.+)";
 
     /** Глобальный чат: ник — последнее слово перед », дальше текст. */
     public String globalPattern = "([A-Za-z0-9_]{2,16})[^»A-Za-z0-9_]*»\\s*(.+)";
@@ -667,6 +670,17 @@ public class PmConfig {
                     if (cfg.coreProtectPattern == null || cfg.coreProtectPattern.isBlank()
                             || cfg.coreProtectPattern.contains("/h\\s+ago")) {
                         cfg.coreProtectPattern = new PmConfig().coreProtectPattern;
+                    }
+                    // Миграция ника ЛС на нежёсткий класс символов (5.9) — старый жёсткий
+                    // [A-Za-z0-9_]{2,16} не матчился, если игроку сменили ник на что-то с
+                    // пробелами/кириллицей/скобками (ник-плагины) — его ЛС просто пропадали.
+                    if (cfg.incomingPattern == null || cfg.incomingPattern.isBlank()
+                            || cfg.incomingPattern.equals(OLD_INCOMING_PATTERN)) {
+                        cfg.incomingPattern = new PmConfig().incomingPattern;
+                    }
+                    if (cfg.outgoingPattern == null || cfg.outgoingPattern.isBlank()
+                            || cfg.outgoingPattern.equals(OLD_OUTGOING_PATTERN)) {
+                        cfg.outgoingPattern = new PmConfig().outgoingPattern;
                     }
                     if (cfg.contacts == null) cfg.contacts = new ArrayList<>();
                     if (cfg.aliases == null) cfg.aliases = new HashMap<>();

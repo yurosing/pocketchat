@@ -31,12 +31,17 @@ import java.util.Locale;
 @Environment(EnvType.CLIENT)
 public class PmGiftsScreen extends Screen {
 
-    private static final int CELL = 100;
-    private static final int GAP = 14;
+    private static final int CELL = 140;
+    private static final int GAP = 12;
     private static final int SPARKLES = 4;
+    private static final int RAYS = 7;
 
-    private int PANEL_W = 420;
-    private int PANEL_H = 340;
+    /** Плавное наведение по карточке (индекс → 0..1, для «попап» масштаба) — как в FlatButton. */
+    private final java.util.Map<Integer, Float> hoverAnim = new java.util.HashMap<>();
+    private long lastFrameMs = 0L;
+
+    private int PANEL_W = 460;
+    private int PANEL_H = 400;
 
     private final Screen parent;
     private final String player;
@@ -82,8 +87,8 @@ public class PmGiftsScreen extends Screen {
         applyTheme();
         clearChildren();
 
-        PANEL_W = Math.max(220, Math.min(420, width - 24));
-        PANEL_H = Math.max(160, Math.min(380, height - 24));
+        PANEL_W = Math.max(220, Math.min(460, width - 24));
+        PANEL_H = Math.max(160, Math.min(400, height - 24));
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 
@@ -104,6 +109,10 @@ public class PmGiftsScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        long now = System.currentTimeMillis();
+        float dt = lastFrameMs == 0L ? 0f : Math.min(0.1f, (now - lastFrameMs) / 1000f);
+        lastFrameMs = now;
+
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
@@ -115,7 +124,7 @@ public class PmGiftsScreen extends Screen {
             Long bal = PmBackend.cachedSelfBalance();
             String balStr = Text.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
             context.drawText(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
-            renderCatalogGrid(context, mouseX, mouseY);
+            renderCatalogGrid(context, mouseX, mouseY, dt);
             if (!status.getString().isEmpty()) {
                 context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2,
                         py + PANEL_H - 46, statusColor, false);
@@ -123,35 +132,65 @@ public class PmGiftsScreen extends Screen {
         } else if (detailIndex >= 0 && detailIndex < gifts().size()) {
             renderDetail(context, gifts().get(detailIndex));
         } else {
-            renderReceivedGrid(context, mouseX, mouseY);
+            renderReceivedGrid(context, mouseX, mouseY, dt);
         }
 
         super.render(context, mouseX, mouseY, delta);
     }
 
-    /** Общий фон карточки: свечение кольцами цвета редкости + дышащий значок + искры на ховере. */
+    /**
+     * Общий фон карточки, в духе Telegram-подарков: скруглённая карточка с лёгким
+     * градиентом цвета редкости, постоянный вращающийся «звёздный» блик из лучей
+     * позади значка (не только на ховере — иначе сетка выглядит мёртвой, пока не
+     * водишь мышью), дышащий значок и плавный «поп»-масштаб карточки при наведении.
+     */
     private void drawCardBase(DrawContext context, int x, int y, int index, String icon, int rarity,
-                               boolean hover, boolean dim) {
+                               boolean hover, boolean dim, float dt) {
         long now = System.currentTimeMillis();
         double t = now / 1000.0 + index * 0.37;
         int cx = x + CELL / 2, cy = y + CELL / 2 - 6;
+        float sc = CELL / 100f; // масштаб свечения/значка относительно размера карточки
 
-        context.fill(x, y, x + CELL, y + CELL, hover ? 0x48FFFFFF : 0x26FFFFFF);
-        context.drawStrokedRectangle(x, y, CELL, CELL, dim ? BTN_BORDER : rarity);
+        // Плавный «поп» при наведении — как у FlatButton, но по индексу карточки.
+        float hAnim = hoverAnim.getOrDefault(index, 0f);
+        hAnim += ((hover ? 1f : 0f) - hAnim) * Math.min(1f, dt * 14f);
+        hoverAnim.put(index, hAnim);
+
+        // Карточка со скруглением + лёгкий градиент к центру цвета редкости.
+        PmScreen.fillRound(context, x, y, CELL, CELL, 8, dim ? BTN_BG : (0x30000000 | (rarity & 0xFFFFFF)));
+        PmScreen.fillRound(context, x + 1, y + 1, CELL - 2, CELL - 2, 7, 0x20FFFFFF);
+        context.drawStrokedRectangle(x, y, CELL, CELL, dim ? BTN_BORDER : lerpAlpha(rarity, 0x60 + (int) (hAnim * 0x50)));
 
         if (!dim) {
             // Свечение кольцами — пульсирует по фазе, сдвинутой для каждой карточки.
-            int glowBase = hover ? 46 : 30;
+            int glowBase = 30 + (int) (hAnim * 22);
             for (int ring = 3; ring >= 1; ring--) {
                 float pulse = (float) (0.6 + 0.4 * Math.sin(t * 2 + ring));
-                int r = 14 + ring * 9;
+                int r = (int) ((14 + ring * 9) * sc);
                 fillCircleClamped(context, cx, cy, r, (rarity & 0xFFFFFF) | (((int) (glowBase / ring * pulse)) << 24),
                         x, y, x + CELL, y + CELL);
+            }
+            // Вращающийся звёздный блик — короткие лучи-искры от центра, всегда видны
+            // (не только на ховере), на ховере ускоряются и становятся ярче.
+            double spin = t * (hover ? 1.1 : 0.4);
+            int rays = RAYS;
+            for (int i = 0; i < rays; i++) {
+                double angle = spin + i * (Math.PI * 2 / rays);
+                double twinkle = 0.4 + 0.6 * Math.sin(t * 3.2 + i * 1.7);
+                int rayLen = (int) (CELL * (0.20 + 0.16 * twinkle)) + (int) (hAnim * 5);
+                for (int step = 2; step <= rayLen; step += 4) {
+                    double frac = step / (double) rayLen;
+                    int rx = cx + (int) (Math.cos(angle) * step);
+                    int ry = cy + (int) (Math.sin(angle) * step * 0.72);
+                    if (rx < x || rx >= x + CELL || ry < y || ry >= y + CELL) continue;
+                    int alpha = (int) (255 * (1.0 - frac) * (0.35 + 0.35 * twinkle) * (0.6 + 0.4 * hAnim));
+                    context.fill(rx, ry, rx + 1, ry + 1, (Math.max(0, alpha) << 24) | 0xFFFFFF);
+                }
             }
         }
 
         float breathe = 1f + 0.12f * (float) Math.sin(t * 2.2);
-        float scale = 3.6f * breathe;
+        float scale = (3.6f * sc + hAnim * 0.5f) * breathe;
         drawScaledCentered(context, icon, cx, cy, scale, dim ? 0xFFB0B0B0 : 0xFFFFFFFF);
 
         if (hover && !dim) {
@@ -166,6 +205,11 @@ public class PmGiftsScreen extends Screen {
         }
     }
 
+    /** Заменяет альфа-канал цвета на заданное значение (0-255). */
+    private static int lerpAlpha(int color, int alpha) {
+        return (Math.max(0, Math.min(255, alpha)) << 24) | (color & 0xFFFFFF);
+    }
+
     /** {@link #fillCircle} с обрезкой по прямоугольнику карточки — свечение не должно вылезать на соседей. */
     private static void fillCircleClamped(DrawContext ctx, int cx, int cy, int r, int color, int minX, int minY, int maxX, int maxY) {
         for (int dy = -r; dy <= r; dy++) {
@@ -177,7 +221,7 @@ public class PmGiftsScreen extends Screen {
         }
     }
 
-    private void renderCatalogGrid(DrawContext context, int mouseX, int mouseY) {
+    private void renderCatalogGrid(DrawContext context, int mouseX, int mouseY, float dt) {
         cardRects.clear();
         List<PmBackend.Gift> cat = PmBackend.cachedCatalog();
         if (cat.isEmpty()) {
@@ -199,7 +243,7 @@ public class PmGiftsScreen extends Screen {
             int rarity = PmBackend.rarityColor(g.rarity);
             boolean hover = mouseX >= x && mouseX < x + CELL && mouseY >= y && mouseY < y + CELL;
 
-            drawCardBase(context, x, y, i, g.icon, rarity, hover, !afford);
+            drawCardBase(context, x, y, i, g.icon, rarity, hover, !afford, dt);
 
             String priceStr = PmBackend.formatCoins(g.price);
             context.drawText(textRenderer, priceStr, x + (CELL - textRenderer.getWidth(priceStr)) / 2,
@@ -228,7 +272,7 @@ public class PmGiftsScreen extends Screen {
         });
     }
 
-    private void renderReceivedGrid(DrawContext context, int mouseX, int mouseY) {
+    private void renderReceivedGrid(DrawContext context, int mouseX, int mouseY, float dt) {
         cardRects.clear();
         List<PmBackend.ReceivedGift> got = gifts();
         if (got.isEmpty()) {
@@ -250,7 +294,7 @@ public class PmGiftsScreen extends Screen {
             int rarity = PmBackend.rarityColor(def != null ? def.rarity : null);
             boolean hover = mouseX >= x && mouseX < x + CELL && mouseY >= y && mouseY < y + CELL;
 
-            drawCardBase(context, x, y, i, icon, rarity, hover, false);
+            drawCardBase(context, x, y, i, icon, rarity, hover, false, dt);
 
             // Цветной кружок-бейдж отправителя (первая буква ника) в углу — как в Telegram.
             String from = g.from == null || g.from.isEmpty() ? "?" : g.from;
