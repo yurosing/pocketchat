@@ -602,122 +602,130 @@ public class PmScreen extends Screen {
     private String pendingJumpHash = null; // отложенный переход к сообщению (после смены диалога)
     private int pendingJumpOffset = -1;
 
-    /** выпадающее меню «⋮» — видео/аудио, опрос, деньги, статистика. */
-    private void buildMoreMenu() {
-        int w = 130;
-        int x = px + PANEL_W - 10 - w;
-        int y = py + 22;
-        int rowH = 18;
+    /** Один пункт меню «⋮»: значок-глиф, ключ подписи, цвет, действие по клику. */
+    private record MoreMenuItem(String icon, String labelKey, int color, Runnable action) {}
 
-        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                Text.literal("▶ " + Text.translatable("pmchat.media.pick").getString()),
-                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
-                    closeModes();
-                    mediaMode = true;
-                    loadMedia();
-                    rebuild();
-                }));
-        y += rowH + 2;
-        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                Text.literal("▤ " + Text.translatable("pmchat.tip.poll").getString()),
-                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
-                    closeModes();
-                    pollMode = true;
-                    rebuild();
-                }));
-        // Сообщение-конверт (5.7): текст, вскрывается по таймеру (+опционально вопросу-паролю).
-        // Только в личном диалоге — глобальный чат/каналы/группы такое не поддерживают.
+    /** Заголовки секций меню «⋮» для рисования в {@link #renderMoreMenu} — {labelKey, x, y}. */
+    private final java.util.List<Object[]> moreMenuSections = new java.util.ArrayList<>();
+    /** Фон меню «⋮» — {x, y, w, h}, посчитан в {@link #buildMoreMenu}. */
+    private int[] moreMenuPanelRect;
+
+    /**
+     * Выпадающее меню «⋮» — раньше это был один сплошной список из 10 кнопок
+     * подряд без единого разделения (по жалобе «весь функционал в одной линии
+     * кнопок»). Теперь пункты сгруппированы по смыслу (медиа / спецсообщения /
+     * профиль-прочее), у каждой группы подпись и фон-панель под всем меню.
+     */
+    private void buildMoreMenu() {
+        moreMenuSections.clear();
+        int w = 150;
+        int rowH = 16;
+        int x = px + PANEL_W - 10 - w;
+        int y = py + 30;
+        int panelTop = y;
+
+        java.util.List<MoreMenuItem> mediaItems = new java.util.ArrayList<>();
+        mediaItems.add(new MoreMenuItem("▶", "pmchat.media.pick", 0xFF9CC4DC, () -> {
+            closeModes();
+            mediaMode = true;
+            loadMedia();
+            rebuild();
+        }));
         if (isPlayerTab(selected)) {
-            y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                    Text.literal("✉ " + Text.translatable("pmchat.envelope.compose").getString()),
-                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF7E9AAB, btn -> {
-                        moreMenuOpen = false;
-                        MinecraftClient.getInstance().setScreen(new PmEnvelopeComposeScreen(this, selected));
-                    }));
+            // «Кружок» (6.11, шаг 1): мгновенный снимок экрана как сообщение — тем же
+            // способом, что и снимок по F2, только без похода в папку screenshots.
+            mediaItems.add(new MoreMenuItem("◉", "pmchat.tip.circle", 0xFFE07A6A, this::sendCircleSnapshot));
+            // «Медиа и файлы» с этим собеседником (как shared-media в Telegram).
+            String peer = selected;
+            mediaItems.add(new MoreMenuItem("▦", "pmchat.sharedmedia.open", 0xFF9CC4DC,
+                    () -> MinecraftClient.getInstance().setScreen(new PmContactMediaScreen(this, peer))));
         }
-        // Общий вайб (5.8): синхронный фоновый эмбиент на двоих, пока идёт переписка.
+
+        java.util.List<MoreMenuItem> extraItems = new java.util.ArrayList<>();
+        extraItems.add(new MoreMenuItem("▤", "pmchat.tip.poll", 0xFF9CC4DC, () -> {
+            closeModes();
+            pollMode = true;
+            rebuild();
+        }));
+        // Сообщение-конверт (5.7) и общий вайб (5.8) — только в личном диалоге,
+        // глобальный чат/каналы/группы такое не поддерживают.
         if (isPlayerTab(selected)) {
+            String target = selected;
+            extraItems.add(new MoreMenuItem("✉", "pmchat.envelope.compose", 0xFF7E9AAB,
+                    () -> MinecraftClient.getInstance().setScreen(new PmEnvelopeComposeScreen(this, target))));
             boolean vibeActive = com.pmchat.client.PmVibe.isActiveFor(selected);
-            y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                    Text.literal("♪ " + Text.translatable(vibeActive
-                            ? "pmchat.vibe.stop" : "pmchat.vibe.open").getString()),
-                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, vibeActive ? 0xFF8FD8A8 : 0xFF6FBF8B, btn -> {
-                        moreMenuOpen = false;
+            extraItems.add(new MoreMenuItem("♪", vibeActive ? "pmchat.vibe.stop" : "pmchat.vibe.open",
+                    vibeActive ? 0xFF8FD8A8 : 0xFF6FBF8B, () -> {
                         if (vibeActive) {
                             com.pmchat.client.PmVibe.stopAndNotify();
                         } else {
-                            MinecraftClient.getInstance().setScreen(new PmVibeScreen(this, selected));
+                            MinecraftClient.getInstance().setScreen(new PmVibeScreen(this, target));
                         }
                     }));
         }
-        y += rowH + 2;
-        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                Text.literal("$ " + Text.translatable("pmchat.tip.money").getString()),
-                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFF0C34E, btn -> {
-                    closeModes();
-                    moneyMode = true;
-                    rebuild();
-                }));
-        y += rowH + 2;
-        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                Text.literal("▥ " + Text.translatable("pmchat.tip.stats").getString()),
-                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
-                    closeModes();
-                    statsMode = true;
-                    clearConfirm = false;
-                    rebuild();
-                }));
-        // Профиль игрока (4.5 / 5.5) — только для личного диалога
+
+        java.util.List<MoreMenuItem> otherItems = new java.util.ArrayList<>();
         if (isPlayerTab(selected)) {
             String peer = selected; // фиксируем собеседника на момент постройки меню
-            y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                    Text.literal("☺ " + Text.translatable("pmchat.profile.open").getString()),
-                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B, btn -> {
-                        moreMenuOpen = false;
-                        openProfile(peer);
-                    }));
+            otherItems.add(new MoreMenuItem("☺", "pmchat.profile.open", 0xFF6FBF8B, () -> openProfile(peer)));
         }
-        // «Кружок» (6.11, шаг 1): мгновенный снимок экрана как сообщение — тем же
-        // способом, что и снимок по F2, только без похода в папку screenshots.
-        // Анимация/запись в реальном времени — отдельный следующий шаг.
-        if (isPlayerTab(selected)) {
-            y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                    Text.literal("◉ " + Text.translatable("pmchat.tip.circle").getString()),
-                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFE07A6A, btn -> {
-                        moreMenuOpen = false;
-                        sendCircleSnapshot();
-                    }));
-        }
-        // «Медиа и файлы» с этим собеседником (как shared-media в Telegram) —
-        // отдельное окно с вкладками Все/ГС/Медиа поверх всей истории переписки.
-        if (isPlayerTab(selected)) {
-            String peer = selected;
-            y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                    Text.literal("▦ " + Text.translatable("pmchat.sharedmedia.open").getString()),
-                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
-                        moreMenuOpen = false;
-                        MinecraftClient.getInstance().setScreen(new PmContactMediaScreen(this, peer));
-                    }));
-        }
+        otherItems.add(new MoreMenuItem("▥", "pmchat.tip.stats", WBTN_TEXT, () -> {
+            closeModes();
+            statsMode = true;
+            clearConfirm = false;
+            rebuild();
+        }));
+        otherItems.add(new MoreMenuItem("$", "pmchat.tip.money", 0xFFF0C34E, () -> {
+            closeModes();
+            moneyMode = true;
+            rebuild();
+        }));
         // Заглушить уведомления этого личного диалога (как в Telegram) — у каналов
         // и групп для этого есть отдельный колокольчик в шапке (см. isFeedTab),
         // личным диалогам его не хватало вовсе.
         if (isPlayerTab(selected)) {
             String convId = selected;
             boolean muted = config.isMutedThread(convId);
-            y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
-                    Text.literal("♪ " + Text.translatable(muted ? "pmchat.tip.unmute" : "pmchat.tip.mute").getString()),
-                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, muted ? WBTN_TEXT : 0xFF8FD8A8, btn -> {
+            otherItems.add(new MoreMenuItem("🔔", muted ? "pmchat.tip.unmute" : "pmchat.tip.mute",
+                    muted ? WBTN_TEXT : 0xFF8FD8A8, () -> {
                         config.toggleMutedThread(convId);
-                        moreMenuOpen = false;
                         rebuild();
                     }));
+        }
+
+        y = layoutMoreMenuSection("pmchat.moremenu.media", mediaItems, x, y, w, rowH);
+        y = layoutMoreMenuSection("pmchat.moremenu.extras", extraItems, x, y, w, rowH);
+        y = layoutMoreMenuSection("pmchat.moremenu.other", otherItems, x, y, w, rowH);
+
+        moreMenuPanelRect = new int[]{x - 8, panelTop - 10, w + 16, y - panelTop + 6};
+    }
+
+    /** Рисует подпись секции и кнопки одной группы пунктов меню «⋮», возвращает Y после группы. */
+    private int layoutMoreMenuSection(String titleKey, java.util.List<MoreMenuItem> items, int x, int y, int w, int rowH) {
+        if (items.isEmpty()) return y;
+        moreMenuSections.add(new Object[]{titleKey, x, y});
+        y += 11;
+        for (MoreMenuItem it : items) {
+            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+                    Text.literal(it.icon() + " " + Text.translatable(it.labelKey()).getString()),
+                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, it.color(), btn -> {
+                        moreMenuOpen = false;
+                        it.action().run();
+                    }));
+            y += rowH + 2;
+        }
+        return y + 4;
+    }
+
+    /** Фон-панель под меню «⋮» + подписи секций (сами кнопки — обычные drawable children). */
+    private void renderMoreMenu(DrawContext context) {
+        if (moreMenuPanelRect == null) return;
+        int[] r = moreMenuPanelRect;
+        fillRound(context, r[0], r[1], r[2], r[3], 6, 0xE0121A22);
+        context.drawStrokedRectangle(r[0], r[1], r[2], r[3], WBTN_BORDER);
+        for (Object[] s : moreMenuSections) {
+            String title = Text.translatable((String) s[0]).getString().toUpperCase(java.util.Locale.ROOT);
+            context.drawText(textRenderer, title, (int) s[1] + 1, (int) s[2] - 8, SUBTLE, false);
         }
     }
 
@@ -2342,6 +2350,10 @@ public class PmScreen extends Screen {
 
         if (callMenuOpen) {
             renderCallMenu(context);
+        }
+
+        if (moreMenuOpen) {
+            renderMoreMenu(context);
         }
 
         renderEditorBackdrop(context);
