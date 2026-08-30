@@ -83,6 +83,12 @@ public final class PmWire {
     private static final Pattern VIBE = Pattern.compile(
             "^pmc vibe ([a-z]|-) ([A-Za-z0-9_-]+) ([A-Za-z0-9]+|-) ([01])$");
 
+    // Секретные чаты (E2E, см. PmSecretChat): pmc sek <64 hex> — рукопожатие
+    // (сырой X25519-публичный ключ, 32 байта, little-endian); pmc sec <hex> —
+    // тело сообщения, зашифрованное AES-256-GCM общим ключом рукопожатия.
+    private static final Pattern SEC_HELLO = Pattern.compile("^pmc sek ([0-9a-f]{64})$");
+    private static final Pattern SEC_MSG = Pattern.compile("^pmc sec ([0-9a-f]+)$");
+
     public static final String POLL_DELIM = " // ";
 
     public static final String TYPING = "pmc typ";
@@ -563,6 +569,30 @@ public final class PmWire {
 
     public static boolean isVibeMeta(String text) {
         return parseVibe(text) != null;
+    }
+
+    // ---------- Секретные чаты (E2E, см. PmSecretChat) ----------
+
+    public static String secHello(String pubKeyHex) {
+        return "pmc sek " + pubKeyHex;
+    }
+
+    /** hex сырого X25519-публичного ключа собеседника (32 байта) или null. */
+    public static String parseSecHello(String text) {
+        if (text == null) return null;
+        Matcher m = SEC_HELLO.matcher(text.trim());
+        return m.matches() ? m.group(1) : null;
+    }
+
+    public static String secMsg(String cipherHex) {
+        return "pmc sec " + cipherHex;
+    }
+
+    /** hex зашифрованного тела (AES-256-GCM) или null. */
+    public static String parseSecMsg(String text) {
+        if (text == null) return null;
+        Matcher m = SEC_MSG.matcher(text.trim());
+        return m.matches() ? m.group(1) : null;
     }
 
     // ---------- Разбор ----------

@@ -719,6 +719,21 @@ public class PmScreen extends Screen {
                         rebuild();
                     }));
         }
+        // Секретный чат (E2E-шифрование трафика этого ЛС, без сервера/аккаунта —
+        // см. PmSecretChat) — доступно только для личных диалогов с игроками.
+        if (isPlayerTab(selected) && !PmChatClient.isLocalChat(selected)) {
+            String peer = selected;
+            boolean secretOn = com.pmchat.client.PmSecretChat.isEnabled(peer);
+            y += rowH + 2;
+            addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
+                    Component.literal("▣ " + Component.translatable(secretOn
+                            ? "pmchat.secret.disable" : "pmchat.secret.enable").getString()),
+                    WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, secretOn ? 0xFF6FBF8B : WBTN_TEXT, btn -> {
+                        com.pmchat.client.PmSecretChat.toggle(peer);
+                        moreMenuOpen = false;
+                        rebuild();
+                    }));
+        }
     }
 
     /** «Кружок», шаг 1: захватывает текущий кадр так же, как F2, и сразу отправляет. */
@@ -3614,6 +3629,14 @@ public class PmScreen extends Screen {
         }
         context.text(font, header, headerX, py + 8, TITLE, false);
         int afterHeaderX = headerX + font.width(header) + 4;
+        // Секретный чат (E2E-шифрование трафика, см. PmSecretChat) — замочек в шапке.
+        // Тусклый, пока не завершилось рукопожатие; ярко-зелёный, когда ключ установлен.
+        if (isPlayerTab(selected) && com.pmchat.client.PmSecretChat.isEnabled(selected)) {
+            boolean established = com.pmchat.client.PmSecretChat.isEstablished(selected);
+            PmIcons.draw(context, PmIcons.LOCK, afterHeaderX, py + 7, 10, 10,
+                    established ? 0xFF6FBF8B : SUBTLE);
+            afterHeaderX += 13;
+        }
         // Галочка верификации / официальный аккаунт PocketChat (см. PmBackend, server-pocketchat)
         if (isPlayerTab(selected) && com.pmchat.client.PmBackend.isConfigured()) {
             com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);

@@ -409,6 +409,8 @@
   "pmchat.tip.leave": "Покинуть канал",
   "pmchat.tip.mute": "Заглушить уведомления",
   "pmchat.tip.unmute": "Включить уведомления",
+  "pmchat.secret.enable": "Секретный чат",
+  "pmchat.secret.disable": "Выключить секретный чат",
   "pmchat.sharedmedia.open": "Медиа и файлы",
   "pmchat.sharedmedia.title": "Медиа и файлы",
   "pmchat.sharedmedia.title_of": "Медиа: %s",

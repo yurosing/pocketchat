@@ -1248,6 +1248,23 @@ public class PmChatClient implements ClientModInitializer {
         // Диалог с самим собой не заводим — это либо эхо своего же /m себе, либо
         // фаззи-совпадение ника. Для заметок себе есть Избранное (SAVED).
         if (sender != null && sender.equalsIgnoreCase(selfName())) return 0;
+
+        // Секретные чаты (E2E): рукопожатие/расшифровка — до любой другой обработки,
+        // дальше строка обрабатывается уже как обычный (расшифрованный) wire-текст.
+        String secResult = PmSecretChat.handleIncoming(sender, text);
+        if (PmSecretChat.HANDLED_META.equals(secResult)) {
+            config.addModUser(sender);
+            return 2;
+        }
+        if (PmSecretChat.UNDECRYPTABLE.equals(secResult)) {
+            config.addModUser(sender);
+            return 2; // ключа нет/не подошёл — молча прячем, а не показываем шифротекст
+        }
+        if (secResult != null) {
+            config.addModUser(sender);
+            text = secResult;
+        }
+
         // Служебные метки от чужого мода
         if (PmWire.isHi(text)) {
             config.addModUser(sender);
@@ -1971,10 +1988,19 @@ public class PmChatClient implements ClientModInitializer {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         String target = commandTarget(to);
+        // Секретные чаты (E2E): шифруем тело перед отправкой, если для этого
+        // контакта включён секретный режим и общий ключ уже установлен. Само
+        // рукопожатие (pmc sek) и уже зашифрованные строки (pmc sec) шифровать
+        // повторно нельзя — иначе рукопожатие никогда не дойдёт до собеседника.
+        String toSend = line;
+        if (PmWire.parseSecHello(line) == null && PmWire.parseSecMsg(line) == null) {
+            String encrypted = PmSecretChat.encryptForSend(to, line);
+            if (encrypted != null) toSend = encrypted;
+        }
         if (PmServerMedia.get().isAvailable()) {
-            PmServerMedia.get().sendPm(target, line, readableFallback(line));
+            PmServerMedia.get().sendPm(target, toSend, readableFallback(toSend));
         } else {
-            client.player.connection.sendCommand(config.msgCommand + " " + target + " " + line);
+            client.player.connection.sendCommand(config.msgCommand + " " + target + " " + toSend);
         }
     }
 
@@ -1983,7 +2009,10 @@ public class PmChatClient implements ClientModInitializer {
         return PmWire.isTyping(wire) || PmWire.isSeen(wire) || PmWire.isHi(wire)
                 || PmWire.parseReaction(wire) != null || PmWire.isPinMeta(wire)
                 || PmWire.isVoteMeta(wire) || PmWire.isEditMeta(wire) || PmWire.isUnpinMeta(wire)
-                || PmWire.isCallMeta(wire) || PmWire.isBcControlMeta(wire) || PmWire.isVibeMeta(wire);
+                || PmWire.isCallMeta(wire) || PmWire.isBcControlMeta(wire) || PmWire.isVibeMeta(wire)
+                // Секретные чаты: рукопожатие — чистая мета; зашифрованное тело тоже не
+                // /tell'им не-мод получателю — он его всё равно не сможет прочитать.
+                || PmWire.parseSecHello(wire) != null || PmWire.parseSecMsg(wire) != null;
     }
 
     /** Читаемый текст для /tell не-мод получателю (пусто — не отправлять вовсе). */

@@ -456,6 +456,20 @@ public class PmConfig {
     /** Заглушенные вкладки (личка/группа/канал) — id вкладки как в {@code selected}. */
     public List<String> mutedThreads = new ArrayList<>();
 
+    /**
+     * Секретные чаты (E2E, см. {@link PmSecretChat}): контакты, для которых включено
+     * сквозное шифрование трафика ЛС поверх обычного /m. Ни сервера, ни аккаунта не
+     * требует — общий ключ выводится анонимным X25519-рукопожатием прямо через /m.
+     */
+    public List<String> secretChats = new ArrayList<>();
+
+    public boolean isSecretChat(String contact) {
+        return contact != null && secretChats.stream().anyMatch(c -> c.equalsIgnoreCase(contact));
+    }
+
+    /** Установленные общие ключи секретных чатов (X25519 ECDH -> SHA-256, 32 байта, hex): контакт -> ключ. */
+    public Map<String, String> secretKeys = new HashMap<>();
+
     public boolean isMutedThread(String threadId) {
         return threadId != null && mutedThreads.stream().anyMatch(t -> t.equalsIgnoreCase(threadId));
     }
@@ -705,6 +719,8 @@ public class PmConfig {
                         if (b.avatar == null) b.avatar = "";
                     }
                     if (cfg.mutedThreads == null) cfg.mutedThreads = new ArrayList<>();
+                    if (cfg.secretChats == null) cfg.secretChats = new ArrayList<>();
+                    if (cfg.secretKeys == null) cfg.secretKeys = new HashMap<>();
                     if (cfg.warnReason == null) cfg.warnReason = "";
                     if (cfg.filterPlayers == null) cfg.filterPlayers = new ArrayList<>();
                     if (cfg.filterDiscordPlayers == null) cfg.filterDiscordPlayers = new ArrayList<>();
