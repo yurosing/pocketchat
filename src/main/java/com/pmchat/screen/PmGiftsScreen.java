@@ -102,7 +102,7 @@ public class PmGiftsScreen extends Screen {
                         detailIndex = -1;
                         init();
                     } else {
-                        close();
+                        onClose();
                     }
                 }));
     }

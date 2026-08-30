@@ -70,7 +70,7 @@ public class PmEnvelopeUnlockScreen extends Screen {
                 Component.translatable("pmchat.envelope.unlock.open"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> tryOpen()));
         addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
-                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> onClose()));
     }
 
     private void tryOpen() {
@@ -78,7 +78,7 @@ public class PmEnvelopeUnlockScreen extends Screen {
         if (PmWire.checkEnvelopeAnswer(answer, answerHash)) {
             msg.envelopeOpened = true;
             PmChatClient.getHistory().save();
-            close();
+            onClose();
         } else {
             status = Component.translatable("pmchat.envelope.unlock.wrong");
             statusColor = 0xFFE07A6A;

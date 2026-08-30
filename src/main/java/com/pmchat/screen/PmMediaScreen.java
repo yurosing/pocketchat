@@ -156,7 +156,7 @@ public class PmMediaScreen extends Screen {
             return true;
         }
         if (in(mx, my, openFolderRect)) {
-            Util.getOperatingSystem().open(PmMedia.musicDir());
+            Util.getPlatform().openFile(PmMedia.musicDir());
             return true;
         }
         for (Object[] r : rowRects) {

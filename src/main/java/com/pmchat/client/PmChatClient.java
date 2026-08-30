@@ -370,8 +370,8 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     private static void chatLine(Minecraft client, String legacy) {
-        if (client.inGameHud != null) {
-            client.inGameHud.getChatHud().addMessage(Component.literal(legacy));
+        if (client.gui != null) {
+            client.gui.hud.getChat().addMessage(Component.literal(legacy));
         }
     }
 
@@ -851,7 +851,7 @@ public class PmChatClient implements ClientModInitializer {
         if (!viewing) {
             groupUnread.merge(id, 1, Integer::sum);
             if (!config.dnd && !config.isMutedThread(GROUP_PREFIX + id)) {
-                client.getToastManager().add(new PmToast(name + " · " + sender, previewOf(text)));
+                client.gui.toastManager().add(new PmToast(name + " · " + sender, previewOf(text)));
                 playNotifySound(client);
             }
         }
@@ -1099,7 +1099,7 @@ public class PmChatClient implements ClientModInitializer {
         if (added) {
             Minecraft client = Minecraft.getInstance();
             if (!config.dnd) {
-                client.getToastManager().add(new PmToast("◈ " + b.name,
+                client.gui.toastManager().add(new PmToast("◈ " + b.name,
                         sender + " — " + Component.translatable("pmchat.broadcast.newsub").getString()));
             }
         }
@@ -1133,7 +1133,7 @@ public class PmChatClient implements ClientModInitializer {
 
         Minecraft client = Minecraft.getInstance();
         if (isNew && !config.dnd) {
-            client.getToastManager().add(new PmToast("◈ " + b.name,
+            client.gui.toastManager().add(new PmToast("◈ " + b.name,
                     Component.translatable("pmchat.broadcast.joined_toast").getString()));
             playNotifySound(client);
         }
@@ -1183,7 +1183,7 @@ public class PmChatClient implements ClientModInitializer {
         } else {
             broadcastUnread.merge(id, 1, Integer::sum);
             if (!config.dnd && !config.isMutedThread(BCAST_PREFIX + id)) {
-                client.getToastManager().add(new PmToast("◈ " + b.name + " · " + sender, previewOf(text)));
+                client.gui.toastManager().add(new PmToast("◈ " + b.name + " · " + sender, previewOf(text)));
                 playNotifySound(client);
             }
         }
@@ -1449,7 +1449,7 @@ public class PmChatClient implements ClientModInitializer {
         } else {
             history.markUnread(sender);
             if (!config.dnd && !config.isMutedThread(sender)) {
-                client.getToastManager().add(new PmToast(sender, previewOf(text)));
+                client.gui.toastManager().add(new PmToast(sender, previewOf(text)));
                 playNotifySound(client);
             }
         }
@@ -1816,7 +1816,7 @@ public class PmChatClient implements ClientModInitializer {
     private static void onIncomingCall(String sender) {
         Minecraft client = Minecraft.getInstance();
         if (!config.dnd) {
-            client.getToastManager().add(new PmToast(sender,
+            client.gui.toastManager().add(new PmToast(sender,
                     Component.translatable("pmchat.call.incoming.toast").getString()));
             playNotifySound(client);
         }
@@ -1850,7 +1850,7 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     private static void notifyMention(Minecraft client, String sender, String text) {
-        client.getToastManager().add(new PmToast("@ " + sender, text));
+        client.gui.toastManager().add(new PmToast("@ " + sender, text));
         playNotifySound(client);
     }
 
@@ -2196,7 +2196,7 @@ public class PmChatClient implements ClientModInitializer {
                 ? Component.translatable("pmchat.restrict.banned")
                 : Component.translatable("pmchat.restrict.muted", formatMuteDuration(mutedUntilAtMs));
         client.execute(() -> {
-            client.getToastManager().add(new PmToast(Component.translatable("pmchat.restrict.title").getString(),
+            client.gui.toastManager().add(new PmToast(Component.translatable("pmchat.restrict.title").getString(),
                     notice.getString()));
             playNotifySound(client);
         });
@@ -2212,7 +2212,7 @@ public class PmChatClient implements ClientModInitializer {
     /** Всплывашка о полученном подарке (4.2). */
     public static void giftToast(String from, String giftName, String icon) {
         Minecraft client = Minecraft.getInstance();
-        client.execute(() -> client.getToastManager().add(
+        client.execute(() -> client.gui.toastManager().add(
                 new PmToast((icon == null ? "🎁" : icon) + " " + from, giftName)));
         com.pmchat.client.api.PocketChatClientImpl.fireGift(from, giftName, icon);
     }
@@ -2233,7 +2233,7 @@ public class PmChatClient implements ClientModInitializer {
         if (!viewing) {
             history.markUnread(from);
             if (!config.dnd && !config.isMutedThread(from)) {
-                client.getToastManager().add(new PmToast(from, previewOf(message)));
+                client.gui.toastManager().add(new PmToast(from, previewOf(message)));
                 playNotifySound(client);
             }
         }
@@ -2277,7 +2277,7 @@ public class PmChatClient implements ClientModInitializer {
                 ? "https://yurosing.github.io/pocketchat/"
                 : "https://yurosing.github.io/pocketchat/en/";
         try {
-            net.minecraft.util.Util.getOperatingSystem().open(url);
+            net.minecraft.util.Util.getPlatform().openUri(url);
         } catch (Exception e) {
             LOGGER.warn("Failed to open docs URL: {}", e.toString());
         }
@@ -2288,7 +2288,7 @@ public class PmChatClient implements ClientModInitializer {
         String url = config.discordUrl;
         if (url == null || url.isBlank()) return;
         try {
-            net.minecraft.util.Util.getOperatingSystem().open(url);
+            net.minecraft.util.Util.getPlatform().openUri(url);
         } catch (Exception e) {
             LOGGER.warn("Failed to open Discord URL: {}", e.toString());
         }

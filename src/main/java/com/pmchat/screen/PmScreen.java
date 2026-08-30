@@ -725,7 +725,7 @@ public class PmScreen extends Screen {
     private void sendCircleSnapshot() {
         if (selected == null) return;
         Minecraft mc = Minecraft.getInstance();
-        net.minecraft.client.Screenshot.takeScreenshot(mc.getMainRenderTarget(), image -> {
+        net.minecraft.client.Screenshot.takeScreenshot(mc.gameRenderer.mainRenderTarget(), image -> {
             try {
                 java.nio.file.Path dir = mediaDir("pmchat-circles");
                 java.nio.file.Path file = dir.resolve("circle-" + System.currentTimeMillis() + ".png");
@@ -1178,7 +1178,7 @@ public class PmScreen extends Screen {
         boolean sent = PmChatClient.requestJoinBroadcast(broadcastCodeField.getValue());
         broadcastJoinMode = false;
         if (sent) {
-            Minecraft.getInstance().getToastManager().add(new com.pmchat.client.PmToast(
+            Minecraft.getInstance().gui.toastManager().add(new com.pmchat.client.PmToast(
                     "◈", Component.translatable("pmchat.broadcast.request_sent").getString()));
         }
         rebuild();
@@ -5026,7 +5026,7 @@ public class PmScreen extends Screen {
             }
             if (inRect(mx, my, playlistFolderBtnRect)) {
                 try {
-                    net.minecraft.util.Util.getOperatingSystem().open(
+                    net.minecraft.util.Util.getPlatform().openFile(
                             playlistDir != null ? playlistDir : com.pmchat.client.PmMedia.musicDir());
                 } catch (Exception ignored) {
                 }
@@ -5112,7 +5112,7 @@ public class PmScreen extends Screen {
             if (inRect(mx, my, videoFallbackRect) || inRect(mx, my, videoBrowserRect)) {
                 closeVideoPlayer();
                 try {
-                    if (link != null) net.minecraft.util.Util.getOperatingSystem().open(link);
+                    if (link != null) net.minecraft.util.Util.getPlatform().openUri(link);
                 } catch (Exception ignored) {
                 }
                 return true;
@@ -5617,8 +5617,8 @@ public class PmScreen extends Screen {
                             fullscreenImg = e;
                         } else {
                             try {
-                                net.minecraft.util.Util.getOperatingSystem()
-                                        .open(com.pmchat.client.PmHosts.baseUrl(imgRef[0]) + imgRef[1]);
+                                net.minecraft.util.Util.getPlatform()
+                                        .openUri(com.pmchat.client.PmHosts.baseUrl(imgRef[0]) + imgRef[1]);
                             } catch (Exception ignored) {
                             }
                         }
@@ -5638,7 +5638,7 @@ public class PmScreen extends Screen {
                             openVideoPlayer(url);
                         } else {
                             try {
-                                net.minecraft.util.Util.getOperatingSystem().open(url);
+                                net.minecraft.util.Util.getPlatform().openUri(url);
                             } catch (Exception ignored) {
                             }
                         }
@@ -5655,7 +5655,7 @@ public class PmScreen extends Screen {
                                 return true;
                             }
                             try {
-                                net.minecraft.util.Util.getOperatingSystem().open(link);
+                                net.minecraft.util.Util.getPlatform().openUri(link);
                             } catch (Exception ignored) {
                             }
                             return true;

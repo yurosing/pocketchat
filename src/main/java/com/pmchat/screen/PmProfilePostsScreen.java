@@ -115,7 +115,7 @@ public class PmProfilePostsScreen extends Screen {
         }
 
         addRenderableWidget(FlatButton.centered(font, px + pw / 2 - 40, py + ph - 20, 80, 15,
-                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> onClose()));
 
         closeRect = new int[]{px + pw - 18, py + 5, 14, 14};
     }
@@ -265,7 +265,7 @@ public class PmProfilePostsScreen extends Screen {
         }
         if (closeRect != null && mx >= closeRect[0] && mx < closeRect[0] + closeRect[2]
                 && my >= closeRect[1] && my < closeRect[1] + closeRect[3]) {
-            close();
+            onClose();
             return true;
         }
         return super.mouseClicked(click, doubled);

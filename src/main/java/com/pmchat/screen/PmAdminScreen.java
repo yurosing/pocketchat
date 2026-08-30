@@ -199,7 +199,7 @@ public class PmAdminScreen extends Screen {
         }
 
         addRenderableWidget(FlatButton.centered(font, width - 90, height - 24, 80, 18,
-                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN, btn -> onClose()));
     }
 
     // ---------- вкладка 0: сводка по бэкенду ----------

@@ -143,7 +143,7 @@ public class PmEnvelopeComposeScreen extends Screen {
                 Component.translatable("pmchat.envelope.send"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> send()));
         addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
-                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> onClose()));
     }
 
     private String trimToButton(String s, int maxW) {
@@ -184,7 +184,7 @@ public class PmEnvelopeComposeScreen extends Screen {
         long unlockAt = System.currentTimeMillis() / 1000L + minutes * 60L;
         String wire = PmWire.envelope(skin, unlockAt, withQuestion ? question : null, withQuestion ? answer : null, content);
         PmChatClient.sendMessage(target, wire);
-        close();
+        onClose();
     }
 
     private void setStatus(Component text, int color) {

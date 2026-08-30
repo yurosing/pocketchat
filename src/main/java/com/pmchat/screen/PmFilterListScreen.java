@@ -119,7 +119,7 @@ public class PmFilterListScreen extends Screen {
         // Назад
         addRenderableWidget(FlatButton.centered(font, px + 10, py + panelH - 24, 70, 18,
                 Component.translatable("pmchat.filters.back"),
-                BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> onClose()));
     }
 
     private static String scopeKey(int scope) {

@@ -40,7 +40,7 @@ public final class PmOfficialIcon {
             PmChatClient.LOGGER.debug("PocketChat official icon resource not found: {}", RESOURCE);
             return;
         }
-        try (InputStream in = res.get().getInputStream()) {
+        try (InputStream in = res.get().open()) {
             byte[] bytes = in.readAllBytes();
             NativeImage image = NativeImage.read(bytes);
             width = image.getWidth();

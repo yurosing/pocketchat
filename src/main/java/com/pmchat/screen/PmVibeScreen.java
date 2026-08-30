@@ -57,7 +57,7 @@ public class PmVibeScreen extends Screen {
         tracks = PmVibe.listTracks();
 
         addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
-                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> onClose()));
     }
 
     @Override
@@ -105,7 +105,7 @@ public class PmVibeScreen extends Screen {
             int[] r = rowRects.get(i);
             if (mx >= r[0] && mx < r[0] + r[2] && my >= r[1] && my < r[1] + r[3]) {
                 PmVibe.startForConversation(target, tracks.get(i));
-                close();
+                onClose();
                 return true;
             }
         }

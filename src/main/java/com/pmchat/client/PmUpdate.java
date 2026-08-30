@@ -80,27 +80,27 @@ public final class PmUpdate {
 
     private static void notifyUpdate(String tag, String url) {
         Minecraft client = Minecraft.getInstance();
-        if (client.inGameHud == null) return;
-        MutableComponent msg = Component.literal("[pmchat] ").formatted(ChatFormatting.AQUA)
-                .append(Component.literal("Доступна новая версия " + tag + ". ").formatted(ChatFormatting.WHITE))
+        if (client.gui == null) return;
+        MutableComponent msg = Component.literal("[pmchat] ").withStyle(ChatFormatting.AQUA)
+                .append(Component.literal("Доступна новая версия " + tag + ". ").withStyle(ChatFormatting.WHITE))
                 .append(Component.literal("Открыть страницу релиза →")
                         .styled(s -> s.withFormatting(ChatFormatting.GREEN, ChatFormatting.UNDERLINE)
                                 .withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
                                 .withHoverEvent(new HoverEvent.ShowText(Component.literal(url)))));
-        client.inGameHud.getChatHud().addMessage(msg);
+        client.gui.getChatHud().addMessage(msg);
 
         // Заодно приглашение в Discord — если задано (pmchat.json: discordUrl).
         String discord = PmChatClient.getConfig().discordUrl;
         if (discord != null && !discord.isBlank()) {
             try {
                 URI discordUri = URI.create(discord);
-                MutableComponent dmsg = Component.literal("[pmchat] ").formatted(ChatFormatting.AQUA)
-                        .append(Component.literal("Наш Discord: ").formatted(ChatFormatting.WHITE))
+                MutableComponent dmsg = Component.literal("[pmchat] ").withStyle(ChatFormatting.AQUA)
+                        .append(Component.literal("Наш Discord: ").withStyle(ChatFormatting.WHITE))
                         .append(Component.literal(discord)
                                 .styled(s -> s.withFormatting(ChatFormatting.BLUE, ChatFormatting.UNDERLINE)
                                         .withClickEvent(new ClickEvent.OpenUrl(discordUri))
                                         .withHoverEvent(new HoverEvent.ShowText(Component.literal(discord)))));
-                client.inGameHud.getChatHud().addMessage(dmsg);
+                client.gui.getChatHud().addMessage(dmsg);
             } catch (IllegalArgumentException ignored) {
                 // некорректная ссылка в конфиге — молча пропускаем
             }

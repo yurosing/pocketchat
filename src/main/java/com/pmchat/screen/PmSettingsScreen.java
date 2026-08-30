@@ -119,7 +119,7 @@ public class PmSettingsScreen extends Screen {
 
         addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Component.translatable("pmchat.settings.done"),
-                0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
+                0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> onClose()));
 
         // кнопка-ссылка на сайт документации (открывает RU/EN по языку клиента)
         FlatButton docsBtn = FlatButton.centered(font, px + PANEL_W - 24, py + 3, 18, 14,

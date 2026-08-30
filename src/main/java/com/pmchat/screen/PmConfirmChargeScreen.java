@@ -58,7 +58,7 @@ public class PmConfirmChargeScreen extends Screen {
         int halfW = (PANEL_W - 24 - 6) / 2;
         addRenderableWidget(FlatButton.centered(font, px + 12, py + PANEL_H - 22, halfW, 16,
                 Component.translatable("pmchat.dm.confirm.cancel"), BTN_BG, BTN_HOVER, BTN_BORDER, LABEL,
-                btn -> close()));
+                btn -> onClose()));
         addRenderableWidget(FlatButton.centered(font, px + 18 + halfW, py + PANEL_H - 22, halfW, 16,
                 Component.translatable("pmchat.dm.confirm.send"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> confirm()));
@@ -88,7 +88,7 @@ public class PmConfirmChargeScreen extends Screen {
     }
 
     private void drawWrapped(GuiGraphicsExtractor context, Component text, int x, int y, int maxW, int color) {
-        for (var line : font.wrapLines(text, maxW)) {
+        for (var line : font.split(text, maxW)) {
             context.text(font, line, x, y, color, false);
             y += 10;
         }

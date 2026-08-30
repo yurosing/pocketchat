@@ -203,7 +203,7 @@ public class PmPhotoEditScreen extends Screen {
         int ax = width / 2 - actW - actGap / 2;
         addRenderableWidget(FlatButton.centered(font, ax, actY, actW, actH,
                 Component.translatable("pmchat.photoedit.cancel"),
-                0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A, btn -> close()));
+                0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A, btn -> onClose()));
         addRenderableWidget(FlatButton.centered(font, width / 2 + actGap / 2, actY, actW, actH,
                 Component.translatable("pmchat.photoedit.send"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> doSend()));
@@ -318,7 +318,7 @@ public class PmPhotoEditScreen extends Screen {
         } catch (Exception ignored) {
             // если сохранить не удалось — просто закрываем без отправки
         }
-        close();
+        onClose();
     }
 
     // ---------- превью / текстура ----------
@@ -392,7 +392,7 @@ public class PmPhotoEditScreen extends Screen {
             int i = 0;
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
-                    nativeImage.setColorArgb(x, y, pixels[i++]);
+                    nativeImage.setPixel(x, y, pixels[i++]);
                 }
             }
             texture.upload();
@@ -550,7 +550,7 @@ public class PmPhotoEditScreen extends Screen {
     @Override
     public void removed() {
         if (textureId != null) {
-            Minecraft.getInstance().getTextureManager().destroyTexture(textureId);
+            Minecraft.getInstance().getTextureManager().release(textureId);
         }
         super.removed();
     }

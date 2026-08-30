@@ -137,11 +137,11 @@ public class PmRulesScreen extends Screen {
         if (viewOnly) {
             addRenderableWidget(FlatButton.centered(font, px + (PANEL_W - 80) / 2, py + panelH - 22, 80, 16,
                     Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, LABEL,
-                    btn -> close()));
+                    btn -> onClose()));
         } else {
             addRenderableWidget(FlatButton.centered(font, px + 12, py + panelH - 22, (PANEL_W - 32) / 2, 16,
                     Component.translatable("pmchat.rules.decline"), BTN_BG, BTN_HOVER, BTN_BORDER, SUBTLE,
-                    btn -> close()));
+                    btn -> onClose()));
             addRenderableWidget(FlatButton.centered(font, px + 20 + (PANEL_W - 32) / 2, py + panelH - 22, (PANEL_W - 32) / 2, 16,
                     Component.translatable("pmchat.rules.accept"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA,
                     btn -> accept()));
@@ -149,7 +149,7 @@ public class PmRulesScreen extends Screen {
     }
 
     private int lineCount(String text, int maxW) {
-        return Math.max(1, font.wrapLines(Component.literal(text), maxW).size());
+        return Math.max(1, font.split(Component.literal(text), maxW).size());
     }
 
     private void accept() {
@@ -197,7 +197,7 @@ public class PmRulesScreen extends Screen {
     }
 
     private void drawWrapped(GuiGraphicsExtractor context, String text, int x, int y, int maxW, int color) {
-        for (var line : font.wrapLines(Component.literal(text), maxW)) {
+        for (var line : font.split(Component.literal(text), maxW)) {
             context.text(font, line, x, y, color, false);
             y += 10;
         }
@@ -205,7 +205,7 @@ public class PmRulesScreen extends Screen {
 
     private int drawBullet(GuiGraphicsExtractor context, String text, int x, int y, int maxW) {
         context.text(font, "•", x, y, 0xFFE07A6A, false);
-        for (var line : font.wrapLines(Component.literal(text), maxW)) {
+        for (var line : font.split(Component.literal(text), maxW)) {
             context.text(font, line, x + 10, y, LABEL, false);
             y += 10;
         }

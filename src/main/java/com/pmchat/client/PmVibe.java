@@ -118,7 +118,7 @@ public final class PmVibe {
         pendingInvite = new Invite(sender, hostCode, fileId, System.currentTimeMillis());
         Minecraft client = Minecraft.getInstance();
         if (!PmChatClient.getConfig().dnd) {
-            client.getToastManager().add(new PmToast(sender,
+            client.gui.toastManager().add(new PmToast(sender,
                     net.minecraft.network.chat.Component.translatable("pmchat.vibe.invite.toast").getString()));
         }
     }

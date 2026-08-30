@@ -41,7 +41,7 @@ public class PmGiftPopupScreen extends Screen {
         int cw = 90;
         addRenderableWidget(FlatButton.centered(font, width / 2 - cw / 2, height / 2 + 88, cw, 18,
                 Component.translatable("pmchat.gift.popup.thanks"), 0xFF20321F, 0xFF2A422A, rarityColor, 0xFFE8F0E0,
-                btn -> close()));
+                btn -> onClose()));
     }
 
     private static float easeOutBack(float t) {
@@ -127,7 +127,7 @@ public class PmGiftPopupScreen extends Screen {
         // появления закончится, иначе случайный клик в момент показа её сразу скроет.
         if (super.mouseClicked(click, doubled)) return true;
         if ((System.currentTimeMillis() - openedAt) > 450) {
-            close();
+            onClose();
             return true;
         }
         return false;

@@ -74,7 +74,7 @@ public class PmChannelInfoScreen extends Screen {
         py = (height - panelH) / 2;
 
         addRenderableWidget(FlatButton.centered(font, px + 10, py + panelH - 24, 70, 18,
-                Component.translatable("pmchat.filters.back"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.filters.back"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> onClose()));
 
         PmConfig.PmBroadcast b = broadcast();
         if (b == null) return;

@@ -79,7 +79,7 @@ public class PmWhatsNewScreen extends Screen {
         TEXT_W = PANEL_W - 40;
 
         for (String key : ITEMS) {
-            List<FormattedCharSequence> wrapped = font.wrapLines(Component.translatable(key), TEXT_W);
+            List<FormattedCharSequence> wrapped = font.split(Component.translatable(key), TEXT_W);
             if (wrapped.isEmpty()) continue;
             for (int i = 0; i < wrapped.size(); i++) {
                 lines.add(wrapped.get(i));
@@ -96,7 +96,7 @@ public class PmWhatsNewScreen extends Screen {
 
         addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Component.translatable("pmchat.settings.done"),
-                0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
+                0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> onClose()));
     }
 
     @Override

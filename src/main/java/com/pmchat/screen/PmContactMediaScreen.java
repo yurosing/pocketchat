@@ -220,7 +220,7 @@ public class PmContactMediaScreen extends Screen {
             return true;
         }
         if (in(mx, my, closeRect)) {
-            close();
+            onClose();
             return true;
         }
         int ty = py + 24;
@@ -256,7 +256,7 @@ public class PmContactMediaScreen extends Screen {
                 fullscreenImg = e;
             } else {
                 try {
-                    Util.getOperatingSystem().open(PmHosts.baseUrl(img[0]) + img[1]);
+                    Util.getPlatform().openUri(PmHosts.baseUrl(img[0]) + img[1]);
                 } catch (Exception ignored) {
                 }
             }
@@ -265,7 +265,7 @@ public class PmContactMediaScreen extends Screen {
         String[] vid = PmWire.parseVid(m.text);
         if (vid != null) {
             try {
-                Util.getOperatingSystem().open(PmHosts.baseUrl(vid[0]) + vid[1]);
+                Util.getPlatform().openUri(PmHosts.baseUrl(vid[0]) + vid[1]);
             } catch (Exception ignored) {
             }
         }

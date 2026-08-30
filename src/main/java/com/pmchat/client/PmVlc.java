@@ -268,7 +268,7 @@ public final class PmVlc {
                         int b = data[i] & 0xFF;
                         int g = data[i + 1] & 0xFF;
                         int r = data[i + 2] & 0xFF;
-                        img.setColorArgb(x, y, 0xFF000000 | (r << 16) | (g << 8) | b);
+                        img.setPixel(x, y, 0xFF000000 | (r << 16) | (g << 8) | b);
                         i += 4;
                     }
                 }
@@ -375,7 +375,7 @@ public final class PmVlc {
                 } catch (Exception ignored) {
                 }
                 Minecraft.getInstance().execute(() ->
-                        Minecraft.getInstance().getTextureManager().destroyTexture(textureId));
+                        Minecraft.getInstance().getTextureManager().release(textureId));
             }
         }
     }
