@@ -208,20 +208,20 @@ public class PmChatClient implements ClientModInitializer {
             // Дополнительно игнорируем короткое окно сразу после закрытия чата
             // (Enter), чтобы буква "j" в конце отправленного сообщения не
             // открывала мессенджер следом.
-            while (openKey.wasPressed()) {
+            while (openKey.consumeClick()) {
                 boolean justClosedChat = System.currentTimeMillis() - chatScreenClosedAt < 300;
                 if (client.gui.screen() == null && !justClosedChat) {
                     openMessenger(client);
                 }
             }
             // медиа-меню и управление плеером в игре
-            while (mediaKey.wasPressed()) {
+            while (mediaKey.consumeClick()) {
                 if (client.gui.screen() == null) {
                     client.gui.setScreen(new com.pmchat.screen.PmMediaScreen());
                 }
             }
-            while (mediaPlayKey.wasPressed()) PmMedia.get().togglePause();
-            while (mediaNextKey.wasPressed()) PmMedia.get().next();
+            while (mediaPlayKey.consumeClick()) PmMedia.get().togglePause();
+            while (mediaNextKey.consumeClick()) PmMedia.get().next();
             // вне мира (главное меню / после выхода с сервера)
             // музыка и видео должны молчать. DISCONNECT ловит не все случаи —
             // это надёжный запасной вариант каждый тик.

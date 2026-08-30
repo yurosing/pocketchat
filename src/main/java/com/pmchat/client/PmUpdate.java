@@ -87,7 +87,7 @@ public final class PmUpdate {
                         .withStyle(s -> s.applyFormats(ChatFormatting.GREEN, ChatFormatting.UNDERLINE)
                                 .withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
                                 .withHoverEvent(new HoverEvent.ShowText(Component.literal(url)))));
-        client.gui.hud.getChat().addMessage(msg);
+        client.gui.hud.getChat().addClientSystemMessage(msg);
 
         // Заодно приглашение в Discord — если задано (pmchat.json: discordUrl).
         String discord = PmChatClient.getConfig().discordUrl;
@@ -100,7 +100,7 @@ public final class PmUpdate {
                                 .withStyle(s -> s.applyFormats(ChatFormatting.BLUE, ChatFormatting.UNDERLINE)
                                         .withClickEvent(new ClickEvent.OpenUrl(discordUri))
                                         .withHoverEvent(new HoverEvent.ShowText(Component.literal(discord)))));
-                client.gui.hud.getChat().addMessage(dmsg);
+                client.gui.hud.getChat().addClientSystemMessage(dmsg);
             } catch (IllegalArgumentException ignored) {
                 // некорректная ссылка в конфиге — молча пропускаем
             }

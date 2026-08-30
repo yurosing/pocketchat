@@ -1829,7 +1829,7 @@ public final class PmBackend {
         if (cb == null) return;
         Minecraft client = Minecraft.getInstance();
         Runnable r = () -> cb.onResult(ok, (T) value, error);
-        if (client.isOnThread()) {
+        if (client.isSameThread()) {
             r.run();
         } else {
             client.execute(r);
