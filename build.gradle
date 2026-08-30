@@ -45,7 +45,7 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     // Mod Menu — только API на компиляции, для экрана настроек (с Modrinth-мавена)
-    compileOnly "maven.modrinth:modmenu:17.0.0-beta.2"
+    compileOnly "maven.modrinth:modmenu:20.0.1"
 
     // Vosk — оффлайн-распознавание речи (нативная библиотека внутри jar;
     // JNA не включаем — Minecraft уже поставляет её для Narrator)

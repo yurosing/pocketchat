@@ -13,8 +13,8 @@ import net.minecraft.resources.Identifier;
  */
 public record MediaPayload(byte[] data) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Id<MediaPayload> ID =
-            new CustomPacketPayload.Id<>(Identifier.fromNamespaceAndPath("pmchat", "media"));
+    public static final CustomPacketPayload.Type<MediaPayload> ID =
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("pmchat", "media"));
 
     public static final StreamCodec<FriendlyByteBuf, MediaPayload> CODEC = new StreamCodec<>() {
         @Override
@@ -31,7 +31,7 @@ public record MediaPayload(byte[] data) implements CustomPacketPayload {
     };
 
     @Override
-    public CustomPacketPayload.Id<MediaPayload> getId() {
+    public CustomPacketPayload.Type<MediaPayload> type() {
         return ID;
     }
 }

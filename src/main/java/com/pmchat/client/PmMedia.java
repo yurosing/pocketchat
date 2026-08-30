@@ -359,8 +359,8 @@ public final class PmMedia {
     public int[] renderMini(GuiGraphicsExtractor ctx, int mouseX, int mouseY, boolean interactive) {
         Minecraft mc = Minecraft.getInstance();
         Font tr = mc.font;
-        int sw = mc.getWindow().getScaledWidth();
-        int sh = mc.getWindow().getScaledHeight();
+        int sw = mc.getWindow().getGuiScaledWidth();
+        int sh = mc.getWindow().getGuiScaledHeight();
         if (session != null) session.tick();
         tickVolumeDrag(mouseX, mouseY, interactive);
 
@@ -415,14 +415,14 @@ public final class PmMedia {
         } else {
             ctx.fill(x0, y0, x0 + mw, y0 + h, th.bg);
             Component st = Component.translatable("pmchat.video.decoding");
-            ctx.text(tr, st, x0 + (mw - tr.getWidth(st)) / 2, y0 + h / 2 - 4, th.label, false);
+            ctx.text(tr, st, x0 + (mw - tr.width(st)) / 2, y0 + h / 2 - 4, th.label, false);
         }
         if (s != null && s.isFinished()) {
             // Кадр доиграл — предлагаем пересмотреть (клик по окошку/play перезапустит)
             ctx.fill(x0, y0, x0 + mw, y0 + h, 0x99050907);
             Component again = Component.translatable("pmchat.video.again");
             PmIcons.draw(ctx, PmIcons.PLAY, x0 + mw / 2 - 8, y0 + h / 2 - 12, 16, 16, th.title);
-            ctx.text(tr, again, x0 + (mw - tr.getWidth(again)) / 2, y0 + h / 2 + 6, th.title, false);
+            ctx.text(tr, again, x0 + (mw - tr.width(again)) / 2, y0 + h / 2 + 6, th.title, false);
         } else if (s != null && !s.isPlaying()) {
             PmIcons.draw(ctx, PmIcons.PLAY, x0 + mw / 2 - 8, y0 + h / 2 - 8, 16, 16, th.title);
         }
@@ -468,7 +468,7 @@ public final class PmMedia {
         int avail = volX - 16 - tx;
         String sub = (playlistName.isEmpty() ? "" : playlistName + "  ") + (trackIndex + 1) + "/" + playlist.size();
         if (avail > 40) {
-            int subW = tr.getWidth(sub) + 10;
+            int subW = tr.width(sub) + 10;
             drawMarquee(ctx, tr, title, tx, (h - tr.lineHeight) / 2, avail - subW, th.title);
             ctx.text(tr, trim(tr, sub, subW), volX - 16 - subW + 4, (h - tr.lineHeight) / 2, th.label, false);
         }
@@ -529,7 +529,7 @@ public final class PmMedia {
      * его по горизонтали (бесшовно, с разрывом), обрезая по scissor.
      */
     private static void drawMarquee(GuiGraphicsExtractor ctx, Font tr, String text, int x, int y, int maxW, int color) {
-        int tw = tr.getWidth(text);
+        int tw = tr.width(text);
         if (tw <= maxW) {
             ctx.text(tr, text, x, y, color, false);
             return;
@@ -574,7 +574,7 @@ public final class PmMedia {
         // Время справа
         if (s != null) {
             String time = fmt(s.timeMs()) + "/" + fmt(s.lengthMs());
-            ctx.text(tr, time, x0 + mw - tr.getWidth(time) - 6, by + 6, th.label, false);
+            ctx.text(tr, time, x0 + mw - tr.width(time) - 6, by + 6, th.label, false);
         }
     }
 
@@ -651,8 +651,8 @@ public final class PmMedia {
     }
 
     private static String trim(Font tr, String s, int maxW) {
-        if (tr.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && tr.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (tr.width(s) <= maxW) return s;
+        while (s.length() > 1 && tr.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 

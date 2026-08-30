@@ -147,7 +147,8 @@ public class PmChatClient implements ClientModInitializer {
 
         // Рисуем окошко медиаплеера поверх HUD, когда никакой наш экран не открыт —
         // так музыка/видео продолжают показываться в углу и когда чат закрыт.
-        net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((ctx, tick) -> {
+        net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
+                net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "media_bar"), (ctx, tick) -> {
             Minecraft mc = Minecraft.getInstance();
             // Экраны обычно рисуют окошко сами. Исключение (#10): если включена
             // опция «полоска при вводе», продолжаем рисовать её поверх ванильного
@@ -2268,7 +2269,7 @@ public class PmChatClient implements ClientModInitializer {
 
     public static boolean isRussian() {
         Minecraft client = Minecraft.getInstance();
-        return client.getLanguageManager().getLanguage().toLowerCase(Locale.ROOT).startsWith("ru");
+        return client.getLanguageManager().getSelected().toLowerCase(Locale.ROOT).startsWith("ru");
     }
 
     /** открыть сайт документации в браузере — на английском, если у игрока не русский язык клиента. */

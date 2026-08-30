@@ -26,7 +26,7 @@ public class PmToast implements Toast {
     }
 
     @Override
-    public Visibility getVisibility() {
+    public Visibility getWantedVisibility() {
         return visibility;
     }
 
@@ -39,14 +39,14 @@ public class PmToast implements Toast {
     }
 
     @Override
-    public void draw(GuiGraphicsExtractor context, Font font, long startTime) {
-        context.fill(0, 0, getWidth(), getHeight(), 0xE61C3644);
-        context.outline(0, 0, getWidth(), getHeight(), ACCENT);
-        context.fill(0, 0, 3, getHeight(), ACCENT);
+    public void extractRenderState(GuiGraphicsExtractor context, Font font, long startTime) {
+        context.fill(0, 0, width(), height(), 0xE61C3644);
+        context.outline(0, 0, width(), height(), ACCENT);
+        context.fill(0, 0, 3, height(), ACCENT);
 
         context.text(font, Component.literal("✉ " + sender), 9, 7, ACCENT, false);
         String text = preview;
-        int maxW = getWidth() - 18;
+        int maxW = width() - 18;
         if (font.width(text) > maxW) {
             text = font.plainSubstrByWidth(text, maxW - font.width("…")) + "…";
         }
@@ -54,12 +54,12 @@ public class PmToast implements Toast {
     }
 
     @Override
-    public int getWidth() {
+    public int width() {
         return 190;
     }
 
     @Override
-    public int getHeight() {
+    public int height() {
         return 32;
     }
 }
