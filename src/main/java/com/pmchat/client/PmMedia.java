@@ -2,11 +2,11 @@ package com.pmchat.client;
 
 import com.pmchat.screen.PmIcons;
 import com.pmchat.screen.PmTheme;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -356,9 +356,9 @@ public final class PmMedia {
      * на наведение (внутри экрана) или просто показать (поверх HUD). Возвращает
      * прямоугольник окна, чтобы вызывающий знал занятую область.
      */
-    public int[] renderMini(DrawContext ctx, int mouseX, int mouseY, boolean interactive) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        TextRenderer tr = mc.textRenderer;
+    public int[] renderMini(GuiGraphics ctx, int mouseX, int mouseY, boolean interactive) {
+        Minecraft mc = Minecraft.getInstance();
+        Font tr = mc.textRenderer;
         int sw = mc.getWindow().getScaledWidth();
         int sh = mc.getWindow().getScaledHeight();
         if (session != null) session.tick();
@@ -402,7 +402,7 @@ public final class PmMedia {
         return winRect;
     }
 
-    private void renderVideoArt(DrawContext ctx, TextRenderer tr, int x0, int y0, int mw, int h, PmTheme th) {
+    private void renderVideoArt(GuiGraphics ctx, Font tr, int x0, int y0, int mw, int h, PmTheme th) {
         PmVlc.Session s = session;
         if (s != null && s.width() > 0 && s.height() > 0) {
             int vw = s.width(), vh = s.height();
@@ -414,13 +414,13 @@ public final class PmMedia {
             ctx.drawTexture(RenderPipelines.GUI_TEXTURED, s.textureId(), ix, iy, 0f, 0f, w, hh, vw, vh, vw, vh);
         } else {
             ctx.fill(x0, y0, x0 + mw, y0 + h, th.bg);
-            Text st = Text.translatable("pmchat.video.decoding");
+            Component st = Component.translatable("pmchat.video.decoding");
             ctx.drawText(tr, st, x0 + (mw - tr.getWidth(st)) / 2, y0 + h / 2 - 4, th.label, false);
         }
         if (s != null && s.isFinished()) {
             // Кадр доиграл — предлагаем пересмотреть (клик по окошку/play перезапустит)
             ctx.fill(x0, y0, x0 + mw, y0 + h, 0x99050907);
-            Text again = Text.translatable("pmchat.video.again");
+            Component again = Component.translatable("pmchat.video.again");
             PmIcons.draw(ctx, PmIcons.PLAY, x0 + mw / 2 - 8, y0 + h / 2 - 12, 16, 16, th.title);
             ctx.drawText(tr, again, x0 + (mw - tr.getWidth(again)) / 2, y0 + h / 2 + 6, th.title, false);
         } else if (s != null && !s.isPlaying()) {
@@ -434,7 +434,7 @@ public final class PmMedia {
      * крестик справа, тонкая полоска прогресса по нижней кромке. Полоска не
      * забирает фокус — клики мимо неё проходят на экран под ней.
      */
-    private int[] renderMusicBar(DrawContext ctx, TextRenderer tr, int sw,
+    private int[] renderMusicBar(GuiGraphics ctx, Font tr, int sw,
                                  int mouseX, int mouseY, boolean interactive) {
         PmTheme th = theme();
         int h = 22;
@@ -488,7 +488,7 @@ public final class PmMedia {
     }
 
     /** Значок громкости + короткий перетаскиваемый трек — общий для музыкальной полоски и мини-окна видео. */
-    private void renderVolumeControl(DrawContext ctx, int x, int y, int trackW, int barH,
+    private void renderVolumeControl(GuiGraphics ctx, int x, int y, int trackW, int barH,
                                       int mouseX, int mouseY, boolean interactive, PmTheme th) {
         int iconSz = 11;
         PmIcons.draw(ctx, PmIcons.VOLUME, x, (barH - iconSz) / 2 + y, iconSz, iconSz, th.label);
@@ -512,7 +512,7 @@ public final class PmMedia {
             return;
         }
         boolean lmbDown = org.lwjgl.glfw.GLFW.glfwGetMouseButton(
-                MinecraftClient.getInstance().getWindow().getHandle(),
+                Minecraft.getInstance().getWindow().getHandle(),
                 org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
         if (!lmbDown) {
             volDragging = false;
@@ -528,7 +528,7 @@ public final class PmMedia {
      * Рисует текст в пределах ширины maxW; если не влезает — плавно прокручивает
      * его по горизонтали (бесшовно, с разрывом), обрезая по scissor.
      */
-    private static void drawMarquee(DrawContext ctx, TextRenderer tr, String text, int x, int y, int maxW, int color) {
+    private static void drawMarquee(GuiGraphics ctx, Font tr, String text, int x, int y, int maxW, int color) {
         int tw = tr.getWidth(text);
         if (tw <= maxW) {
             ctx.drawText(tr, text, x, y, color, false);
@@ -544,7 +544,7 @@ public final class PmMedia {
         ctx.disableScissor();
     }
 
-    private void renderControlBar(DrawContext ctx, TextRenderer tr, int x0, int y0, int mw, int h,
+    private void renderControlBar(GuiGraphics ctx, Font tr, int x0, int y0, int mw, int h,
                                   int mouseX, int mouseY, boolean interactive, PmTheme th) {
         ctx.fill(x0, y0, x0 + mw, y0 + h, th.btnBg);
         PmVlc.Session s = session;
@@ -578,12 +578,12 @@ public final class PmMedia {
         }
     }
 
-    private void drawBtn(DrawContext ctx, int[] r, String[] icon, int mx, int my, boolean interactive, PmTheme th) {
+    private void drawBtn(GuiGraphics ctx, int[] r, String[] icon, int mx, int my, boolean interactive, PmTheme th) {
         if (r == null) return;
         drawBtnIcon(ctx, r, icon, mx, my, interactive, th.label, th);
     }
 
-    private void drawBtnIcon(DrawContext ctx, int[] r, String[] icon, int mx, int my, boolean interactive, int col, PmTheme th) {
+    private void drawBtnIcon(GuiGraphics ctx, int[] r, String[] icon, int mx, int my, boolean interactive, int col, PmTheme th) {
         if (r == null) return;
         boolean hov = interactive && inRect(mx, my, r);
         ctx.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hov ? th.btnHover : th.btnBg);
@@ -650,7 +650,7 @@ public final class PmMedia {
         return dot > 0 ? name.substring(0, dot) : name;
     }
 
-    private static String trim(TextRenderer tr, String s, int maxW) {
+    private static String trim(Font tr, String s, int maxW) {
         if (tr.getWidth(s) <= maxW) return s;
         while (s.length() > 1 && tr.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
@@ -664,7 +664,7 @@ public final class PmMedia {
 
     /** Папка с музыкой пользователя: config/pmchat-music. */
     public static File musicDir() {
-        File dir = new File(MinecraftClient.getInstance().runDirectory, "config/pmchat-music");
+        File dir = new File(Minecraft.getInstance().runDirectory, "config/pmchat-music");
         //noinspection ResultOfMethodCallIgnored
         dir.mkdirs();
         return dir;

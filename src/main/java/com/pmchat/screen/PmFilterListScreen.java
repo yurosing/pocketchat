@@ -4,13 +4,13 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.KeyInput;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -53,7 +53,7 @@ public class PmFilterListScreen extends Screen {
     private String input = "";
     private int scope = PmConfig.SCOPE_BOTH;
 
-    private TextFieldWidget field;
+    private EditBox field;
 
     /** Кнопки строк для кликов: {x,y,w,h,type(0 edit/1 delete),index}. */
     private final List<int[]> rowButtons = new ArrayList<>();
@@ -64,7 +64,7 @@ public class PmFilterListScreen extends Screen {
     private String tabLastCompleted, tabBase = "";
 
     public PmFilterListScreen(Screen parent, int category) {
-        super(Text.translatable(PmFiltersScreen.categoryKey(category)));
+        super(Component.translatable(PmFiltersScreen.categoryKey(category)));
         this.parent = parent;
         this.category = category;
     }
@@ -91,10 +91,10 @@ public class PmFilterListScreen extends Screen {
         int fieldW = PANEL_W - 20 - rightBtnW - 6 - scopeW - scopeGap;
 
         String hintKey = isText() ? "pmchat.filters.texthint" : "pmchat.filters.nick";
-        field = new TextFieldWidget(textRenderer, px + 10, addY, fieldW, 16, Text.translatable(hintKey));
+        field = new EditBox(textRenderer, px + 10, addY, fieldW, 16, Component.translatable(hintKey));
         field.setMaxLength(256);
         field.setText(input);
-        String hint = Text.translatable(hintKey).getString();
+        String hint = Component.translatable(hintKey).getString();
         field.setSuggestion(input.isEmpty() ? hint : "");
         field.setChangedListener(s -> {
             field.setSuggestion(s.isEmpty() ? hint : "");
@@ -106,19 +106,19 @@ public class PmFilterListScreen extends Screen {
         if (isText()) {
             int sx = bx - scopeGap - scopeW;
             addDrawableChild(FlatButton.centered(textRenderer, sx, addY, scopeW, 16,
-                    Text.translatable(scopeKey(scope)), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
+                    Component.translatable(scopeKey(scope)), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
                         input = field.getText();
                         scope = (scope + 1) % 3;
                         reinit();
                     }));
         }
         addDrawableChild(FlatButton.centered(textRenderer, bx, addY, rightBtnW, 16,
-                Text.translatable(editIndex >= 0 ? "pmchat.filters.save" : "pmchat.filters.add"),
+                Component.translatable(editIndex >= 0 ? "pmchat.filters.save" : "pmchat.filters.add"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> commit()));
 
         // Назад
         addDrawableChild(FlatButton.centered(textRenderer, px + 10, py + panelH - 24, 70, 18,
-                Text.translatable("pmchat.filters.back"),
+                Component.translatable("pmchat.filters.back"),
                 BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
@@ -169,12 +169,12 @@ public class PmFilterListScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         ctx.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
         ctx.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
 
-        Text title = Text.translatable(PmFiltersScreen.categoryKey(category));
+        Component title = Component.translatable(PmFiltersScreen.categoryKey(category));
         ctx.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
 
         int listTop = py + 48;
@@ -182,7 +182,7 @@ public class PmFilterListScreen extends Screen {
         rowButtons.clear();
 
         if (size() == 0) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.filters.empty"),
+            ctx.drawText(textRenderer, Component.translatable("pmchat.filters.empty"),
                     px + 12, listTop + 4, SECTION, false);
         }
 
@@ -192,7 +192,7 @@ public class PmFilterListScreen extends Screen {
         int total = 0;
         for (int i = 0; i < size(); i++) {
             String display = entryText(i);
-            String tag = isText() ? "  (" + Text.translatable(scopeKey(config.filterRules.get(i).scope)).getString() + ")" : "";
+            String tag = isText() ? "  (" + Component.translatable(scopeKey(config.filterRules.get(i).scope)).getString() + ")" : "";
             List<String> lines = wrap(display, textW);
             int rowH = Math.max(18, lines.size() * 10 + 6);
             if (y + rowH >= listTop && y <= listBottom) {
@@ -224,14 +224,14 @@ public class PmFilterListScreen extends Screen {
         // Подсказка про Tab для ников — справа от кнопки «Назад», чтобы не
         // перекрывалась ею (кнопка занимает px+10..px+80 внизу).
         if (!isText()) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.filters.tabhint"),
+            ctx.drawText(textRenderer, Component.translatable("pmchat.filters.tabhint"),
                     px + 90, py + panelH - 20, SECTION, false);
         }
 
         super.render(ctx, mouseX, mouseY, delta);
     }
 
-    private void drawMini(DrawContext ctx, int x, int y, String glyph, int color, int mx, int my) {
+    private void drawMini(GuiGraphics ctx, int x, int y, String glyph, int color, int mx, int my) {
         boolean hov = mx >= x && mx < x + 16 && my >= y && my < y + 14;
         ctx.fill(x, y, x + 16, y + 14, hov ? 0xFF2A4A5C : 0xFF101A16);
         ctx.drawText(textRenderer, glyph, x + 8 - textRenderer.getWidth(glyph) / 2, y + 3, color, false);
@@ -305,10 +305,10 @@ public class PmFilterListScreen extends Screen {
             if (text.isEmpty()) return;
             String pl = text.toLowerCase(Locale.ROOT);
             tabMatches.clear();
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc.getNetworkHandler() != null) {
                 List<String> names = new ArrayList<>();
-                for (net.minecraft.client.network.PlayerListEntry e : mc.getNetworkHandler().getPlayerList()) {
+                for (net.minecraft.client.multiplayer.PlayerInfo e : mc.getNetworkHandler().getPlayerList()) {
                     String n = e.getProfile().name();
                     if (n != null && n.toLowerCase(Locale.ROOT).startsWith(pl)) names.add(n);
                 }
@@ -334,7 +334,7 @@ public class PmFilterListScreen extends Screen {
     public void close() {
         config.save();
         PmChatClient.reloadPatterns();
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

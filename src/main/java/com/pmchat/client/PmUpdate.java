@@ -3,12 +3,12 @@ package com.pmchat.client;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -68,7 +68,7 @@ public final class PmUpdate {
                         : "https://github.com/" + repo + "/releases";
 
                 if (isNewer(tag, currentVersion())) {
-                    MinecraftClient.getInstance().execute(() -> notifyUpdate(tag, url));
+                    Minecraft.getInstance().execute(() -> notifyUpdate(tag, url));
                 }
             } catch (Exception e) {
                 PmChatClient.LOGGER.debug("Update check failed: {}", e.toString());
@@ -79,14 +79,14 @@ public final class PmUpdate {
     }
 
     private static void notifyUpdate(String tag, String url) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.inGameHud == null) return;
-        MutableText msg = Text.literal("[pmchat] ").formatted(Formatting.AQUA)
-                .append(Text.literal("Доступна новая версия " + tag + ". ").formatted(Formatting.WHITE))
-                .append(Text.literal("Открыть страницу релиза →")
-                        .styled(s -> s.withFormatting(Formatting.GREEN, Formatting.UNDERLINE)
+        MutableComponent msg = Component.literal("[pmchat] ").formatted(ChatFormatting.AQUA)
+                .append(Component.literal("Доступна новая версия " + tag + ". ").formatted(ChatFormatting.WHITE))
+                .append(Component.literal("Открыть страницу релиза →")
+                        .styled(s -> s.withFormatting(ChatFormatting.GREEN, ChatFormatting.UNDERLINE)
                                 .withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
-                                .withHoverEvent(new HoverEvent.ShowText(Text.literal(url)))));
+                                .withHoverEvent(new HoverEvent.ShowText(Component.literal(url)))));
         client.inGameHud.getChatHud().addMessage(msg);
 
         // Заодно приглашение в Discord — если задано (pmchat.json: discordUrl).
@@ -94,12 +94,12 @@ public final class PmUpdate {
         if (discord != null && !discord.isBlank()) {
             try {
                 URI discordUri = URI.create(discord);
-                MutableText dmsg = Text.literal("[pmchat] ").formatted(Formatting.AQUA)
-                        .append(Text.literal("Наш Discord: ").formatted(Formatting.WHITE))
-                        .append(Text.literal(discord)
-                                .styled(s -> s.withFormatting(Formatting.BLUE, Formatting.UNDERLINE)
+                MutableComponent dmsg = Component.literal("[pmchat] ").formatted(ChatFormatting.AQUA)
+                        .append(Component.literal("Наш Discord: ").formatted(ChatFormatting.WHITE))
+                        .append(Component.literal(discord)
+                                .styled(s -> s.withFormatting(ChatFormatting.BLUE, ChatFormatting.UNDERLINE)
                                         .withClickEvent(new ClickEvent.OpenUrl(discordUri))
-                                        .withHoverEvent(new HoverEvent.ShowText(Text.literal(discord)))));
+                                        .withHoverEvent(new HoverEvent.ShowText(Component.literal(discord)))));
                 client.inGameHud.getChatHud().addMessage(dmsg);
             } catch (IllegalArgumentException ignored) {
                 // некорректная ссылка в конфиге — молча пропускаем

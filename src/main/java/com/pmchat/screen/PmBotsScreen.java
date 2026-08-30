@@ -5,11 +5,11 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,9 +31,9 @@ public class PmBotsScreen extends Screen {
     private int BG, BORDER, LABEL, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
     private int px, py, pw, ph;
 
-    private TextFieldWidget nameField;
-    private TextFieldWidget userField;
-    private TextFieldWidget searchField;
+    private EditBox nameField;
+    private EditBox userField;
+    private EditBox searchField;
     private String nameText = "", userText = "", searchText = "";
 
     /** null — ещё грузим список; иначе актуальный список ботов. */
@@ -45,12 +45,12 @@ public class PmBotsScreen extends Screen {
     private final List<Object[]> searchRowRects = new ArrayList<>(); // x,y,w,h,username
     private int searchSeq = 0;
 
-    private Text status = Text.empty();
+    private Component status = Component.empty();
     private int statusColor = 0xFFAAAAAA;
     private int[] closeRect;
 
     public PmBotsScreen(Screen parent) {
-        super(Text.translatable("pmchat.bots.title"));
+        super(Component.translatable("pmchat.bots.title"));
         this.parent = parent;
     }
 
@@ -97,18 +97,18 @@ public class PmBotsScreen extends Screen {
         int y = py + 24;
 
         // Создание бота: имя + @username
-        nameField = new TextFieldWidget(textRenderer, fx, y, fw / 2 - 3, 15, Text.translatable("pmchat.bots.name"));
+        nameField = new EditBox(textRenderer, fx, y, fw / 2 - 3, 15, Component.translatable("pmchat.bots.name"));
         nameField.setMaxLength(64);
         nameField.setText(nameText);
-        String nameHint = Text.translatable("pmchat.bots.name").getString();
+        String nameHint = Component.translatable("pmchat.bots.name").getString();
         nameField.setSuggestion(nameText.isEmpty() ? nameHint : null);
         nameField.setChangedListener(s -> nameField.setSuggestion(s.isEmpty() ? nameHint : null));
         addDrawableChild(nameField);
 
-        userField = new TextFieldWidget(textRenderer, fx + fw / 2 + 3, y, fw / 2 - 3, 15, Text.translatable("pmchat.bots.username"));
+        userField = new EditBox(textRenderer, fx + fw / 2 + 3, y, fw / 2 - 3, 15, Component.translatable("pmchat.bots.username"));
         userField.setMaxLength(32);
         userField.setText(userText);
-        String userHint = Text.translatable("pmchat.bots.username").getString();
+        String userHint = Component.translatable("pmchat.bots.username").getString();
         userField.setSuggestion(userText.isEmpty() ? userHint : null);
         userField.setChangedListener(s -> userField.setSuggestion(s.isEmpty() ? userHint : null));
         addDrawableChild(userField);
@@ -118,11 +118,11 @@ public class PmBotsScreen extends Screen {
 
         int createW = fw - 96;
         addDrawableChild(FlatButton.centered(textRenderer, fx, y, createW, 15,
-                Text.translatable("pmchat.bots.create"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
+                Component.translatable("pmchat.bots.create"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> createBot()));
         addDrawableChild(FlatButton.centered(textRenderer, fx + createW + 4, y, fw - createW - 4, 15,
-                Text.translatable("pmchat.bots.store"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
-                btn -> MinecraftClient.getInstance().setScreen(new PmBotStoreScreen(this))));
+                Component.translatable("pmchat.bots.store"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
+                btn -> Minecraft.getInstance().setScreen(new PmBotStoreScreen(this))));
         y += 22;
 
         // Список моих ботов
@@ -138,20 +138,20 @@ public class PmBotsScreen extends Screen {
                 int actY = y + 13;
                 int actW = (bw - 12) / 4;
                 addDrawableChild(FlatButton.centered(textRenderer, fx, actY, actW, 13,
-                        Text.translatable("pmchat.bots.copytoken"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
+                        Component.translatable("pmchat.bots.copytoken"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
                         btn -> {
-                            MinecraftClient.getInstance().keyboard.setClipboard(b.token);
-                            status = Text.translatable("pmchat.bots.copied");
+                            Minecraft.getInstance().keyboard.setClipboard(b.token);
+                            status = Component.translatable("pmchat.bots.copied");
                             statusColor = 0xFF8FD8A8;
                         }));
                 addDrawableChild(FlatButton.centered(textRenderer, fx + actW + 4, actY, actW, 13,
-                        Text.translatable("pmchat.bots.openchat"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF8FD8A8,
-                        btn -> MinecraftClient.getInstance().setScreen(new PmScreen(b.username))));
+                        Component.translatable("pmchat.bots.openchat"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF8FD8A8,
+                        btn -> Minecraft.getInstance().setScreen(new PmScreen(b.username))));
                 addDrawableChild(FlatButton.centered(textRenderer, fx + 2 * (actW + 4), actY, actW, 13,
-                        Text.literal("✎"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
-                        btn -> MinecraftClient.getInstance().setScreen(new PmBotEditScreen(this, b))));
+                        Component.literal("✎"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
+                        btn -> Minecraft.getInstance().setScreen(new PmBotEditScreen(this, b))));
                 addDrawableChild(FlatButton.centered(textRenderer, fx + 3 * (actW + 4), actY, actW, 13,
-                        Text.literal("✖"), 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A,
+                        Component.literal("✖"), 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A,
                         btn -> deleteBot(b.username)));
                 y += rowH;
                 shown++;
@@ -161,10 +161,10 @@ public class PmBotsScreen extends Screen {
 
         // Поиск ботов по @username — вживую, список результатов ниже поля
         int searchY = py + ph - 40;
-        searchField = new TextFieldWidget(textRenderer, fx, searchY, fw, 15, Text.translatable("pmchat.bots.searchhint"));
+        searchField = new EditBox(textRenderer, fx, searchY, fw, 15, Component.translatable("pmchat.bots.searchhint"));
         searchField.setMaxLength(32);
         searchField.setText(searchText);
-        String searchHint = Text.translatable("pmchat.bots.searchhint").getString();
+        String searchHint = Component.translatable("pmchat.bots.searchhint").getString();
         searchField.setSuggestion(searchText.isEmpty() ? searchHint : null);
         searchField.setChangedListener(s -> {
             searchField.setSuggestion(s.isEmpty() ? searchHint : null);
@@ -174,7 +174,7 @@ public class PmBotsScreen extends Screen {
 
         // Закрыть
         addDrawableChild(FlatButton.centered(textRenderer, px + pw / 2 - 40, py + ph - 20, 80, 15,
-                Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
 
         closeRect = new int[]{px + pw - 18, py + 5, 14, 14};
     }
@@ -195,24 +195,24 @@ public class PmBotsScreen extends Screen {
         String name = nameField.getText().trim();
         String user = userField.getText().trim().replaceFirst("^@", "");
         if (user.isEmpty()) {
-            status = Text.translatable("pmchat.bots.needusername");
+            status = Component.translatable("pmchat.bots.needusername");
             statusColor = 0xFFE07A6A;
             return;
         }
         PmBackend.createBot(user, name, (ok, bot, err) -> {
             if (ok && bot != null) {
-                status = Text.translatable("pmchat.bots.created", bot.username);
+                status = Component.translatable("pmchat.bots.created", bot.username);
                 statusColor = 0xFF8FD8A8;
                 nameField.setText("");
                 userField.setText("");
                 nameText = ""; userText = "";
-                MinecraftClient.getInstance().keyboard.setClipboard(bot.token);
+                Minecraft.getInstance().keyboard.setClipboard(bot.token);
                 loadBots();
             } else if (err != null && err.contains("insufficient balance")) {
-                status = Text.translatable("pmchat.bots.needcoins", createPrice);
+                status = Component.translatable("pmchat.bots.needcoins", createPrice);
                 statusColor = 0xFFE07A6A;
             } else {
-                status = Text.translatable("pmchat.bots.fail", String.valueOf(err));
+                status = Component.translatable("pmchat.bots.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
             }
         });
@@ -221,23 +221,23 @@ public class PmBotsScreen extends Screen {
     private void deleteBot(String username) {
         PmBackend.deleteBot(username, (ok, v, err) -> {
             if (ok) {
-                status = Text.translatable("pmchat.bots.deleted", username);
+                status = Component.translatable("pmchat.bots.deleted", username);
                 statusColor = 0xFFAAB0B6;
                 loadBots();
             } else {
-                status = Text.translatable("pmchat.bots.fail", String.valueOf(err));
+                status = Component.translatable("pmchat.bots.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
             }
         });
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, 0xC0000000);
         ctx.fill(px, py, px + pw, py + ph, BG);
         ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
 
-        Text title = getTitle();
+        Component title = getTitle();
         ctx.drawText(textRenderer, title, px + 12, py + 8, TITLE, false);
         String x = "✕";
         boolean hovX = closeRect != null && mouseX >= closeRect[0] && mouseX < closeRect[0] + closeRect[2]
@@ -248,16 +248,16 @@ public class PmBotsScreen extends Screen {
         int fw = pw - 24;
         int y = py + 24 + 19;
         if (createPrice > 0) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.bots.priceline", createPrice), fx, y, LABEL, false);
+            ctx.drawText(textRenderer, Component.translatable("pmchat.bots.priceline", createPrice), fx, y, LABEL, false);
             y += 10;
         }
         y += 22; // строка кнопок «Создать»/«Магазин»
 
         // Список ботов (текстовая часть; кнопки рисует super.render)
         if (bots == null) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.bots.loading"), fx, y, LABEL, false);
+            ctx.drawText(textRenderer, Component.translatable("pmchat.bots.loading"), fx, y, LABEL, false);
         } else if (bots.isEmpty()) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.bots.none"), fx, y, LABEL, false);
+            ctx.drawText(textRenderer, Component.translatable("pmchat.bots.none"), fx, y, LABEL, false);
         } else {
             int rowH = 30;
             int listBottom = py + ph - 78;
@@ -301,7 +301,7 @@ public class PmBotsScreen extends Screen {
         for (Object[] r : searchRowRects) {
             if (mx >= (int) r[0] && mx < (int) r[0] + (int) r[2]
                     && my >= (int) r[1] && my < (int) r[1] + (int) r[3]) {
-                MinecraftClient.getInstance().setScreen(new PmScreen((String) r[4]));
+                Minecraft.getInstance().setScreen(new PmScreen((String) r[4]));
                 return true;
             }
         }
@@ -323,7 +323,7 @@ public class PmBotsScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

@@ -6,11 +6,11 @@ import com.pmchat.client.PmImages;
 import com.pmchat.client.PmPalettes;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 /**
  * Экран настроек мода: открывается кнопкой ⚙ в чате и из Mod Menu.
@@ -55,7 +55,7 @@ public class PmSettingsScreen extends Screen {
     private int tab = lastTab;
 
     public PmSettingsScreen(Screen parent) {
-        super(Text.translatable("pmchat.settings.title"));
+        super(Component.translatable("pmchat.settings.title"));
         this.parent = parent;
     }
 
@@ -80,7 +80,7 @@ public class PmSettingsScreen extends Screen {
         };
     }
 
-    private TextFieldWidget backendUrlField;
+    private EditBox backendUrlField;
     private boolean editBackendUrl = false;
 
     @Override
@@ -102,7 +102,7 @@ public class PmSettingsScreen extends Screen {
             int ti = i;
             boolean active = ti == tab;
             addDrawableChild(FlatButton.centered(textRenderer, px + i * tabW + 1, py + 22, tabW - 2, TAB_H - 2,
-                    Text.translatable(TAB_KEYS[i]), active ? BTN_HOVER : BTN_BG, BTN_HOVER, BTN_BORDER,
+                    Component.translatable(TAB_KEYS[i]), active ? BTN_HOVER : BTN_BG, BTN_HOVER, BTN_BORDER,
                     active ? VALUE : LABEL, btn -> { tab = ti; init(); }));
         }
 
@@ -118,44 +118,44 @@ public class PmSettingsScreen extends Screen {
         }
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
-                Text.translatable("pmchat.settings.done"),
+                Component.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
 
         // кнопка-ссылка на сайт документации (открывает RU/EN по языку клиента)
         FlatButton docsBtn = FlatButton.centered(textRenderer, px + PANEL_W - 24, py + 3, 18, 14,
-                Text.translatable("pmchat.tip.docs"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
+                Component.translatable("pmchat.tip.docs"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
                 btn -> PmChatClient.openDocs()).withIcon(PmIcons.DOCS);
-        docsBtn.setTooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("pmchat.tip.docs")));
+        docsBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable("pmchat.tip.docs")));
         addDrawableChild(docsBtn);
     }
 
     private int buildAppearanceTab(int y) {
         y = addOption(y, "pmchat.set.theme",
-                () -> Text.translatable(PmTheme.nameKey(config.theme)),
+                () -> Component.translatable(PmTheme.nameKey(config.theme)),
                 VALUE, () -> config.theme = (config.theme + 1) % PmTheme.COUNT);
 
         y = addOption(y, "pmchat.set.outcolor",
-                () -> Text.literal("■ " + (config.outColor % PmPalettes.OUT.length + 1)),
+                () -> Component.literal("■ " + (config.outColor % PmPalettes.OUT.length + 1)),
                 () -> PmPalettes.OUT[Math.floorMod(config.outColor, PmPalettes.OUT.length)],
                 () -> config.outColor = (config.outColor + 1) % PmPalettes.OUT.length);
 
         y = addOption(y, "pmchat.set.incolor",
-                () -> Text.literal("■ " + (config.inColor % PmPalettes.IN.length + 1)),
+                () -> Component.literal("■ " + (config.inColor % PmPalettes.IN.length + 1)),
                 () -> PmPalettes.IN[Math.floorMod(config.inColor, PmPalettes.IN.length)],
                 () -> config.inColor = (config.inColor + 1) % PmPalettes.IN.length);
 
         y = addOption(y, "pmchat.set.names",
-                () -> Text.translatable(config.uniformNames ? "pmchat.set.names.uniform" : "pmchat.set.names.rainbow"),
+                () -> Component.translatable(config.uniformNames ? "pmchat.set.names.uniform" : "pmchat.set.names.rainbow"),
                 VALUE, () -> config.uniformNames = !config.uniformNames);
 
         y = addOption(y, "pmchat.set.namecolor",
-                () -> Text.literal("■ " + (config.nameColor % PmPalettes.NAMES.length + 1)),
+                () -> Component.literal("■ " + (config.nameColor % PmPalettes.NAMES.length + 1)),
                 () -> PmPalettes.NAMES[Math.floorMod(config.nameColor, PmPalettes.NAMES.length)],
                 () -> config.nameColor = (config.nameColor + 1) % PmPalettes.NAMES.length);
 
         y = addOption(y, "pmchat.set.msgtextcolor",
-                () -> Text.literal(config.msgTextColor == 0
-                        ? Text.translatable("pmchat.set.wallpaper.none").getString()
+                () -> Component.literal(config.msgTextColor == 0
+                        ? Component.translatable("pmchat.set.wallpaper.none").getString()
                         : "■ " + config.msgTextColor),
                 () -> {
                     int c = PmPalettes.MSG_TEXT[Math.floorMod(config.msgTextColor, PmPalettes.MSG_TEXT.length)];
@@ -164,11 +164,11 @@ public class PmSettingsScreen extends Screen {
                 () -> config.msgTextColor = (config.msgTextColor + 1) % PmPalettes.MSG_TEXT.length);
 
         y = addOption(y, "pmchat.set.textscale",
-                () -> Text.literal(config.textScalePct + "%"),
+                () -> Component.literal(config.textScalePct + "%"),
                 VALUE, () -> config.textScalePct = SCALES[(indexOf(SCALES, config.textScalePct) + 1) % SCALES.length]);
 
         y = addOption(y, "pmchat.set.uiscale",
-                () -> Text.literal(switch (Math.floorMod(config.uiScale, 3)) {
+                () -> Component.literal(switch (Math.floorMod(config.uiScale, 3)) {
                     case 1 -> "M";
                     case 2 -> "L";
                     default -> "S";
@@ -176,18 +176,18 @@ public class PmSettingsScreen extends Screen {
                 VALUE, () -> config.uiScale = (config.uiScale + 1) % 3);
 
         y = addOption(y, "pmchat.set.wallpaper",
-                () -> Text.literal(config.wallpaper == null || config.wallpaper.isBlank()
-                        ? Text.translatable("pmchat.set.wallpaper.none").getString()
+                () -> Component.literal(config.wallpaper == null || config.wallpaper.isBlank()
+                        ? Component.translatable("pmchat.set.wallpaper.none").getString()
                         : config.wallpaper.length() > 12 ? config.wallpaper.substring(0, 11) + "…" : config.wallpaper),
                 VALUE, this::cycleWallpaper);
 
         y = addOption(y, "pmchat.set.badge",
-                () -> Text.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),
+                () -> Component.literal("■ " + (config.badgeColor % PmPalettes.BADGE.length + 1)),
                 () -> PmPalettes.BADGE[Math.floorMod(config.badgeColor, PmPalettes.BADGE.length)],
                 () -> config.badgeColor = (config.badgeColor + 1) % PmPalettes.BADGE.length);
 
         y = addOption(y, "pmchat.set.contactstar",
-                () -> Text.literal("★ " + (config.contactStarColor % PmPalettes.CONTACT_STAR.length + 1)),
+                () -> Component.literal("★ " + (config.contactStarColor % PmPalettes.CONTACT_STAR.length + 1)),
                 () -> PmPalettes.CONTACT_STAR[Math.floorMod(config.contactStarColor, PmPalettes.CONTACT_STAR.length)],
                 () -> config.contactStarColor = (config.contactStarColor + 1) % PmPalettes.CONTACT_STAR.length);
 
@@ -196,18 +196,18 @@ public class PmSettingsScreen extends Screen {
 
     private int buildChatTab(int y) {
         y = addOption(y, "pmchat.set.mention",
-                () -> Text.translatable(config.mentionEnabled ? "pmchat.set.mention.on" : "pmchat.set.mention.off"),
+                () -> Component.translatable(config.mentionEnabled ? "pmchat.set.mention.on" : "pmchat.set.mention.off"),
                 () -> config.mentionEnabled ? 0xFFF0C34E : VALUE,
                 () -> config.mentionEnabled = !config.mentionEnabled);
 
         y = addOption(y, "pmchat.set.dnd",
-                () -> Text.translatable(config.dnd ? "pmchat.set.dnd.on" : "pmchat.set.dnd.off"),
+                () -> Component.translatable(config.dnd ? "pmchat.set.dnd.on" : "pmchat.set.dnd.off"),
                 () -> config.dnd ? 0xFFE07A6A : 0xFF8FD8A8,
                 () -> config.dnd = !config.dnd);
 
         y = addOption(y, "pmchat.set.globalprefix",
-                () -> Text.literal(config.globalPrefix == null || config.globalPrefix.isBlank()
-                        ? Text.translatable("pmchat.set.globalprefix.none").getString()
+                () -> Component.literal(config.globalPrefix == null || config.globalPrefix.isBlank()
+                        ? Component.translatable("pmchat.set.globalprefix.none").getString()
                         : config.globalPrefix),
                 VALUE, () -> {
                     String[] cycle = {"!", "@", "."};
@@ -220,72 +220,72 @@ public class PmSettingsScreen extends Screen {
                 });
 
         y = addOption(y, "pmchat.set.closedmg",
-                () -> Text.translatable(config.closeOnDamage ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> Component.translatable(config.closeOnDamage ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.closeOnDamage ? 0xFFE07A6A : VALUE,
                 () -> config.closeOnDamage = !config.closeOnDamage);
 
         y = addOption(y, "pmchat.set.copynick",
-                () -> Text.translatable(config.mentionOnCopy ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> Component.translatable(config.mentionOnCopy ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.mentionOnCopy ? 0xFF8FD8A8 : VALUE,
                 () -> config.mentionOnCopy = !config.mentionOnCopy);
 
         // При заданном переименовании — слать /m на псевдоним, а не на реальный ник
         y = addOption(y, "pmchat.set.aliastarget",
-                () -> Text.translatable(config.aliasAsTarget ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> Component.translatable(config.aliasAsTarget ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.aliasAsTarget ? 0xFF8FD8A8 : VALUE,
                 () -> config.aliasAsTarget = !config.aliasAsTarget);
 
         y = addOption(y, "pmchat.set.staff",
-                () -> Text.translatable(config.staffFeatures ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> Component.translatable(config.staffFeatures ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.staffFeatures ? 0xFFE07A6A : VALUE,
                 () -> config.staffFeatures = !config.staffFeatures);
 
         y = addOption(y, "pmchat.set.coreprotect",
-                () -> Text.translatable(config.coreProtectEnabled ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> Component.translatable(config.coreProtectEnabled ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.coreProtectEnabled ? 0xFF8FD8A8 : VALUE,
                 () -> config.coreProtectEnabled = !config.coreProtectEnabled);
 
         y = addOption(y, "pmchat.set.mediabar",
-                () -> Text.translatable(config.mediaBarWhileTyping ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> Component.translatable(config.mediaBarWhileTyping ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.mediaBarWhileTyping ? 0xFF8FD8A8 : VALUE,
                 () -> config.mediaBarWhileTyping = !config.mediaBarWhileTyping);
 
         // Отдельный экран фильтров чата («No Global Chat»)
         y = addOption(y, "pmchat.filters.open",
-                () -> Text.literal("⚙"),
+                () -> Component.literal("⚙"),
                 () -> 0xFF8FD8A8,
-                () -> MinecraftClient.getInstance().setScreen(new PmFiltersScreen(this)));
+                () -> Minecraft.getInstance().setScreen(new PmFiltersScreen(this)));
 
         return y;
     }
 
     private int buildSoundTab(int y) {
         y = addOption(y, "pmchat.set.sound",
-                () -> Text.translatable("pmchat.set.sound." + Math.floorMod(config.notifySound, 4)),
+                () -> Component.translatable("pmchat.set.sound." + Math.floorMod(config.notifySound, 4)),
                 VALUE, () -> {
                     config.notifySound = (config.notifySound + 1) % 4;
-                    PmChatClient.playNotifySound(MinecraftClient.getInstance()); // предпрослушка
+                    PmChatClient.playNotifySound(Minecraft.getInstance()); // предпрослушка
                 });
 
         y = addOption(y, "pmchat.set.volume",
-                () -> Text.literal(config.notifyVolume + "%"),
+                () -> Component.literal(config.notifyVolume + "%"),
                 VALUE, () -> {
                     config.notifyVolume = VOLUMES[(indexOf(VOLUMES, config.notifyVolume) + 1) % VOLUMES.length];
-                    PmChatClient.playNotifySound(MinecraftClient.getInstance());
+                    PmChatClient.playNotifySound(Minecraft.getInstance());
                 });
 
         y = addOption(y, "pmchat.set.tts",
-                () -> Text.translatable(config.ttsGlobal ? "pmchat.set.tts.on" : "pmchat.set.tts.off"),
+                () -> Component.translatable(config.ttsGlobal ? "pmchat.set.tts.on" : "pmchat.set.tts.off"),
                 () -> config.ttsGlobal ? 0xFF8FD8A8 : VALUE,
                 () -> {
                     config.ttsGlobal = !config.ttsGlobal;
                     if (config.ttsGlobal) {
-                        PmChatClient.speak(Text.translatable("pmchat.set.tts.preview").getString());
+                        PmChatClient.speak(Component.translatable("pmchat.set.tts.preview").getString());
                     }
                 });
 
         y = addOption(y, "pmchat.set.sttlang",
-                () -> Text.translatable(config.sttLang == 1 ? "pmchat.set.sttlang.en" : "pmchat.set.sttlang.ru"),
+                () -> Component.translatable(config.sttLang == 1 ? "pmchat.set.sttlang.en" : "pmchat.set.sttlang.ru"),
                 VALUE, () -> {
                     config.sttLang = config.sttLang == 1 ? 0 : 1;
                     com.pmchat.client.PmStt.onLanguageChanged();
@@ -296,9 +296,9 @@ public class PmSettingsScreen extends Screen {
 
     private int buildAccountTab(int y) {
         y = addOption(y, "pmchat.rules.view",
-                () -> Text.literal("⚙"),
+                () -> Component.literal("⚙"),
                 () -> LABEL,
-                () -> MinecraftClient.getInstance().setScreen(new PmRulesScreen(this)));
+                () -> Minecraft.getInstance().setScreen(new PmRulesScreen(this)));
 
         if (!backendConfigured() || editBackendUrl) {
             int fx = px + 16;
@@ -306,8 +306,8 @@ public class PmSettingsScreen extends Screen {
             optionLabels.add(new Object[]{"pmchat.settings.tab.account.none", y});
             y += 12;
 
-            String hint = Text.translatable("pmchat.settings.backendurl.hint").getString();
-            backendUrlField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.settings.backendurl.hint"));
+            String hint = Component.translatable("pmchat.settings.backendurl.hint").getString();
+            backendUrlField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.settings.backendurl.hint"));
             backendUrlField.setMaxLength(200);
             if (backendConfigured()) {
                 backendUrlField.setText(config.backendUrl);
@@ -319,7 +319,7 @@ public class PmSettingsScreen extends Screen {
             y += 20;
 
             addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
-                    Text.translatable("pmchat.settings.backendurl.connect"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
+                    Component.translatable("pmchat.settings.backendurl.connect"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                     btn -> {
                         String url = backendUrlField.getText().trim();
                         if (!url.isEmpty()) {
@@ -337,37 +337,37 @@ public class PmSettingsScreen extends Screen {
         }
 
         y = addOption(y, "pmchat.login.open",
-                () -> Text.literal("⚙"),
+                () -> Component.literal("⚙"),
                 () -> 0xFF8FD8A8,
-                () -> MinecraftClient.getInstance().setScreen(new PmLoginScreen(this)));
+                () -> Minecraft.getInstance().setScreen(new PmLoginScreen(this)));
 
         if (isAdminAccount()) {
             y = addOption(y, "pmchat.admin.open",
-                    () -> Text.literal("⚙"),
+                    () -> Component.literal("⚙"),
                     () -> 0xFFF0C34E,
-                    () -> MinecraftClient.getInstance().setScreen(new PmAdminScreen(this)));
+                    () -> Minecraft.getInstance().setScreen(new PmAdminScreen(this)));
         }
 
         y = addOption(y, "pmchat.support.open",
-                () -> Text.literal("✉"),
+                () -> Component.literal("✉"),
                 () -> 0xFF5AA0E0,
-                () -> MinecraftClient.getInstance().setScreen(new PmSupportScreen(this)));
+                () -> Minecraft.getInstance().setScreen(new PmSupportScreen(this)));
 
         y = addOption(y, "pmchat.settings.backendurl.change",
-                () -> Text.literal("⚙"),
+                () -> Component.literal("⚙"),
                 () -> LABEL,
                 () -> editBackendUrl = true);
 
         return y;
     }
 
-    private TextFieldWidget dmPriceField;
-    private Text dmPriceStatus = Text.empty();
+    private EditBox dmPriceField;
+    private Component dmPriceStatus = Component.empty();
     private int dmPriceStatusColor = 0xFFAAAAAA;
 
     private int buildPrivacyTab(int y) {
         y = addOption(y, "pmchat.set.preciseseen",
-                () -> Text.translatable(config.preciseLastSeen ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> Component.translatable(config.preciseLastSeen ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.preciseLastSeen ? 0xFF8FD8A8 : VALUE,
                 () -> {
                     config.preciseLastSeen = !config.preciseLastSeen;
@@ -382,25 +382,25 @@ public class PmSettingsScreen extends Screen {
             y += 12;
             int fx = px + 12, fw = PANEL_W - 24;
             if (com.pmchat.client.PmBackend.hasActiveFeature("paid_dm")) {
-                dmPriceField = new TextFieldWidget(textRenderer, fx, y, fw - 62, 16, Text.translatable("pmchat.shop.dmprice.hint"));
+                dmPriceField = new EditBox(textRenderer, fx, y, fw - 62, 16, Component.translatable("pmchat.shop.dmprice.hint"));
                 dmPriceField.setMaxLength(8);
                 com.pmchat.client.PmBackend.AccountInfo self =
                         com.pmchat.client.PmBackend.cachedAccountInfo(PmChatClient.selfName());
                 dmPriceField.setText(self != null ? String.valueOf(self.dmPrice) : "");
-                String hint = Text.translatable("pmchat.shop.dmprice.hint").getString();
+                String hint = Component.translatable("pmchat.shop.dmprice.hint").getString();
                 dmPriceField.setSuggestion(dmPriceField.getText().isEmpty() ? hint : "");
                 dmPriceField.setChangedListener(s -> dmPriceField.setSuggestion(s.isEmpty() ? hint : ""));
                 addDrawableChild(dmPriceField);
                 addDrawableChild(FlatButton.centered(textRenderer, fx + fw - 58, y, 58, 16,
-                        Text.translatable("pmchat.shop.dmprice.save"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
+                        Component.translatable("pmchat.shop.dmprice.save"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                         btn -> saveDmPrice()));
                 y += 20;
             } else {
                 optionLabels.add(new Object[]{"pmchat.privacy.dmprice.needshop", y});
                 y += 12;
                 addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
-                        Text.translatable("pmchat.tip.shop"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
-                        btn -> MinecraftClient.getInstance().setScreen(new PmShopScreen(this))));
+                        Component.translatable("pmchat.tip.shop"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
+                        btn -> Minecraft.getInstance().setScreen(new PmShopScreen(this))));
                 y += 20;
             }
         }
@@ -412,19 +412,19 @@ public class PmSettingsScreen extends Screen {
         try {
             price = Long.parseLong(dmPriceField.getText().trim());
         } catch (NumberFormatException e) {
-            dmPriceStatus = Text.translatable("pmchat.admin.badamount");
+            dmPriceStatus = Component.translatable("pmchat.admin.badamount");
             dmPriceStatusColor = 0xFFE07A6A;
             return;
         }
         if (price < 0) return;
         com.pmchat.client.PmBackend.setDmPrice(price, (ok, v, err) -> {
-            dmPriceStatus = ok ? Text.translatable("pmchat.admin.ok") : Text.translatable("pmchat.admin.fail", String.valueOf(err));
+            dmPriceStatus = ok ? Component.translatable("pmchat.admin.ok") : Component.translatable("pmchat.admin.fail", String.valueOf(err));
             dmPriceStatusColor = ok ? 0xFF8FD8A8 : 0xFFE07A6A;
         });
     }
 
     private interface ValueSupplier {
-        Text get();
+        Component get();
     }
 
     private interface ColorSupplier {
@@ -452,17 +452,17 @@ public class PmSettingsScreen extends Screen {
     private final java.util.List<Object[]> optionLabels = new java.util.ArrayList<>();
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
 
-        Text title = Text.translatable("pmchat.settings.title");
+        Component title = Component.translatable("pmchat.settings.title");
         context.drawText(textRenderer, title,
                 px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
         for (Object[] entry : optionLabels) {
-            context.drawText(textRenderer, Text.translatable((String) entry[0]),
+            context.drawText(textRenderer, Component.translatable((String) entry[0]),
                     px + 10, (int) entry[1] + 3, LABEL, false);
         }
 
@@ -508,7 +508,7 @@ public class PmSettingsScreen extends Screen {
     @Override
     public void close() {
         config.save();
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         // Возвращаемся в чат с уже применёнными настройками
         client.setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
     }

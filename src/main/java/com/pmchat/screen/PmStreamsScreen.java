@@ -5,12 +5,12 @@ import com.pmchat.client.PmConfig;
 import com.pmchat.client.PmServerMedia;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,11 +44,11 @@ public class PmStreamsScreen extends Screen {
 
     // Диалог «начать стрим»
     private boolean startMode = false;
-    private TextFieldWidget titleField, urlField;
+    private EditBox titleField, urlField;
 
     // Диалог доната
     private String donateTarget = null;
-    private TextFieldWidget amountField;
+    private EditBox amountField;
 
     /** {x,y,w,h,player} — кнопки доната в списке. */
     private final List<Object[]> donateRects = new ArrayList<>();
@@ -58,7 +58,7 @@ public class PmStreamsScreen extends Screen {
     private long localMsgAt = 0L;
 
     public PmStreamsScreen(Screen parent) {
-        super(Text.translatable("pmchat.streams.title"));
+        super(Component.translatable("pmchat.streams.title"));
         this.parent = parent;
     }
 
@@ -95,13 +95,13 @@ public class PmStreamsScreen extends Screen {
 
         if (!startMode && donateTarget == null) {
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 70, py + headerH, 140, 16,
-                    Text.translatable(sm.isSelfStreaming() ? "pmchat.streams.stop" : "pmchat.streams.start"),
+                    Component.translatable(sm.isSelfStreaming() ? "pmchat.streams.stop" : "pmchat.streams.start"),
                     sm.isSelfStreaming() ? 0xFF5A2A22 : 0xFF2E5F46,
                     sm.isSelfStreaming() ? 0xFF6E332A : 0xFF376F52,
                     sm.isSelfStreaming() ? 0xFFA0463A : 0xFF4C8A66,
                     0xFFEDF3F0, btn -> {
                         if (!pluginPresent()) {
-                            showLocalMsg(Text.translatable("pmchat.streams.needplugin").getString());
+                            showLocalMsg(Component.translatable("pmchat.streams.needplugin").getString());
                             return;
                         }
                         if (sm.isSelfStreaming()) {
@@ -116,29 +116,29 @@ public class PmStreamsScreen extends Screen {
 
         if (startMode) {
             int fy = py + headerH + 22;
-            titleField = new TextFieldWidget(textRenderer, px + 16, fy, PANEL_W - 32, 16,
-                    Text.translatable("pmchat.streams.titlehint"));
+            titleField = new EditBox(textRenderer, px + 16, fy, PANEL_W - 32, 16,
+                    Component.translatable("pmchat.streams.titlehint"));
             titleField.setMaxLength(64);
-            titleField.setSuggestion(Text.translatable("pmchat.streams.titlehint").getString());
+            titleField.setSuggestion(Component.translatable("pmchat.streams.titlehint").getString());
             addDrawableChild(titleField);
 
-            urlField = new TextFieldWidget(textRenderer, px + 16, fy + 22, PANEL_W - 32, 16,
-                    Text.translatable("pmchat.streams.urlhint"));
+            urlField = new EditBox(textRenderer, px + 16, fy + 22, PANEL_W - 32, 16,
+                    Component.translatable("pmchat.streams.urlhint"));
             urlField.setMaxLength(96);
-            urlField.setSuggestion(Text.translatable("pmchat.streams.urlhint").getString());
+            urlField.setSuggestion(Component.translatable("pmchat.streams.urlhint").getString());
             addDrawableChild(urlField);
 
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 90, fy + 44, 84, 18,
-                    Text.translatable("pmchat.streams.cancel"),
+                    Component.translatable("pmchat.streams.cancel"),
                     BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
                         startMode = false;
                         reinit();
                     }));
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 + 6, fy + 44, 84, 18,
-                    Text.translatable("pmchat.streams.go"),
+                    Component.translatable("pmchat.streams.go"),
                     0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> {
                         if (!pluginPresent()) {
-                            showLocalMsg(Text.translatable("pmchat.streams.needplugin").getString());
+                            showLocalMsg(Component.translatable("pmchat.streams.needplugin").getString());
                             startMode = false;
                             reinit();
                             return;
@@ -149,19 +149,19 @@ public class PmStreamsScreen extends Screen {
                     }));
         } else if (donateTarget != null) {
             int fy = py + headerH + 22;
-            amountField = new TextFieldWidget(textRenderer, px + 16, fy, PANEL_W - 32, 16,
-                    Text.translatable("pmchat.streams.amounthint"));
+            amountField = new EditBox(textRenderer, px + 16, fy, PANEL_W - 32, 16,
+                    Component.translatable("pmchat.streams.amounthint"));
             amountField.setMaxLength(12);
             addDrawableChild(amountField);
 
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 90, fy + 24, 84, 18,
-                    Text.translatable("pmchat.streams.cancel"),
+                    Component.translatable("pmchat.streams.cancel"),
                     BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
                         donateTarget = null;
                         reinit();
                     }));
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 + 6, fy + 24, 84, 18,
-                    Text.translatable("pmchat.streams.donate"),
+                    Component.translatable("pmchat.streams.donate"),
                     0xFF6B4A1E, 0xFF7E5824, 0xFFB98A3A, 0xFFF0D8A0, btn -> {
                         double amount = parseAmount(amountField.getText());
                         if (amount > 0) sm.donate(donateTarget, amount);
@@ -171,7 +171,7 @@ public class PmStreamsScreen extends Screen {
         }
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
-                Text.translatable("pmchat.settings.done"),
+                Component.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
     }
 
@@ -190,7 +190,7 @@ public class PmStreamsScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         if (sm.streamVersion() != lastSeenVersion && !startMode && donateTarget == null) {
             reinit();
         }
@@ -199,12 +199,12 @@ public class PmStreamsScreen extends Screen {
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
 
-        Text title = Text.translatable("pmchat.streams.title");
+        Component title = Component.translatable("pmchat.streams.title");
         context.drawText(textRenderer, title,
                 px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
 
         if (!pluginPresent() && !startMode && donateTarget == null) {
-            String note = Text.translatable("pmchat.streams.noplugin_note").getString();
+            String note = Component.translatable("pmchat.streams.noplugin_note").getString();
             context.drawText(textRenderer, trimTo(note, PANEL_W - 24),
                     px + (PANEL_W - textRenderer.getWidth(trimTo(note, PANEL_W - 24))) / 2, py + 19, SUBTLE, false);
         }
@@ -225,12 +225,12 @@ public class PmStreamsScreen extends Screen {
         super.render(context, mouseX, mouseY, delta);
     }
 
-    private void drawList(DrawContext context, int mouseX, int mouseY) {
+    private void drawList(GuiGraphics context, int mouseX, int mouseY) {
         donateRects.clear();
         List<PmServerMedia.LiveStream> streams = sm.liveStreams();
         int listTop = py + headerH + 22;
         if (streams.isEmpty()) {
-            context.drawText(textRenderer, Text.translatable("pmchat.streams.empty"),
+            context.drawText(textRenderer, Component.translatable("pmchat.streams.empty"),
                     px + 14, listTop + 4, SUBTLE, false);
             return;
         }
@@ -240,7 +240,7 @@ public class PmStreamsScreen extends Screen {
             context.drawStrokedRectangle(px + 8, y, PANEL_W - 16, ROW_H - 4, BORDER);
             context.drawText(textRenderer, "● " + config.aliasOf(s.player()), px + 14, y + 4, 0xFFE07A6A, false);
             String t = s.title() == null || s.title().isBlank()
-                    ? Text.translatable("pmchat.streams.notitle").getString() : s.title();
+                    ? Component.translatable("pmchat.streams.notitle").getString() : s.title();
             context.drawText(textRenderer, trimTo(t, PANEL_W - 100), px + 14, y + 16, LABEL, false);
 
             boolean self = s.player().equalsIgnoreCase(PmChatClient.selfName());
@@ -249,7 +249,7 @@ public class PmStreamsScreen extends Screen {
                 boolean hov = mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + bh;
                 context.fill(bx, by, bx + bw, by + bh, hov ? BTN_HOVER : BTN_BG);
                 context.drawStrokedRectangle(bx, by, bw, bh, BTN_BORDER);
-                String lbl = Text.translatable("pmchat.streams.donate").getString();
+                String lbl = Component.translatable("pmchat.streams.donate").getString();
                 context.drawText(textRenderer, lbl, bx + (bw - textRenderer.getWidth(lbl)) / 2, by + 5,
                         0xFFF0C34E, false);
                 donateRects.add(new Object[]{bx, by, bw, bh, s.player()});
@@ -286,7 +286,7 @@ public class PmStreamsScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

@@ -5,13 +5,13 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.Component;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -43,17 +43,17 @@ public class PmProfilePostsScreen extends Screen {
     private int scroll = 0;
     private int[] closeRect;
 
-    private TextFieldWidget composeField;
+    private EditBox composeField;
     private String composeText = "";
     private List<PmBackend.ProfilePost> posts = null;
     private final List<Object[]> deleteRects = new ArrayList<>(); // x,y,w,h,postId
-    private Text status = Text.empty();
+    private Component status = Component.empty();
     private int statusColor = 0xFFAAAAAA;
 
     private final SimpleDateFormat fmt = new SimpleDateFormat("dd.MM HH:mm", Locale.ROOT);
 
     public PmProfilePostsScreen(Screen parent, String player) {
-        super(Text.translatable("pmchat.posts.title"));
+        super(Component.translatable("pmchat.posts.title"));
         this.parent = parent;
         this.player = player;
         this.self = player.equalsIgnoreCase(PmChatClient.selfNamePublic());
@@ -94,28 +94,28 @@ public class PmProfilePostsScreen extends Screen {
 
         if (self) {
             int fieldW = fw - 66;
-            composeField = new TextFieldWidget(textRenderer, fx, y, fieldW, 15, Text.translatable("pmchat.posts.hint"));
+            composeField = new EditBox(textRenderer, fx, y, fieldW, 15, Component.translatable("pmchat.posts.hint"));
             composeField.setMaxLength(2000);
             composeField.setText(composeText);
             addDrawableChild(composeField);
 
             int bw = 20;
             addDrawableChild(FlatButton.centered(textRenderer, fx + fieldW + 2, y, bw, 15,
-                    Text.literal("Ж"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> wrapField("**")));
+                    Component.literal("Ж"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> wrapField("**")));
             addDrawableChild(FlatButton.centered(textRenderer, fx + fieldW + 2 + bw + 2, y, bw, 15,
-                    Text.literal("К"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> wrapField("_")));
+                    Component.literal("К"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> wrapField("_")));
             addDrawableChild(FlatButton.centered(textRenderer, fx + fieldW + 2 + 2 * (bw + 2), y, bw, 15,
-                    Text.literal("П"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> wrapField("__")));
+                    Component.literal("П"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> wrapField("__")));
             y += 19;
 
             addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 15,
-                    Text.translatable("pmchat.posts.publish"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
+                    Component.translatable("pmchat.posts.publish"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                     btn -> publish()));
             y += 20;
         }
 
         addDrawableChild(FlatButton.centered(textRenderer, px + pw / 2 - 40, py + ph - 20, 80, 15,
-                Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
 
         closeRect = new int[]{px + pw - 18, py + 5, 14, 14};
     }
@@ -137,11 +137,11 @@ public class PmProfilePostsScreen extends Screen {
             if (ok) {
                 composeField.setText("");
                 composeText = "";
-                status = Text.translatable("pmchat.posts.published");
+                status = Component.translatable("pmchat.posts.published");
                 statusColor = 0xFF8FD8A8;
                 loadPosts();
             } else {
-                status = Text.translatable("pmchat.posts.fail", String.valueOf(err));
+                status = Component.translatable("pmchat.posts.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
             }
         });
@@ -151,40 +151,40 @@ public class PmProfilePostsScreen extends Screen {
         PmBackend.deleteProfilePost(id, (ok, v, err) -> {
             if (ok) loadPosts();
             else {
-                status = Text.translatable("pmchat.posts.fail", String.valueOf(err));
+                status = Component.translatable("pmchat.posts.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
             }
         });
     }
 
-    /** **жирный** / _курсив_ / __подчёркнутый__ → размеченный Text. Порядок альтернатив в MARKUP важен. */
-    static MutableText parseMarkup(String raw) {
-        MutableText out = Text.literal("");
+    /** **жирный** / _курсив_ / __подчёркнутый__ → размеченный Component. Порядок альтернатив в MARKUP важен. */
+    static MutableComponent parseMarkup(String raw) {
+        MutableComponent out = Component.literal("");
         Matcher m = MARKUP.matcher(raw);
         int last = 0;
         while (m.find()) {
-            if (m.start() > last) out.append(Text.literal(raw.substring(last, m.start())));
+            if (m.start() > last) out.append(Component.literal(raw.substring(last, m.start())));
             String bold = m.group(1), italic = m.group(3), underline = m.group(2);
             if (bold != null) {
-                out.append(Text.literal(bold).setStyle(Style.EMPTY.withBold(true)));
+                out.append(Component.literal(bold).setStyle(Style.EMPTY.withBold(true)));
             } else if (underline != null) {
-                out.append(Text.literal(underline).setStyle(Style.EMPTY.withUnderline(true)));
+                out.append(Component.literal(underline).setStyle(Style.EMPTY.withUnderline(true)));
             } else if (italic != null) {
-                out.append(Text.literal(italic).setStyle(Style.EMPTY.withItalic(true)));
+                out.append(Component.literal(italic).setStyle(Style.EMPTY.withItalic(true)));
             }
             last = m.end();
         }
-        if (last < raw.length()) out.append(Text.literal(raw.substring(last)));
+        if (last < raw.length()) out.append(Component.literal(raw.substring(last)));
         return out;
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, 0xC0000000);
         ctx.fill(px, py, px + pw, py + ph, BG);
         ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
 
-        Text title = Text.translatable("pmchat.posts.title_of", player);
+        Component title = Component.translatable("pmchat.posts.title_of", player);
         ctx.drawText(textRenderer, trim(title.getString(), pw - 40), px + 12, py + 8, TITLE, false);
         String x = "✕";
         boolean hovX = closeRect != null && mouseX >= closeRect[0] && mouseX < closeRect[0] + closeRect[2]
@@ -199,9 +199,9 @@ public class PmProfilePostsScreen extends Screen {
         deleteRects.clear();
         ctx.enableScissor(px + 1, listTop, px + pw - 1, listBottom);
         if (posts == null) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
+            ctx.drawText(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
         } else if (posts.isEmpty()) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.posts.empty"), fx, listTop + 4, LABEL, false);
+            ctx.drawText(textRenderer, Component.translatable("pmchat.posts.empty"), fx, listTop + 4, LABEL, false);
         } else {
             int y = listTop - scroll;
             for (PmBackend.ProfilePost p : posts) {
@@ -285,7 +285,7 @@ public class PmProfilePostsScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

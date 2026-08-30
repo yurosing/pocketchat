@@ -5,11 +5,11 @@ import com.pmchat.client.PmConfig;
 import com.pmchat.client.PmWire;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 /**
  * Составление сообщения-конверта (5.7): скин + обязательный таймер + опциональный
@@ -33,22 +33,22 @@ public class PmEnvelopeComposeScreen extends Screen {
 
     private int skinIndex = 0;
     private boolean withQuestion = false;
-    private TextFieldWidget contentField;
-    private TextFieldWidget minutesField;
-    private TextFieldWidget questionField;
-    private TextFieldWidget answerField;
-    private Text status = Text.empty();
+    private EditBox contentField;
+    private EditBox minutesField;
+    private EditBox questionField;
+    private EditBox answerField;
+    private Component status = Component.empty();
     private int statusColor = 0xFFAAAAAA;
 
     // Значения полей переживают переинициализацию (toggle «вопрос-пароль» вызывает
-    // init() заново и пересоздаёт все TextFieldWidget) — как composeText в PmProfilePostsScreen.
+    // init() заново и пересоздаёт все EditBox) — как composeText в PmProfilePostsScreen.
     private String contentText = "";
     private String minutesText = "15";
     private String questionText = "";
     private String answerText = "";
 
     public PmEnvelopeComposeScreen(Screen parent, String target) {
-        super(Text.translatable("pmchat.envelope.compose"));
+        super(Component.translatable("pmchat.envelope.compose"));
         this.parent = parent;
         this.target = target;
     }
@@ -86,14 +86,14 @@ public class PmEnvelopeComposeScreen extends Screen {
         y += 22;
 
         fieldLabels.add(new Object[]{"pmchat.envelope.content", fx, y - 10});
-        contentField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.envelope.content"));
+        contentField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.content"));
         contentField.setMaxLength(300);
         contentField.setText(contentText);
         addDrawableChild(contentField);
         y += 26;
 
         fieldLabels.add(new Object[]{"pmchat.envelope.minutes", fx, y - 10});
-        minutesField = new TextFieldWidget(textRenderer, fx, y, 60, 16, Text.translatable("pmchat.envelope.minutes"));
+        minutesField = new EditBox(textRenderer, fx, y, 60, 16, Component.translatable("pmchat.envelope.minutes"));
         minutesField.setMaxLength(6);
         minutesField.setText(minutesText);
         addDrawableChild(minutesField);
@@ -106,14 +106,14 @@ public class PmEnvelopeComposeScreen extends Screen {
         for (int m : PRESETS_MIN) {
             String label = trimToButton(presetLabel(m), pw - 4);
             addDrawableChild(FlatButton.centered(textRenderer, px2, y, pw - 2, 16,
-                    Text.literal(label), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
+                    Component.literal(label), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                     btn -> minutesField.setText(String.valueOf(m))));
             px2 += pw;
         }
         y += 24;
 
         addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
-                Text.translatable(withQuestion ? "pmchat.envelope.question.remove" : "pmchat.envelope.question.add"),
+                Component.translatable(withQuestion ? "pmchat.envelope.question.remove" : "pmchat.envelope.question.add"),
                 BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
                     withQuestion = !withQuestion;
                     init();
@@ -122,14 +122,14 @@ public class PmEnvelopeComposeScreen extends Screen {
 
         if (withQuestion) {
             fieldLabels.add(new Object[]{"pmchat.envelope.question", fx, y - 10});
-            questionField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.envelope.question"));
+            questionField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.question"));
             questionField.setMaxLength(120);
             questionField.setText(questionText);
             addDrawableChild(questionField);
             y += 26;
 
             fieldLabels.add(new Object[]{"pmchat.envelope.answer", fx, y - 10});
-            answerField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.envelope.answer"));
+            answerField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.answer"));
             answerField.setMaxLength(60);
             answerField.setText(answerText);
             addDrawableChild(answerField);
@@ -140,10 +140,10 @@ public class PmEnvelopeComposeScreen extends Screen {
         }
 
         addDrawableChild(FlatButton.centered(textRenderer, fx, y, (fw - 6) / 2, 18,
-                Text.translatable("pmchat.envelope.send"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
+                Component.translatable("pmchat.envelope.send"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> send()));
         addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
-                Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
     private String trimToButton(String s, int maxW) {
@@ -162,7 +162,7 @@ public class PmEnvelopeComposeScreen extends Screen {
         String skin = PmWire.ENVELOPE_SKINS[skinIndex];
         String content = contentField.getText().trim();
         if (content.isEmpty()) {
-            setStatus(Text.translatable("pmchat.envelope.needcontent"), 0xFFE07A6A);
+            setStatus(Component.translatable("pmchat.envelope.needcontent"), 0xFFE07A6A);
             return;
         }
         int minutes;
@@ -172,13 +172,13 @@ public class PmEnvelopeComposeScreen extends Screen {
             minutes = -1;
         }
         if (minutes <= 0) {
-            setStatus(Text.translatable("pmchat.envelope.needtimer"), 0xFFE07A6A);
+            setStatus(Component.translatable("pmchat.envelope.needtimer"), 0xFFE07A6A);
             return;
         }
         String question = withQuestion && questionField != null ? questionField.getText().trim() : "";
         String answer = withQuestion && answerField != null ? answerField.getText().trim() : "";
         if (withQuestion && (question.isEmpty() || answer.isEmpty())) {
-            setStatus(Text.translatable("pmchat.envelope.needqa"), 0xFFE07A6A);
+            setStatus(Component.translatable("pmchat.envelope.needqa"), 0xFFE07A6A);
             return;
         }
         long unlockAt = System.currentTimeMillis() / 1000L + minutes * 60L;
@@ -187,13 +187,13 @@ public class PmEnvelopeComposeScreen extends Screen {
         close();
     }
 
-    private void setStatus(Text text, int color) {
+    private void setStatus(Component text, int color) {
         status = text;
         statusColor = color;
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
@@ -201,7 +201,7 @@ public class PmEnvelopeComposeScreen extends Screen {
         context.drawText(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
 
         for (Object[] entry : fieldLabels) {
-            context.drawText(textRenderer, Text.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
+            context.drawText(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
         }
 
         if (skinRect != null) {
@@ -210,8 +210,8 @@ public class PmEnvelopeComposeScreen extends Screen {
             context.fill(skinRect[0], skinRect[1], skinRect[0] + skinRect[2], skinRect[1] + skinRect[3],
                     hov ? BTN_HOVER : BTN_BG);
             context.drawStrokedRectangle(skinRect[0], skinRect[1], skinRect[2], skinRect[3], BTN_BORDER);
-            String label = PmWire.envelopeIcon(skin) + "  " + Text.translatable(PmWire.envelopeLabelKey(skin)).getString()
-                    + "  (" + Text.translatable("pmchat.envelope.skin.next").getString() + ")";
+            String label = PmWire.envelopeIcon(skin) + "  " + Component.translatable(PmWire.envelopeLabelKey(skin)).getString()
+                    + "  (" + Component.translatable("pmchat.envelope.skin.next").getString() + ")";
             label = trimToButton(label, skinRect[2] - 6);
             context.drawText(textRenderer, label,
                     skinRect[0] + (skinRect[2] - textRenderer.getWidth(label)) / 2, skinRect[1] + 4,
@@ -241,7 +241,7 @@ public class PmEnvelopeComposeScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

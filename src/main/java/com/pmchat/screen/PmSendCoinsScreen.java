@@ -5,11 +5,11 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 /**
  * Прямой перевод монет игроку (кнопка «Отправить монеты» в чужом профиле) —
@@ -28,12 +28,12 @@ public class PmSendCoinsScreen extends Screen {
     private int px, py;
     private int BG, BORDER, LABEL, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
 
-    private TextFieldWidget amountField;
-    private Text status = Text.empty();
+    private EditBox amountField;
+    private Component status = Component.empty();
     private int statusColor = 0xFFAAAAAA;
 
     public PmSendCoinsScreen(Screen parent, String target) {
-        super(Text.translatable("pmchat.coins.title", target));
+        super(Component.translatable("pmchat.coins.title", target));
         this.parent = parent;
         this.target = target;
     }
@@ -57,20 +57,20 @@ public class PmSendCoinsScreen extends Screen {
         int fw = PANEL_W - 32;
         int y = py + 34;
 
-        amountField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.coins.hint"));
+        amountField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.coins.hint"));
         amountField.setMaxLength(10);
-        String hint = Text.translatable("pmchat.coins.hint").getString();
+        String hint = Component.translatable("pmchat.coins.hint").getString();
         amountField.setSuggestion(hint);
         amountField.setChangedListener(s -> amountField.setSuggestion(s.isEmpty() ? hint : null));
         addDrawableChild(amountField);
         y += 24;
 
         addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
-                Text.translatable("pmchat.coins.send"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
+                Component.translatable("pmchat.coins.send"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                 btn -> send()));
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
-                Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
     private void send() {
@@ -78,34 +78,34 @@ public class PmSendCoinsScreen extends Screen {
         try {
             amount = Long.parseLong(amountField.getText().trim());
         } catch (NumberFormatException e) {
-            status = Text.translatable("pmchat.admin.badamount");
+            status = Component.translatable("pmchat.admin.badamount");
             statusColor = 0xFFE07A6A;
             return;
         }
         if (amount <= 0) return;
         PmBackend.sendCoins(target, amount, (ok, v, err) -> {
             if (ok) {
-                status = Text.translatable("pmchat.coins.ok");
+                status = Component.translatable("pmchat.coins.ok");
                 statusColor = 0xFF8FD8A8;
                 amountField.setText("");
             } else {
-                status = Text.translatable("pmchat.admin.fail", String.valueOf(err));
+                status = Component.translatable("pmchat.admin.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
             }
         });
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
 
-        Text title = getTitle();
+        Component title = getTitle();
         context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
         Long bal = PmBackend.cachedSelfBalance();
-        String balStr = Text.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
+        String balStr = Component.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
         context.drawText(textRenderer, balStr, px + 16, py + 20, PmBackend.CURRENCY_COLOR, false);
 
         if (!status.getString().isEmpty()) {
@@ -117,7 +117,7 @@ public class PmSendCoinsScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

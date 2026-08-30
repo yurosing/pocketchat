@@ -5,11 +5,11 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 /**
  * Редактирование одного бота: имя, @username (переезд очереди входящих на
@@ -27,15 +27,15 @@ public class PmBotEditScreen extends Screen {
     private int BG, BORDER, LABEL, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
     private int px, py, pw, ph;
 
-    private TextFieldWidget nameField;
-    private TextFieldWidget userField;
+    private EditBox nameField;
+    private EditBox userField;
     private String nameText, userText;
-    private Text status = Text.empty();
+    private Component status = Component.empty();
     private int statusColor = 0xFFAAAAAA;
     private String currentUsername;
 
     public PmBotEditScreen(PmBotsScreen parent, PmBackend.BotInfo bot) {
-        super(Text.translatable("pmchat.bots.edit.title", bot.username));
+        super(Component.translatable("pmchat.bots.edit.title", bot.username));
         this.parent = parent;
         this.originalUsername = bot.username;
         this.currentUsername = bot.username;
@@ -68,30 +68,30 @@ public class PmBotEditScreen extends Screen {
         int fw = pw - 24;
         int y = py + 26;
 
-        nameField = new TextFieldWidget(textRenderer, fx, y, fw, 15, Text.translatable("pmchat.bots.name"));
+        nameField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.bots.name"));
         nameField.setMaxLength(64);
         nameField.setText(nameText);
         addDrawableChild(nameField);
         y += 19;
 
-        userField = new TextFieldWidget(textRenderer, fx, y, fw, 15, Text.translatable("pmchat.bots.username"));
+        userField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.bots.username"));
         userField.setMaxLength(32);
         userField.setText(userText);
         addDrawableChild(userField);
         y += 22;
 
         addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 15,
-                Text.translatable("pmchat.bots.save"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
+                Component.translatable("pmchat.bots.save"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> save(false)));
         y += 19;
 
         addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 15,
-                Text.translatable("pmchat.bots.regen"), 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A,
+                Component.translatable("pmchat.bots.regen"), 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A,
                 btn -> save(true)));
         y += 22;
 
         addDrawableChild(FlatButton.centered(textRenderer, px + pw / 2 - 40, y, 80, 15,
-                Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                 btn -> back()));
     }
 
@@ -99,7 +99,7 @@ public class PmBotEditScreen extends Screen {
         String name = nameField.getText().trim();
         String newUser = userField.getText().trim().replaceFirst("^@", "");
         if (newUser.isEmpty()) {
-            status = Text.translatable("pmchat.bots.needusername");
+            status = Component.translatable("pmchat.bots.needusername");
             statusColor = 0xFFE07A6A;
             return;
         }
@@ -108,14 +108,14 @@ public class PmBotEditScreen extends Screen {
             if (ok && bot != null) {
                 currentUsername = bot.username;
                 if (regenerateToken) {
-                    MinecraftClient.getInstance().keyboard.setClipboard(bot.token);
-                    status = Text.translatable("pmchat.bots.regenok");
+                    Minecraft.getInstance().keyboard.setClipboard(bot.token);
+                    status = Component.translatable("pmchat.bots.regenok");
                 } else {
-                    status = Text.translatable("pmchat.bots.saved");
+                    status = Component.translatable("pmchat.bots.saved");
                 }
                 statusColor = 0xFF8FD8A8;
             } else {
-                status = Text.translatable("pmchat.bots.fail", String.valueOf(err));
+                status = Component.translatable("pmchat.bots.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
             }
         });
@@ -123,16 +123,16 @@ public class PmBotEditScreen extends Screen {
 
     private void back() {
         parent.loadBots();
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, 0xC0000000);
         ctx.fill(px, py, px + pw, py + ph, BG);
         ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
 
-        Text title = getTitle();
+        Component title = getTitle();
         ctx.drawText(textRenderer, trim(title.getString(), pw - 16), px + 8, py + 8, TITLE, false);
 
         if (!status.getString().isEmpty()) {

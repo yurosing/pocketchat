@@ -1,7 +1,7 @@
 package com.pmchat.client;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -361,7 +361,7 @@ public final class PmServerMedia {
         // Обнаружение плагина: сервер объявляет канал pmchat:media (canSend=true),
         // только если на нём стоит PocketChatMedia. canSend можно звать лишь при
         // активном соединении, иначе оно бросает исключение.
-        boolean connected = MinecraftClient.getInstance().getNetworkHandler() != null;
+        boolean connected = Minecraft.getInstance().getNetworkHandler() != null;
         boolean canSend = connected && ClientPlayNetworking.canSend(MediaPayload.ID);
         if (!serverHasPlugin) {
             if (canSend) {

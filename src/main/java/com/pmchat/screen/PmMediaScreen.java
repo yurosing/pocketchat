@@ -3,12 +3,12 @@ package com.pmchat.screen;
 import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import com.pmchat.client.PmMedia;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyInput;
-import net.minecraft.text.Text;
-import net.minecraft.util.Util;
+import net.minecraft.network.chat.Component;
+import net.minecraft.Util;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.File;
@@ -35,7 +35,7 @@ public class PmMediaScreen extends Screen {
     private int[] openFolderRect;
 
     public PmMediaScreen() {
-        super(Text.translatable("pmchat.media.title"));
+        super(Component.translatable("pmchat.media.title"));
     }
 
     private void applyTheme() {
@@ -59,7 +59,7 @@ public class PmMediaScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         // Тёмная заливка вместо renderBackground(): его блюр падает
         // «Can only blur once per frame», если кадр уже размывался.
         ctx.fill(0, 0, width, height, BG);
@@ -68,10 +68,10 @@ public class PmMediaScreen extends Screen {
         ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
 
         // Заголовок
-        Text title = Text.translatable("pmchat.media.title");
+        Component title = Component.translatable("pmchat.media.title");
         ctx.drawText(textRenderer, title, px + 12, py + 10, TEXT, false);
         // Кнопка «открыть папку музыки»
-        Text openLbl = Text.translatable("pmchat.media.openfolder");
+        Component openLbl = Component.translatable("pmchat.media.openfolder");
         int owL = textRenderer.getWidth(openLbl) + 16;
         int oX = px + pw - owL - 10, oY = py + 7;
         openFolderRect = new int[]{oX, oY, owL, 16};
@@ -89,9 +89,9 @@ public class PmMediaScreen extends Screen {
         int y = listTop - scroll;
         int rowH = 18;
         if (entries.isEmpty()) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.media.empty"),
+            ctx.drawText(textRenderer, Component.translatable("pmchat.media.empty"),
                     px + 12, listTop + 6, SUBTLE, false);
-            ctx.drawText(textRenderer, Text.translatable("pmchat.media.hint"),
+            ctx.drawText(textRenderer, Component.translatable("pmchat.media.hint"),
                     px + 12, listTop + 20, SUBTLE, false);
         }
         ctx.enableScissor(px + 1, listTop, px + pw - 1, listBottom);
@@ -104,7 +104,7 @@ public class PmMediaScreen extends Screen {
                 PmIcons.draw(ctx, icon, px + 9, y + 2, 12, 12, dir ? 0xFF8FD8A8 : 0xFF9CC4DC);
                 String label = dir ? f.getName() + "  ♫" : PmMedia.get().hasActive() ? f.getName() : f.getName();
                 int count = dir ? countAudio(f) : 0;
-                String right = dir ? count + " " + Text.translatable("pmchat.media.tracks").getString() : "";
+                String right = dir ? count + " " + Component.translatable("pmchat.media.tracks").getString() : "";
                 ctx.drawText(textRenderer, trim(label, pw - 60), px + 26, y + 5, TEXT, false);
                 if (!right.isEmpty()) {
                     ctx.drawText(textRenderer, right, px + pw - 12 - textRenderer.getWidth(right), y + 5, SUBTLE, false);

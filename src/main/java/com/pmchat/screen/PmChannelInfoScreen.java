@@ -4,11 +4,11 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +50,7 @@ public class PmChannelInfoScreen extends Screen {
     private int[] copyRect;
 
     public PmChannelInfoScreen(Screen parent, String id) {
-        super(Text.translatable("pmchat.broadcast.info.title"));
+        super(Component.translatable("pmchat.broadcast.info.title"));
         this.parent = parent;
         this.id = id;
     }
@@ -74,14 +74,14 @@ public class PmChannelInfoScreen extends Screen {
         py = (height - panelH) / 2;
 
         addDrawableChild(FlatButton.centered(textRenderer, px + 10, py + panelH - 24, 70, 18,
-                Text.translatable("pmchat.filters.back"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.filters.back"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
 
         PmConfig.PmBroadcast b = broadcast();
         if (b == null) return;
 
         if (isOwner()) {
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 130, py + panelH - 24, 120, 18,
-                    Text.translatable(deleteConfirm ? "pmchat.broadcast.delete.confirm" : "pmchat.broadcast.delete"),
+                    Component.translatable(deleteConfirm ? "pmchat.broadcast.delete.confirm" : "pmchat.broadcast.delete"),
                     0xFF6A2E2E, 0xFF7A3636, 0xFF8F4242, 0xFFEED6D6, btn -> {
                         if (!deleteConfirm) {
                             deleteConfirm = true;
@@ -93,7 +93,7 @@ public class PmChannelInfoScreen extends Screen {
                     }));
         } else {
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 130, py + panelH - 24, 120, 18,
-                    Text.translatable("pmchat.broadcast.leave"),
+                    Component.translatable("pmchat.broadcast.leave"),
                     0xFF6A2E2E, 0xFF7A3636, 0xFF8F4242, 0xFFEED6D6, btn -> {
                         PmChatClient.leaveBroadcast(id);
                         closeToParent();
@@ -106,14 +106,14 @@ public class PmChannelInfoScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         ctx.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
         ctx.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
 
         PmConfig.PmBroadcast b = broadcast();
         if (b == null) {
-            Text gone = Text.translatable("pmchat.broadcast.gone");
+            Component gone = Component.translatable("pmchat.broadcast.gone");
             ctx.drawText(textRenderer, gone, px + (PANEL_W - textRenderer.getWidth(gone)) / 2, py + 20, LABEL, false);
             super.render(ctx, mouseX, mouseY, delta);
             return;
@@ -132,7 +132,7 @@ public class PmChannelInfoScreen extends Screen {
         }
 
         int subs = owner ? b.subscribers.size() : b.knownSubscribers;
-        ctx.drawText(textRenderer, Text.translatable("pmchat.broadcast.subs", subs), px + 12, y, VALUE, false);
+        ctx.drawText(textRenderer, Component.translatable("pmchat.broadcast.subs", subs), px + 12, y, VALUE, false);
         y += ROW_H;
 
         adminToggleRects.clear();
@@ -140,7 +140,7 @@ public class PmChannelInfoScreen extends Screen {
 
         if (owner) {
             String code = PmChatClient.broadcastInviteCode(b);
-            ctx.drawText(textRenderer, Text.translatable("pmchat.broadcast.invitecode"), px + 12, y, LABEL, false);
+            ctx.drawText(textRenderer, Component.translatable("pmchat.broadcast.invitecode"), px + 12, y, LABEL, false);
             y += 10;
             ctx.fill(px + 12, y, px + PANEL_W - 60, y + 14, BTN_BG);
             ctx.drawStrokedRectangle(px + 12, y, PANEL_W - 72, 14, BTN_BORDER);
@@ -148,13 +148,13 @@ public class PmChannelInfoScreen extends Screen {
             boolean hov = mouseX >= px + PANEL_W - 56 && mouseX < px + PANEL_W - 12 && mouseY >= y && mouseY < y + 14;
             ctx.fill(px + PANEL_W - 56, y, px + PANEL_W - 12, y + 14, hov ? BTN_HOVER : BTN_BG);
             ctx.drawStrokedRectangle(px + PANEL_W - 56, y, 44, 14, BTN_BORDER);
-            Text copyLbl = Text.translatable(copiedAt > 0 && System.currentTimeMillis() - copiedAt < 1500
+            Component copyLbl = Component.translatable(copiedAt > 0 && System.currentTimeMillis() - copiedAt < 1500
                     ? "pmchat.broadcast.copied" : "pmchat.broadcast.copy");
             ctx.drawText(textRenderer, copyLbl, px + PANEL_W - 52, y + 3, VALUE, false);
             copyRect = new int[]{px + PANEL_W - 56, y, 44, 14};
             y += 20;
 
-            ctx.drawText(textRenderer, Text.translatable("pmchat.broadcast.subscribers"), px + 12, y, LABEL, false);
+            ctx.drawText(textRenderer, Component.translatable("pmchat.broadcast.subscribers"), px + 12, y, LABEL, false);
             y += 10;
 
             int listTop = y;
@@ -170,7 +170,7 @@ public class PmChannelInfoScreen extends Screen {
                     int bx = px + PANEL_W - 90;
                     boolean bhov = mouseX >= bx && mouseX < bx + 78 && mouseY >= ry && mouseY < ry + ROW_H - 2;
                     ctx.fill(bx, ry + 2, bx + 78, ry + ROW_H - 4, bhov ? BTN_HOVER : BTN_BG);
-                    Text toggleLbl = Text.translatable(admin ? "pmchat.broadcast.demote" : "pmchat.broadcast.promote");
+                    Component toggleLbl = Component.translatable(admin ? "pmchat.broadcast.demote" : "pmchat.broadcast.promote");
                     ctx.drawText(textRenderer, toggleLbl, bx + 4, ry + 4, admin ? 0xFF8FD8A8 : VALUE, false);
                     adminToggleRects.add(new Object[]{bx, ry + 2, 78, ROW_H - 4, name});
                 }
@@ -181,7 +181,7 @@ public class PmChannelInfoScreen extends Screen {
             maxScroll = Math.max(0, total - (listBottom - listTop));
             if (scroll > maxScroll) scroll = maxScroll;
             if (b.subscribers.isEmpty()) {
-                ctx.drawText(textRenderer, Text.translatable("pmchat.broadcast.nosubs"), px + 16, listTop + 4, LABEL, false);
+                ctx.drawText(textRenderer, Component.translatable("pmchat.broadcast.nosubs"), px + 16, listTop + 4, LABEL, false);
             }
         }
 
@@ -215,7 +215,7 @@ public class PmChannelInfoScreen extends Screen {
                 && my >= copyRect[1] && my < copyRect[1] + copyRect[3]) {
             PmConfig.PmBroadcast b = broadcast();
             if (b != null) {
-                MinecraftClient.getInstance().keyboard.setClipboard(PmChatClient.broadcastInviteCode(b));
+                Minecraft.getInstance().keyboard.setClipboard(PmChatClient.broadcastInviteCode(b));
                 copiedAt = System.currentTimeMillis();
             }
             return true;
@@ -243,7 +243,7 @@ public class PmChannelInfoScreen extends Screen {
     }
 
     private void closeToParent() {
-        MinecraftClient.getInstance().setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
+        Minecraft.getInstance().setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
     }
 
     @Override

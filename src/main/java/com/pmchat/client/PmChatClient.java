@@ -9,12 +9,12 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,10 +33,10 @@ public class PmChatClient implements ClientModInitializer {
 
     private static PmConfig config;
     private static PmHistory history;
-    private static KeyBinding openKey;
-    private static KeyBinding mediaKey;      // открыть меню медиа/плейлистов
-    private static KeyBinding mediaPlayKey;  // пауза/воспроизведение в игре
-    private static KeyBinding mediaNextKey;  // следующий трек в игре
+    private static KeyMapping openKey;
+    private static KeyMapping mediaKey;      // открыть меню медиа/плейлистов
+    private static KeyMapping mediaPlayKey;  // пауза/воспроизведение в игре
+    private static KeyMapping mediaNextKey;  // следующий трек в игре
 
     private static Pattern incoming;
     private static Pattern outgoing;
@@ -134,26 +134,26 @@ public class PmChatClient implements ClientModInitializer {
 
         // Категорию создаём ОДИН раз и переиспользуем для всех клавиш —
         // повторный create() с тем же id падает «already registered».
-        KeyBinding.Category category = KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
-        openKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        KeyMapping.Category category = KeyMapping.Category.create(ResourceLocation.of(MOD_ID, "category"));
+        openKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.pmchat.open", GLFW.GLFW_KEY_J, category));
         // медиа/плейлисты
-        mediaKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        mediaKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.pmchat.media", GLFW.GLFW_KEY_K, category));
-        mediaPlayKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        mediaPlayKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.pmchat.media.play", GLFW.GLFW_KEY_UNKNOWN, category));
-        mediaNextKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        mediaNextKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.pmchat.media.next", GLFW.GLFW_KEY_UNKNOWN, category));
 
         // Рисуем окошко медиаплеера поверх HUD, когда никакой наш экран не открыт —
         // так музыка/видео продолжают показываться в углу и когда чат закрыт.
         net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((ctx, tick) -> {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             // Экраны обычно рисуют окошко сами. Исключение (#10): если включена
             // опция «полоска при вводе», продолжаем рисовать её поверх ванильного
             // чата, чтобы плеер не исчезал, пока пишешь сообщение.
             boolean overChat = config.mediaBarWhileTyping
-                    && mc.currentScreen instanceof net.minecraft.client.gui.screen.ChatScreen;
+                    && mc.currentScreen instanceof net.minecraft.client.gui.screens.ChatScreen;
             if (mc.currentScreen != null && !overChat) return;
             if (PmMedia.get().hasActive()) {
                 PmMedia.get().renderMini(ctx, -1, -1, false);
@@ -196,7 +196,7 @@ public class PmChatClient implements ClientModInitializer {
                 (handler, client) -> PmBackend.goOffline());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            boolean chatScreenOpenNow = client.currentScreen instanceof net.minecraft.client.gui.screen.ChatScreen;
+            boolean chatScreenOpenNow = client.currentScreen instanceof net.minecraft.client.gui.screens.ChatScreen;
             if (chatScreenOpenLastTick && !chatScreenOpenNow) {
                 chatScreenClosedAt = System.currentTimeMillis();
             }
@@ -264,7 +264,7 @@ public class PmChatClient implements ClientModInitializer {
             // значок его должности пропадал бы вовсе (казалось бы «нет роли»).
             if (client.getNetworkHandler() != null && System.currentTimeMillis() >= nextRoleCacheAt) {
                 nextRoleCacheAt = System.currentTimeMillis() + 3000L;
-                for (net.minecraft.client.network.PlayerListEntry e : client.getNetworkHandler().getPlayerList()) {
+                for (net.minecraft.client.multiplayer.PlayerInfo e : client.getNetworkHandler().getPlayerList()) {
                     String name = e.getProfile().name();
                     String code = com.pmchat.screen.PmRoles.detect(com.pmchat.screen.PmNames.displayString(name));
                     config.cacheRole(name, code);
@@ -292,7 +292,7 @@ public class PmChatClient implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
                 ClientCommandManager.literal("pm")
                         .executes(ctx -> {
-                            MinecraftClient client = ctx.getSource().getClient();
+                            Minecraft client = ctx.getSource().getClient();
                             client.execute(() -> openMessenger(client));
                             return 1;
                         })
@@ -320,7 +320,7 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     /** /pm hosts — проверка каждого хостинга: загрузка + скачивание, отчёт в чат. */
-    private static void testHosts(MinecraftClient client) {
+    private static void testHosts(Minecraft client) {
         // 1×1 прозрачный PNG
         byte[] probe = java.util.Base64.getDecoder().decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==");
@@ -369,9 +369,9 @@ public class PmChatClient implements ClientModInitializer {
         }, "pmchat-hosttest").start();
     }
 
-    private static void chatLine(MinecraftClient client, String legacy) {
+    private static void chatLine(Minecraft client, String legacy) {
         if (client.inGameHud != null) {
-            client.inGameHud.getChatHud().addMessage(Text.literal(legacy));
+            client.inGameHud.getChatHud().addMessage(Component.literal(legacy));
         }
     }
 
@@ -524,7 +524,7 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     /** @return 0 — не ЛС, 1 — обычное ЛС, 2 — служебная метка (прятать всегда) */
-    private static int handleChatLine(Text message) {
+    private static int handleChatLine(Component message) {
         String plain = message.getString().replaceAll("§.", "").trim();
         if (plain.isEmpty()) return 0;
 
@@ -646,7 +646,7 @@ public class PmChatClient implements ClientModInitializer {
                 feed.remove(0);
             }
 
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             boolean viewing = client.currentScreen instanceof PmScreen screen
                     && screen.isViewing(CHANNEL_PREFIX + channel.id);
             if (!viewing && !msg.out) {
@@ -696,7 +696,7 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     public static void sendChannel(String id, String text) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null || text.isBlank()) return;
         for (PmConfig.PmChannel channel : config.channels) {
             if (channel.id.equals(id)) {
@@ -787,7 +787,7 @@ public class PmChatClient implements ClientModInitializer {
     public static void sendGroup(String id, String text) {
         PmConfig.PmGroup g = config.findGroup(id);
         if (g == null || text == null || text.isBlank()) return;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         String self = selfName();
 
@@ -845,7 +845,7 @@ public class PmChatClient implements ClientModInitializer {
         msg.sender = sender;
         addToGroupFeed(id, msg);
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         boolean viewing = client.currentScreen instanceof PmScreen screen
                 && screen.isViewing(GROUP_PREFIX + id);
         if (!viewing) {
@@ -972,7 +972,7 @@ public class PmChatClient implements ClientModInitializer {
         String owner = c.substring(0, idx).trim();
         String id = c.substring(idx + 1).trim();
         if (owner.isEmpty() || id.isEmpty() || owner.equalsIgnoreCase(selfName())) return false;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return false;
         pmDeliver(owner, PmWire.bcJoin(id));
         return true;
@@ -982,7 +982,7 @@ public class PmChatClient implements ClientModInitializer {
     public static void sendBroadcastPost(String id, String text) {
         PmConfig.PmBroadcast b = config.findBroadcast(id);
         if (b == null || text == null || text.isBlank()) return;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         String self = selfName();
         boolean isOwner = b.owner != null && b.owner.equalsIgnoreCase(self);
@@ -1097,10 +1097,10 @@ public class PmChatClient implements ClientModInitializer {
         config.save();
         pmDeliver(sender, PmWire.bcWelcome(id, b.name, b.description, b.subscribers.size()));
         if (added) {
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             if (!config.dnd) {
                 client.getToastManager().add(new PmToast("◈ " + b.name,
-                        sender + " — " + Text.translatable("pmchat.broadcast.newsub").getString()));
+                        sender + " — " + Component.translatable("pmchat.broadcast.newsub").getString()));
             }
         }
     }
@@ -1131,10 +1131,10 @@ public class PmChatClient implements ClientModInitializer {
         b.knownSubscribers = count;
         config.save();
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (isNew && !config.dnd) {
             client.getToastManager().add(new PmToast("◈ " + b.name,
-                    Text.translatable("pmchat.broadcast.joined_toast").getString()));
+                    Component.translatable("pmchat.broadcast.joined_toast").getString()));
             playNotifySound(client);
         }
     }
@@ -1175,7 +1175,7 @@ public class PmChatClient implements ClientModInitializer {
         msg.sender = sender;
         addToBroadcastFeed(id, msg);
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         boolean viewing = client.currentScreen instanceof PmScreen screen
                 && screen.isViewing(BCAST_PREFIX + id);
         if (viewing) {
@@ -1208,7 +1208,7 @@ public class PmChatClient implements ClientModInitializer {
         }
         // Упоминание в общем чате — пинг + тост
         if (!msg.out && mentionsMe(text, sender)) {
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             boolean viewing = client.currentScreen instanceof PmScreen s && s.isViewing(GLOBAL);
             if (!viewing && !config.dnd) notifyMention(client, sender, text);
         }
@@ -1235,7 +1235,7 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Сообщение в общий чат сервера; префикс из настроек (обычно "!"). */
     public static void sendGlobal(String text) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null || text.isBlank()) return;
         String prefix = config.globalPrefix == null ? "" : config.globalPrefix.trim();
         // Не дублируем префикс, если игрок уже его набрал
@@ -1442,7 +1442,7 @@ public class PmChatClient implements ClientModInitializer {
         if (replyTo != null || forwardFrom != null || msg.isPoll()) history.save();
         com.pmchat.client.api.PocketChatClientImpl.fireReceived(sender, msg);
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         boolean viewing = client.currentScreen instanceof PmScreen screen && screen.isViewing(sender);
         if (viewing) {
             sendSeen(sender);
@@ -1457,29 +1457,29 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     /** Звук уведомления с учётом выбора и громкости из настроек. */
-    public static void playNotifySound(MinecraftClient client) {
+    public static void playNotifySound(Minecraft client) {
         if (!config.soundEnabled || config.notifySound == 3) return;
-        net.minecraft.sound.SoundEvent sound = switch (config.notifySound) {
+        net.minecraft.sounds.SoundEvent sound = switch (config.notifySound) {
             case 1 -> SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME;
             case 2 -> SoundEvents.ENTITY_ITEM_PICKUP;
             default -> SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP;
         };
         float volume = Math.max(0.05f, config.notifyVolume / 100f);
-        client.getSoundManager().play(PositionedSoundInstance.ui(sound, 1.4f, volume));
+        client.getSoundManager().play(SimpleSoundInstance.ui(sound, 1.4f, volume));
     }
 
     public static String previewOf(String text) {
         if (PmWire.parseImg(text) != null) {
-            return Text.translatable("pmchat.image.label").getString();
+            return Component.translatable("pmchat.image.label").getString();
         }
         if (PmWire.parseVoice(text) != null) {
-            return Text.translatable("pmchat.voice.label").getString();
+            return Component.translatable("pmchat.voice.label").getString();
         }
         if (PmWire.parseVid(text) != null) {
-            return Text.translatable("pmchat.video.label").getString();
+            return Component.translatable("pmchat.video.label").getString();
         }
         if (PmWire.parseEnvelope(text) != null) {
-            return "✉ " + Text.translatable("pmchat.envelope.label").getString();
+            return "✉ " + Component.translatable("pmchat.envelope.label").getString();
         }
         String[] poll = PmWire.parsePoll(text);
         if (poll != null) {
@@ -1491,7 +1491,7 @@ public class PmChatClient implements ClientModInitializer {
     /** Одноразовое рукопожатие «у меня мод» — тихо, без записи в историю. */
     private static void sendHi(String target) {
         if (!config.enableMeta || config.hiSentTo(target)) return;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         config.markHiSent(target);
         pmDeliver(target, PmWire.HI);
@@ -1499,7 +1499,7 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Реакция на сообщение: локально + собеседнику с модом. */
     public static void sendReaction(String target, PmMessage msg, int index) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null || msg.text == null) return;
         msg.reactMine = PmWire.REACTIONS[index];
         history.save();
@@ -1511,7 +1511,7 @@ public class PmChatClient implements ClientModInitializer {
 
     private static void sendPinMeta(String target, String wire) {
         if (config.enableMeta && config.isModUser(target) && !isLocalChat(target)) {
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             if (client.player != null) {
                 pmDeliver(target, wire);
             }
@@ -1557,7 +1557,7 @@ public class PmChatClient implements ClientModInitializer {
 
         if (isLocalChat(target)) return; // Избранное — только локально
         if (config.enableMeta && config.isModUser(target)) {
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             if (client.player != null) {
                 String wire = PmWire.edit(oldHash, newText);
                 pmDeliver(target, wire);
@@ -1573,7 +1573,7 @@ public class PmChatClient implements ClientModInitializer {
      * (шапка «переслано от X»), обычному игроку — текстом «X » текст».
      */
     public static void forwardMessage(String target, String fromNick, PmMessage msg) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null || target.isBlank()) return;
         String inner = msg.text != null ? msg.text : "";
 
@@ -1620,7 +1620,7 @@ public class PmChatClient implements ClientModInitializer {
      */
     public static void warnPlayer(String nick) {
         if (!config.staffFeatures || nick == null || nick.isBlank()) return;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         String cmd = (config.warnCommand == null || config.warnCommand.isBlank() ? "warn" : config.warnCommand.trim());
         String reason = config.warnReason == null ? "" : config.warnReason.trim();
@@ -1644,7 +1644,7 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Создать опрос в личном диалоге (в глобал/каналы нельзя). */
     public static void sendPoll(String target, boolean multi, String question, java.util.List<String> options) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null || target.isBlank() || question.isBlank() || options.size() < 2) return;
         String wire = PmWire.poll(multi, question, options);
         if (isLocalChat(target)) {
@@ -1675,7 +1675,7 @@ public class PmChatClient implements ClientModInitializer {
         }
         history.save();
         if (config.enableMeta && config.isModUser(target)) {
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             if (client.player != null) {
                 String hash = PmHistory.msgHash(poll.text);
                 pmDeliver(target, PmWire.pvote(hash, poll.pollMyVotes));
@@ -1732,7 +1732,7 @@ public class PmChatClient implements ClientModInitializer {
     /** UUID участников войс-группы (мы первыми), для показа аватарок в меню. */
     public static java.util.List<java.util.UUID> callMemberIds() {
         java.util.List<java.util.UUID> ids = new java.util.ArrayList<>();
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player != null) ids.add(client.player.getUuid());
         for (java.util.UUID id : PmSvc.groupMemberIds()) {
             if (!ids.contains(id)) ids.add(id);
@@ -1742,7 +1742,7 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Говорит ли участник сейчас (для подсветки аватарки). */
     public static boolean isSpeaking(java.util.UUID id) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player != null && client.player.getUuid().equals(id)) {
             // Себя нет в TalkCache — смотрим состояние микрофона
             return PmSvc.isSelfSpeaking() || PmSvc.isSpeaking(id);
@@ -1769,7 +1769,7 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     public static void startCall(String target) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null || target == null || target.isBlank()) return;
         pmDeliver(target, PmWire.call());
 
@@ -1814,10 +1814,10 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Уведомление о звонке — сам голосовой канал уже подключает сервер через /voicechat invite. */
     private static void onIncomingCall(String sender) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (!config.dnd) {
             client.getToastManager().add(new PmToast(sender,
-                    Text.translatable("pmchat.call.incoming.toast").getString()));
+                    Component.translatable("pmchat.call.incoming.toast").getString()));
             playNotifySound(client);
         }
     }
@@ -1849,7 +1849,7 @@ public class PmChatClient implements ClientModInitializer {
         return false;
     }
 
-    private static void notifyMention(MinecraftClient client, String sender, String text) {
+    private static void notifyMention(Minecraft client, String sender, String text) {
         client.getToastManager().add(new PmToast("@ " + sender, text));
         playNotifySound(client);
     }
@@ -1947,12 +1947,12 @@ public class PmChatClient implements ClientModInitializer {
      * {@link PmBackend#cachedRules}), показывает правила вместо мессенджера;
      * открыть его без принятия правил нельзя.
      */
-    public static void openMessenger(MinecraftClient client) {
+    public static void openMessenger(Minecraft client) {
         openMessenger(client, null);
     }
 
-    /** Same as {@link #openMessenger(MinecraftClient)}, but jumps straight to {@code conversationId}. */
-    public static void openMessenger(MinecraftClient client, String conversationId) {
+    /** Same as {@link #openMessenger(Minecraft)}, but jumps straight to {@code conversationId}. */
+    public static void openMessenger(Minecraft client, String conversationId) {
         Runnable open = () -> client.setScreen(conversationId == null || conversationId.isBlank()
                 ? new PmScreen() : new PmScreen(conversationId));
         PmBackend.RulesContent rules = PmBackend.cachedRules();
@@ -1967,7 +1967,7 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     static void pmDeliver(String to, String line) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         String target = commandTarget(to);
         if (PmServerMedia.get().isAvailable()) {
@@ -2006,13 +2006,13 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Входящая ЛС по каналу плагина — обрабатываем как /m от отправителя (на клиентском потоке). */
     public static void deliverServerPm(String sender, String wire) {
-        MinecraftClient.getInstance().execute(() -> onIncoming(sender, wire));
+        Minecraft.getInstance().execute(() -> onIncoming(sender, wire));
     }
 
     /** Получатель оффлайн — сообщение поставлено в очередь, доставится при его входе. */
     public static void notifyPmOffline(String target) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        String notice = Text.translatable("pmchat.pm.offline", target).getString();
+        Minecraft client = Minecraft.getInstance();
+        String notice = Component.translatable("pmchat.pm.offline", target).getString();
         client.execute(() -> chatLine(client, "§7[pmchat] " + notice));
     }
 
@@ -2036,7 +2036,7 @@ public class PmChatClient implements ClientModInitializer {
 
     public static PmMessage sendMessage(String target, String text, String replyToHash,
                                         int fragStart, int fragLen, String fragText) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null || target.isBlank() || text.isBlank()) return null;
         // Самому себе писать нельзя (/m самому себе на сервере уходит в никуда) —
         // для заметок «себе» есть отдельное Избранное (SAVED). Тихо гасим отправку.
@@ -2093,7 +2093,7 @@ public class PmChatClient implements ClientModInitializer {
 
     /** В таб-листе текущего Minecraft-сервера ли игрок — единственное, что мод может проверить локально. */
     private static boolean isPlayerOnlineHere(String name) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         return name != null && client.getNetworkHandler() != null
                 && client.getNetworkHandler().getPlayerListEntry(name) != null;
     }
@@ -2107,7 +2107,7 @@ public class PmChatClient implements ClientModInitializer {
 
     public static void sendTyping(String target) {
         if (!config.enableMeta || !config.isModUser(target)) return;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         long now = System.currentTimeMillis();
         Long last = lastTypingSent.get(target.toLowerCase(Locale.ROOT));
@@ -2118,7 +2118,7 @@ public class PmChatClient implements ClientModInitializer {
 
     public static void sendSeen(String target) {
         if (!config.enableMeta || !config.isModUser(target)) return;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         long now = System.currentTimeMillis();
         Long last = lastSeenSent.get(target.toLowerCase(Locale.ROOT));
@@ -2129,7 +2129,7 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Перевод денег из мессенджера: /pay + денежное сообщение в историю. */
     public static PmMessage sendMoney(String target, long amount) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null || target.isBlank() || amount <= 0) return null;
         if (isLocalChat(target)) return null; // в Избранное деньги не переводим
         client.player.networkHandler.sendChatCommand(config.payCommand + " " + target + " " + amount);
@@ -2149,7 +2149,7 @@ public class PmChatClient implements ClientModInitializer {
      */
     public static void setBlocked(String name, boolean blocked) {
         if (name == null || name.isBlank()) return;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (blocked) {
             // Официальный аккаунт PocketChat нельзя добавить в чёрный список —
             // иначе игрок теряет рассылки/уведомления администрации.
@@ -2191,12 +2191,12 @@ public class PmChatClient implements ClientModInitializer {
      * только постфактум, при попытке отправить сообщение (анимация отказа ✋).
      */
     public static void announceRestriction(boolean banned, long mutedUntilAtMs) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        Text notice = banned
-                ? Text.translatable("pmchat.restrict.banned")
-                : Text.translatable("pmchat.restrict.muted", formatMuteDuration(mutedUntilAtMs));
+        Minecraft client = Minecraft.getInstance();
+        Component notice = banned
+                ? Component.translatable("pmchat.restrict.banned")
+                : Component.translatable("pmchat.restrict.muted", formatMuteDuration(mutedUntilAtMs));
         client.execute(() -> {
-            client.getToastManager().add(new PmToast(Text.translatable("pmchat.restrict.title").getString(),
+            client.getToastManager().add(new PmToast(Component.translatable("pmchat.restrict.title").getString(),
                     notice.getString()));
             playNotifySound(client);
         });
@@ -2204,14 +2204,14 @@ public class PmChatClient implements ClientModInitializer {
 
     private static String formatMuteDuration(long untilAtMs) {
         long minutes = Math.max(1, (untilAtMs - System.currentTimeMillis()) / 60_000L);
-        if (minutes < 60) return minutes + " " + Text.translatable("pmchat.restrict.minutes").getString();
+        if (minutes < 60) return minutes + " " + Component.translatable("pmchat.restrict.minutes").getString();
         long hours = minutes / 60;
-        return hours + " " + Text.translatable("pmchat.restrict.hours").getString();
+        return hours + " " + Component.translatable("pmchat.restrict.hours").getString();
     }
 
     /** Всплывашка о полученном подарке (4.2). */
     public static void giftToast(String from, String giftName, String icon) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         client.execute(() -> client.getToastManager().add(
                 new PmToast((icon == null ? "🎁" : icon) + " " + from, giftName)));
         com.pmchat.client.api.PocketChatClientImpl.fireGift(from, giftName, icon);
@@ -2228,7 +2228,7 @@ public class PmChatClient implements ClientModInitializer {
         PmMessage msg = history.add(from, false, message, 0);
         com.pmchat.client.api.PocketChatClientImpl.fireReceived(from, msg);
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         boolean viewing = client.currentScreen instanceof PmScreen screen && screen.isViewing(from);
         if (!viewing) {
             history.markUnread(from);
@@ -2240,7 +2240,7 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     public static String selfName() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         return client.player != null ? client.player.getGameProfile().name() : "";
     }
 
@@ -2267,7 +2267,7 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     public static boolean isRussian() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         return client.getLanguageManager().getLanguage().toLowerCase(Locale.ROOT).startsWith("ru");
     }
 
@@ -2277,7 +2277,7 @@ public class PmChatClient implements ClientModInitializer {
                 ? "https://yurosing.github.io/pocketchat/"
                 : "https://yurosing.github.io/pocketchat/en/";
         try {
-            net.minecraft.util.Util.getOperatingSystem().open(url);
+            net.minecraft.Util.getOperatingSystem().open(url);
         } catch (Exception e) {
             LOGGER.warn("Failed to open docs URL: {}", e.toString());
         }
@@ -2288,7 +2288,7 @@ public class PmChatClient implements ClientModInitializer {
         String url = config.discordUrl;
         if (url == null || url.isBlank()) return;
         try {
-            net.minecraft.util.Util.getOperatingSystem().open(url);
+            net.minecraft.Util.getOperatingSystem().open(url);
         } catch (Exception e) {
             LOGGER.warn("Failed to open Discord URL: {}", e.toString());
         }
@@ -2302,7 +2302,7 @@ public class PmChatClient implements ClientModInitializer {
         return history;
     }
 
-    public static KeyBinding getOpenKey() {
+    public static KeyMapping getOpenKey() {
         return openKey;
     }
 }

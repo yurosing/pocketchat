@@ -1,6 +1,6 @@
 package com.pmchat.client;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
@@ -94,7 +94,7 @@ public final class PmVibe {
     /** Грузит выбранный локальный файл, запускает у себя и зовёт собеседника включить тот же. */
     public static void startForConversation(String conversation, Path file) {
         if (conversation == null || file == null) return;
-        PmImages.upload(file).whenComplete((res, err) -> MinecraftClient.getInstance().execute(() -> {
+        PmImages.upload(file).whenComplete((res, err) -> Minecraft.getInstance().execute(() -> {
             if (err != null || res == null) return;
             try {
                 byte[] bytes = Files.readAllBytes(file);
@@ -116,10 +116,10 @@ public final class PmVibe {
     public static void onIncoming(String sender, String hostCode, String fileId) {
         if (sender == null) return;
         pendingInvite = new Invite(sender, hostCode, fileId, System.currentTimeMillis());
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (!PmChatClient.getConfig().dnd) {
             client.getToastManager().add(new PmToast(sender,
-                    net.minecraft.text.Text.translatable("pmchat.vibe.invite.toast").getString()));
+                    net.minecraft.network.chat.Component.translatable("pmchat.vibe.invite.toast").getString()));
         }
     }
 
@@ -151,7 +151,7 @@ public final class PmVibe {
                     PmImages.saveToDisk(inv.hostCode, inv.fileId, bytes);
                 }
                 byte[] fBytes = bytes;
-                MinecraftClient.getInstance().execute(() -> playBytes(fBytes, inv.sender, inv.fileId));
+                Minecraft.getInstance().execute(() -> playBytes(fBytes, inv.sender, inv.fileId));
             } catch (Exception e) {
                 PmChatClient.LOGGER.warn("Vibe fetch failed: {}", e.toString());
             }

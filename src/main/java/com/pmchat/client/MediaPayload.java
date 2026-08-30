@@ -1,9 +1,9 @@
 package com.pmchat.client;
 
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Custom payload for the {@code pmchat:media} plugin-messaging channel — the
@@ -11,27 +11,27 @@ import net.minecraft.util.Identifier;
  * PocketChatMedia plugin. The payload is just an opaque byte array; the framing
  * (opcodes, chunking) lives in {@link PmServerMedia}.
  */
-public record MediaPayload(byte[] data) implements CustomPayload {
+public record MediaPayload(byte[] data) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<MediaPayload> ID =
-            new CustomPayload.Id<>(Identifier.of("pmchat", "media"));
+    public static final CustomPacketPayload.Id<MediaPayload> ID =
+            new CustomPacketPayload.Id<>(ResourceLocation.of("pmchat", "media"));
 
-    public static final PacketCodec<PacketByteBuf, MediaPayload> CODEC = new PacketCodec<>() {
+    public static final StreamCodec<FriendlyByteBuf, MediaPayload> CODEC = new StreamCodec<>() {
         @Override
-        public MediaPayload decode(PacketByteBuf buf) {
+        public MediaPayload decode(FriendlyByteBuf buf) {
             byte[] b = new byte[buf.readableBytes()];
             buf.readBytes(b);
             return new MediaPayload(b);
         }
 
         @Override
-        public void encode(PacketByteBuf buf, MediaPayload value) {
+        public void encode(FriendlyByteBuf buf, MediaPayload value) {
             buf.writeBytes(value.data());
         }
     };
 
     @Override
-    public CustomPayload.Id<MediaPayload> getId() {
+    public CustomPacketPayload.Id<MediaPayload> getId() {
         return ID;
     }
 }

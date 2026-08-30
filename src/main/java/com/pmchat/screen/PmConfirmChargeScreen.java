@@ -5,10 +5,10 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 /**
  * Предупреждение перед отправкой платного ЛС: получатель настроил цену за
@@ -35,7 +35,7 @@ public class PmConfirmChargeScreen extends Screen {
     private boolean sending = false;
 
     public PmConfirmChargeScreen(Screen parent, String target, long price, Runnable onConfirmed) {
-        super(Text.translatable("pmchat.dm.confirm.title"));
+        super(Component.translatable("pmchat.dm.confirm.title"));
         this.parent = parent;
         this.target = target;
         this.price = price;
@@ -57,37 +57,37 @@ public class PmConfirmChargeScreen extends Screen {
 
         int halfW = (PANEL_W - 24 - 6) / 2;
         addDrawableChild(FlatButton.centered(textRenderer, px + 12, py + PANEL_H - 22, halfW, 16,
-                Text.translatable("pmchat.dm.confirm.cancel"), BTN_BG, BTN_HOVER, BTN_BORDER, LABEL,
+                Component.translatable("pmchat.dm.confirm.cancel"), BTN_BG, BTN_HOVER, BTN_BORDER, LABEL,
                 btn -> close()));
         addDrawableChild(FlatButton.centered(textRenderer, px + 18 + halfW, py + PANEL_H - 22, halfW, 16,
-                Text.translatable("pmchat.dm.confirm.send"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA,
+                Component.translatable("pmchat.dm.confirm.send"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> confirm()));
     }
 
     private void confirm() {
         if (sending) return;
         sending = true;
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
         onConfirmed.run();
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0x90000000);
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
 
-        Text title = getTitle();
+        Component title = getTitle();
         context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
-        Text ask = Text.translatable("pmchat.dm.confirm.ask", target, PmBackend.formatCoins(price));
+        Component ask = Component.translatable("pmchat.dm.confirm.ask", target, PmBackend.formatCoins(price));
         drawWrapped(context, ask, px + 12, py + 24, PANEL_W - 24, LABEL);
 
         super.render(context, mouseX, mouseY, delta);
     }
 
-    private void drawWrapped(DrawContext context, Text text, int x, int y, int maxW, int color) {
+    private void drawWrapped(GuiGraphics context, Component text, int x, int y, int maxW, int color) {
         for (var line : textRenderer.wrapLines(text, maxW)) {
             context.drawText(textRenderer, line, x, y, color, false);
             y += 10;
@@ -96,7 +96,7 @@ public class PmConfirmChargeScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

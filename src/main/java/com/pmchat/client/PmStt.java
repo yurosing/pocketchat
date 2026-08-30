@@ -3,7 +3,7 @@ package com.pmchat.client;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.vosk.LibVosk;
 import org.vosk.LogLevel;
 import org.vosk.Model;
@@ -450,7 +450,7 @@ public final class PmStt {
                 if (state == State.READY) {
                     transcribeAsync(wavBytes, onDone, onError);
                 } else {
-                    MinecraftClient.getInstance().execute(() -> onError.accept("модель STT не готова"));
+                    Minecraft.getInstance().execute(() -> onError.accept("модель STT не готова"));
                 }
             }, "pmchat-stt-transcribe-wait");
             waiter.setDaemon(true);
@@ -468,11 +468,11 @@ public final class PmStt {
                     recognizer.acceptWaveForm(buf, n);
                 }
                 String text = extract(recognizer.getFinalResult(), "text");
-                MinecraftClient.getInstance().execute(() -> onDone.accept(text));
+                Minecraft.getInstance().execute(() -> onDone.accept(text));
             } catch (Throwable t) {
                 PmChatClient.LOGGER.warn("Voice transcription failed: {}", t.toString());
                 String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
-                MinecraftClient.getInstance().execute(() -> onError.accept(msg));
+                Minecraft.getInstance().execute(() -> onError.accept(msg));
             } finally {
                 if (recognizer != null) {
                     try {
@@ -490,7 +490,7 @@ public final class PmStt {
     private static void deliver(String text) {
         Consumer<String> callback = onFinal;
         if (callback != null) {
-            MinecraftClient.getInstance().execute(() -> callback.accept(text));
+            Minecraft.getInstance().execute(() -> callback.accept(text));
         }
     }
 

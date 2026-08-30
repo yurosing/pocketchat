@@ -5,10 +5,10 @@ import com.pmchat.client.PmConfig;
 import com.pmchat.client.PmVibe;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ public class PmVibeScreen extends Screen {
     private final List<int[]> rowRects = new ArrayList<>(); // x,y,w,h
 
     public PmVibeScreen(Screen parent, String target) {
-        super(Text.translatable("pmchat.vibe.title"));
+        super(Component.translatable("pmchat.vibe.title"));
         this.parent = parent;
         this.target = target;
     }
@@ -57,11 +57,11 @@ public class PmVibeScreen extends Screen {
         tracks = PmVibe.listTracks();
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
-                Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
@@ -75,7 +75,7 @@ public class PmVibeScreen extends Screen {
 
         rowRects.clear();
         if (tracks.isEmpty()) {
-            context.drawText(textRenderer, trim(Text.translatable("pmchat.vibe.empty").getString(), fw), fx, listTop, LABEL, false);
+            context.drawText(textRenderer, trim(Component.translatable("pmchat.vibe.empty").getString(), fw), fx, listTop, LABEL, false);
         } else {
             int y = listTop;
             for (Path f : tracks) {
@@ -114,7 +114,7 @@ public class PmVibeScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

@@ -5,11 +5,11 @@ import com.pmchat.client.PmConfig;
 import com.pmchat.client.PmUpdate;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,11 +53,11 @@ public class PmWhatsNewScreen extends Screen {
 
     private int px, py, panelH;
     // Заранее развёрнутые в строки пункты (иконка-буллет рисуется у первой строки).
-    private final List<OrderedText> lines = new ArrayList<>();
+    private final List<FormattedCharSequence> lines = new ArrayList<>();
     private final List<Boolean> firstLine = new ArrayList<>();
 
     public PmWhatsNewScreen(Screen parent) {
-        super(Text.translatable("pmchat.whatsnew.title"));
+        super(Component.translatable("pmchat.whatsnew.title"));
         this.parent = parent;
     }
 
@@ -79,7 +79,7 @@ public class PmWhatsNewScreen extends Screen {
         TEXT_W = PANEL_W - 40;
 
         for (String key : ITEMS) {
-            List<OrderedText> wrapped = textRenderer.wrapLines(Text.translatable(key), TEXT_W);
+            List<FormattedCharSequence> wrapped = textRenderer.wrapLines(Component.translatable(key), TEXT_W);
             if (wrapped.isEmpty()) continue;
             for (int i = 0; i < wrapped.size(); i++) {
                 lines.add(wrapped.get(i));
@@ -95,21 +95,21 @@ public class PmWhatsNewScreen extends Screen {
         py = (height - panelH) / 2;
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
-                Text.translatable("pmchat.settings.done"),
+                Component.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
 
-        Text title = Text.translatable("pmchat.whatsnew.title");
+        Component title = Component.translatable("pmchat.whatsnew.title");
         context.drawText(textRenderer, title,
                 px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
 
-        Text ver = Text.translatable("pmchat.whatsnew.version", PmUpdate.currentVersion());
+        Component ver = Component.translatable("pmchat.whatsnew.version", PmUpdate.currentVersion());
         context.drawText(textRenderer, ver,
                 px + (PANEL_W - textRenderer.getWidth(ver)) / 2, py + 22, SUBTLE, false);
 
@@ -130,7 +130,7 @@ public class PmWhatsNewScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         client.setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
     }
 

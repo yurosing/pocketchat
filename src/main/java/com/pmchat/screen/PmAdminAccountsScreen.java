@@ -5,11 +5,11 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,15 +35,15 @@ public class PmAdminAccountsScreen extends Screen {
     private int px, py;
     private int BG, BORDER, LABEL, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
 
-    private TextFieldWidget searchField;
+    private EditBox searchField;
     private List<PmBackend.AdminAccount> accounts = Collections.emptyList();
-    private Text status = Text.empty();
+    private Component status = Component.empty();
     private int statusColor = 0xFFAAAAAA;
     private int scroll = 0;
     private int listTop, listBottom;
 
     public PmAdminAccountsScreen(Screen parent, Consumer<String> onPick) {
-        super(Text.translatable("pmchat.admin.accounts.title"));
+        super(Component.translatable("pmchat.admin.accounts.title"));
         this.parent = parent;
         this.onPick = onPick;
     }
@@ -67,8 +67,8 @@ public class PmAdminAccountsScreen extends Screen {
         int fw = PANEL_W - 32;
         int y = py + 26;
 
-        searchField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.admin.accounts.search"));
-        String hint = Text.translatable("pmchat.admin.accounts.search").getString();
+        searchField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.admin.accounts.search"));
+        String hint = Component.translatable("pmchat.admin.accounts.search").getString();
         searchField.setSuggestion(hint);
         searchField.setChangedListener(s -> {
             searchField.setSuggestion(s.isEmpty() ? hint : null);
@@ -80,30 +80,30 @@ public class PmAdminAccountsScreen extends Screen {
         listBottom = py + PANEL_H - 44;
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
-                Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
 
         load();
     }
 
     private void load() {
-        status = Text.translatable("pmchat.admin.accounts.loading");
+        status = Component.translatable("pmchat.admin.accounts.loading");
         statusColor = 0xFFAAAAAA;
         String q = searchField != null ? searchField.getText() : "";
         PmBackend.adminListAccounts(q, (ok, list, err) -> {
             if (ok) {
                 accounts = list;
                 scroll = 0;
-                status = accounts.isEmpty() ? Text.translatable("pmchat.admin.accounts.empty") : Text.empty();
+                status = accounts.isEmpty() ? Component.translatable("pmchat.admin.accounts.empty") : Component.empty();
             } else {
                 accounts = Collections.emptyList();
-                status = Text.translatable("pmchat.admin.fail", String.valueOf(err));
+                status = Component.translatable("pmchat.admin.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
             }
         });
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
@@ -123,7 +123,7 @@ public class PmAdminAccountsScreen extends Screen {
             String balanceStr = String.valueOf(a.balance);
             context.drawText(textRenderer, balanceStr,
                     px + PANEL_W - 14 - textRenderer.getWidth(balanceStr), y + 2, VALUE, false);
-            net.minecraft.text.Text lastSeen = PmBackend.humanizeLastSeen(a.lastSeenAt, config.preciseLastSeen && a.sharePrecise);
+            net.minecraft.network.chat.Component lastSeen = PmBackend.humanizeLastSeen(a.lastSeenAt, config.preciseLastSeen && a.sharePrecise);
             context.drawText(textRenderer, lastSeen, px + 10, y + 13, LABEL, false);
             y += ROW_H;
         }
@@ -160,7 +160,7 @@ public class PmAdminAccountsScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

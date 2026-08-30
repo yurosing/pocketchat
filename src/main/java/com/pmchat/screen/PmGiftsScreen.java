@@ -5,10 +5,10 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -57,11 +57,11 @@ public class PmGiftsScreen extends Screen {
     /** Индекс выбранного полученного подарка для показа деталей, -1 — сетка (только не-каталог). */
     private int detailIndex = -1;
 
-    private Text status = Text.empty();
+    private Component status = Component.empty();
     private int statusColor = 0xFFAAAAAA;
 
     public PmGiftsScreen(Screen parent, String player, boolean catalogMode) {
-        super(catalogMode ? Text.translatable("pmchat.gifts.give.title", player) : Text.translatable("pmchat.profile.gifts"));
+        super(catalogMode ? Component.translatable("pmchat.gifts.give.title", player) : Component.translatable("pmchat.profile.gifts"));
         this.parent = parent;
         this.player = player;
         this.catalogMode = catalogMode;
@@ -96,7 +96,7 @@ public class PmGiftsScreen extends Screen {
         gridBottom = py + PANEL_H - 34;
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
-                Text.translatable(detailIndex >= 0 ? "pmchat.gifts.back" : "pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
+                Component.translatable(detailIndex >= 0 ? "pmchat.gifts.back" : "pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                 btn -> {
                     if (detailIndex >= 0) {
                         detailIndex = -1;
@@ -108,7 +108,7 @@ public class PmGiftsScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         long now = System.currentTimeMillis();
         float dt = lastFrameMs == 0L ? 0f : Math.min(0.1f, (now - lastFrameMs) / 1000f);
         lastFrameMs = now;
@@ -117,12 +117,12 @@ public class PmGiftsScreen extends Screen {
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
 
-        Text title = getTitle();
+        Component title = getTitle();
         context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
         if (catalogMode) {
             Long bal = PmBackend.cachedSelfBalance();
-            String balStr = Text.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
+            String balStr = Component.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
             context.drawText(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
             renderCatalogGrid(context, mouseX, mouseY, dt);
             if (!status.getString().isEmpty()) {
@@ -144,7 +144,7 @@ public class PmGiftsScreen extends Screen {
      * позади значка (не только на ховере — иначе сетка выглядит мёртвой, пока не
      * водишь мышью), дышащий значок и плавный «поп»-масштаб карточки при наведении.
      */
-    private void drawCardBase(DrawContext context, int x, int y, int index, String icon, int rarity,
+    private void drawCardBase(GuiGraphics context, int x, int y, int index, String icon, int rarity,
                                boolean hover, boolean dim, float dt) {
         long now = System.currentTimeMillis();
         double t = now / 1000.0 + index * 0.37;
@@ -211,7 +211,7 @@ public class PmGiftsScreen extends Screen {
     }
 
     /** {@link #fillCircle} с обрезкой по прямоугольнику карточки — свечение не должно вылезать на соседей. */
-    private static void fillCircleClamped(DrawContext ctx, int cx, int cy, int r, int color, int minX, int minY, int maxX, int maxY) {
+    private static void fillCircleClamped(GuiGraphics ctx, int cx, int cy, int r, int color, int minX, int minY, int maxX, int maxY) {
         for (int dy = -r; dy <= r; dy++) {
             int yy = cy + dy;
             if (yy < minY || yy >= maxY) continue;
@@ -221,11 +221,11 @@ public class PmGiftsScreen extends Screen {
         }
     }
 
-    private void renderCatalogGrid(DrawContext context, int mouseX, int mouseY, float dt) {
+    private void renderCatalogGrid(GuiGraphics context, int mouseX, int mouseY, float dt) {
         cardRects.clear();
         List<PmBackend.Gift> cat = PmBackend.cachedCatalog();
         if (cat.isEmpty()) {
-            Text empty = Text.translatable("pmchat.shop.empty");
+            Component empty = Component.translatable("pmchat.shop.empty");
             context.drawText(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
             return;
         }
@@ -266,17 +266,17 @@ public class PmGiftsScreen extends Screen {
         if (catalogIndex < 0 || catalogIndex >= cat.size()) return;
         PmBackend.Gift g = cat.get(catalogIndex);
         PmBackend.sendGift(player, g.id, (ok, v, err) -> {
-            status = ok ? Text.translatable("pmchat.profile.gifts.sent")
-                    : Text.translatable("pmchat.profile.gifts.fail", String.valueOf(err));
+            status = ok ? Component.translatable("pmchat.profile.gifts.sent")
+                    : Component.translatable("pmchat.profile.gifts.fail", String.valueOf(err));
             statusColor = ok ? 0xFF6FBF8B : 0xFFE0574C;
         });
     }
 
-    private void renderReceivedGrid(DrawContext context, int mouseX, int mouseY, float dt) {
+    private void renderReceivedGrid(GuiGraphics context, int mouseX, int mouseY, float dt) {
         cardRects.clear();
         List<PmBackend.ReceivedGift> got = gifts();
         if (got.isEmpty()) {
-            Text empty = Text.translatable("pmchat.profile.gifts.empty");
+            Component empty = Component.translatable("pmchat.profile.gifts.empty");
             context.drawText(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
             return;
         }
@@ -314,11 +314,11 @@ public class PmGiftsScreen extends Screen {
             }
         }
 
-        Text caption = Text.translatable("pmchat.gifts.caption", PmNames.displayString(player));
+        Component caption = Component.translatable("pmchat.gifts.caption", PmNames.displayString(player));
         context.drawText(textRenderer, caption, px + (PANEL_W - textRenderer.getWidth(caption)) / 2, py + PANEL_H - 40, SUBTLE, false);
     }
 
-    private void renderDetail(DrawContext context, PmBackend.ReceivedGift g) {
+    private void renderDetail(GuiGraphics context, PmBackend.ReceivedGift g) {
         PmBackend.Gift def = PmBackend.giftById(g.giftId);
         String icon = def != null ? def.icon : (g.giftId == null || g.giftId.isEmpty() ? "•" : g.giftId);
         int rarity = PmBackend.rarityColor(def != null ? def.rarity : null);
@@ -345,30 +345,30 @@ public class PmGiftsScreen extends Screen {
 
         String name = def != null ? def.name : g.giftId;
         drawCentered(context, name, cx, cy + 58, TITLE);
-        Text from = Text.translatable("pmchat.gifts.detail.from", g.from);
+        Component from = Component.translatable("pmchat.gifts.detail.from", g.from);
         drawCentered(context, from.getString(), cx, cy + 70, LABEL);
         if (g.at > 0) {
             String date = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.ROOT).format(new Date(g.at));
-            Text when = Text.translatable("pmchat.gifts.detail.when", date);
+            Component when = Component.translatable("pmchat.gifts.detail.when", date);
             drawCentered(context, when.getString(), cx, cy + 82, SUBTLE);
         }
     }
 
-    private void drawCentered(DrawContext ctx, String s, int centerX, int y, int color) {
-        ctx.drawText(textRenderer, Text.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
+    private void drawCentered(GuiGraphics ctx, String s, int centerX, int y, int color) {
+        ctx.drawText(textRenderer, Component.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
     }
 
     /** Текст с масштабом вокруг точки (centerX, y — центр по вертикали). */
-    private void drawScaledCentered(DrawContext ctx, String s, int centerX, int y, float scale, int color) {
+    private void drawScaledCentered(GuiGraphics ctx, String s, int centerX, int y, float scale, int color) {
         var m = ctx.getMatrices();
         m.pushMatrix();
         m.translate(centerX, y);
         m.scale(scale, scale);
-        ctx.drawText(textRenderer, Text.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
+        ctx.drawText(textRenderer, Component.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
         m.popMatrix();
     }
 
-    private static void fillCircle(DrawContext ctx, int cx, int cy, int r, int color) {
+    private static void fillCircle(GuiGraphics ctx, int cx, int cy, int r, int color) {
         for (int dy = -r; dy <= r; dy++) {
             int dx = (int) Math.sqrt((double) r * r - dy * dy);
             ctx.fill(cx - dx, cy + dy, cx + dx, cy + dy + 1, color);
@@ -409,7 +409,7 @@ public class PmGiftsScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

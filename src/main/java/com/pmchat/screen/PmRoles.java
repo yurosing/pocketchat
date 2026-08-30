@@ -131,6 +131,6 @@ public final class PmRoles {
         }
         String code = resolve(config, name);
         return new Effective(icon(code), color(code),
-                net.minecraft.text.Text.translatable(nameKey(code)).getString(), code.isEmpty());
+                net.minecraft.network.chat.Component.translatable(nameKey(code)).getString(), code.isEmpty());
     }
 }

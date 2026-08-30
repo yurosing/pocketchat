@@ -2,7 +2,7 @@ package com.pmchat.client;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -133,7 +133,7 @@ public final class PmBackend {
      * кросс-серверный (не зависит от таб-листа текущего Minecraft-сервера).
      */
     /** Расплывчатый статус (недавно/на этой неделе/давно) — по умолчанию, без взаимного согласия на точность. */
-    public static net.minecraft.text.Text humanizeLastSeen(long lastSeenAtMs) {
+    public static net.minecraft.network.chat.Component humanizeLastSeen(long lastSeenAtMs) {
         return humanizeLastSeen(lastSeenAtMs, false);
     }
 
@@ -142,25 +142,25 @@ public final class PmBackend {
      *                неделе/давно» — вызывающий код должен передавать true только когда ОБЕ
      *                стороны включили {@link PmConfig#preciseLastSeen} (см. AccountInfo.sharePrecise).
      */
-    public static net.minecraft.text.Text humanizeLastSeen(long lastSeenAtMs, boolean precise) {
-        if (lastSeenAtMs <= 0) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.unknown");
+    public static net.minecraft.network.chat.Component humanizeLastSeen(long lastSeenAtMs, boolean precise) {
+        if (lastSeenAtMs <= 0) return net.minecraft.network.chat.Component.translatable("pmchat.profile.lastseen.unknown");
         long diff = System.currentTimeMillis() - lastSeenAtMs;
-        if (diff < 90_000L) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.online");
+        if (diff < 90_000L) return net.minecraft.network.chat.Component.translatable("pmchat.profile.lastseen.online");
         if (precise) {
             if (diff < 3_600_000L) {
-                return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.minutes", diff / 60_000L);
+                return net.minecraft.network.chat.Component.translatable("pmchat.profile.lastseen.minutes", diff / 60_000L);
             }
             if (diff < 24 * 3_600_000L) {
-                return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.hours", diff / 3_600_000L);
+                return net.minecraft.network.chat.Component.translatable("pmchat.profile.lastseen.hours", diff / 3_600_000L);
             }
             if (diff < 30L * 24 * 3_600_000L) {
-                return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.days", diff / (24 * 3_600_000L));
+                return net.minecraft.network.chat.Component.translatable("pmchat.profile.lastseen.days", diff / (24 * 3_600_000L));
             }
-            return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.long");
+            return net.minecraft.network.chat.Component.translatable("pmchat.profile.lastseen.long");
         }
-        if (diff < 3_600_000L) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.recent");
-        if (diff < 7 * 24 * 3_600_000L) return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.week");
-        return net.minecraft.text.Text.translatable("pmchat.profile.lastseen.long");
+        if (diff < 3_600_000L) return net.minecraft.network.chat.Component.translatable("pmchat.profile.lastseen.recent");
+        if (diff < 7 * 24 * 3_600_000L) return net.minecraft.network.chat.Component.translatable("pmchat.profile.lastseen.week");
+        return net.minecraft.network.chat.Component.translatable("pmchat.profile.lastseen.long");
     }
 
     // ---------- логин/пароль (своя система, не Mojang) ----------
@@ -1307,11 +1307,11 @@ public final class PmBackend {
                 String from = b.has("from") ? b.get("from").getAsString() : "PocketChat";
                 String message = b.has("message") ? b.get("message").getAsString() : "";
                 maxId = Math.max(maxId, id);
-                MinecraftClient.getInstance().execute(() -> onEach.accept(from, message));
+                Minecraft.getInstance().execute(() -> onEach.accept(from, message));
             }
             if (maxId > since) {
                 final long newSince = maxId;
-                MinecraftClient.getInstance().execute(() -> {
+                Minecraft.getInstance().execute(() -> {
                     PmChatClient.getConfig().lastBroadcastId = newSince;
                     PmChatClient.getConfig().save();
                 });
@@ -1358,7 +1358,7 @@ public final class PmBackend {
                 long at = m.has("at") && !m.get("at").isJsonNull() ? parseIsoMillis(m.get("at").getAsString()) : 0L;
                 if (from.isEmpty() || wire.isEmpty()) continue;
                 MailboxMessage mm = new MailboxMessage(from, wire, at);
-                MinecraftClient.getInstance().execute(() -> onEach.accept(mm));
+                Minecraft.getInstance().execute(() -> onEach.accept(mm));
             }
         });
     }
@@ -1815,7 +1815,7 @@ public final class PmBackend {
             boolean ok = status / 100 == 2 && error == null;
             JsonObject finalJson = json;
             String finalError = error;
-            MinecraftClient.getInstance().execute(() -> {
+            Minecraft.getInstance().execute(() -> {
                 if (ok && onSuccess != null) onSuccess.accept(finalJson);
                 run(cb, ok, null, finalError);
             });
@@ -1827,7 +1827,7 @@ public final class PmBackend {
     @SuppressWarnings("unchecked")
     private static <T> void run(Callback<T> cb, boolean ok, Object value, String error) {
         if (cb == null) return;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         Runnable r = () -> cb.onResult(ok, (T) value, error);
         if (client.isOnThread()) {
             r.run();

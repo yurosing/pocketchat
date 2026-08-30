@@ -1,6 +1,6 @@
 package com.pmchat.client;
 
-import net.minecraft.client.texture.NativeImage;
+import com.mojang.blaze3d.platform.NativeImage;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;

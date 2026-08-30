@@ -13,7 +13,7 @@ import com.pmchat.client.PmMessage;
 import com.pmchat.client.PmServerMedia;
 import com.pmchat.client.PmToast;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -195,13 +195,13 @@ public final class PocketChatClientImpl implements PocketChatClientApi {
 
     @Override
     public void open(String conversationId) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         client.execute(() -> PmChatClient.openMessenger(client, conversationId));
     }
 
     @Override
     public void toast(String title, String body) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         client.execute(() -> client.getToastManager().add(
                 new PmToast(title == null ? "" : title, body == null ? "" : body)));
     }

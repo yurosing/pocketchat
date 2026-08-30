@@ -10,13 +10,13 @@ import com.pmchat.client.PmWire;
 import net.minecraft.client.gl.RenderPipelines;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyInput;
-import net.minecraft.text.Text;
-import net.minecraft.util.Util;
+import net.minecraft.network.chat.Component;
+import net.minecraft.Util;
 import org.lwjgl.glfw.GLFW;
 
 import java.text.SimpleDateFormat;
@@ -52,7 +52,7 @@ public class PmContactMediaScreen extends Screen {
     private final SimpleDateFormat fmt = new SimpleDateFormat("dd.MM HH:mm", Locale.ROOT);
 
     public PmContactMediaScreen(Screen parent, String peer) {
-        super(Text.translatable("pmchat.sharedmedia.title"));
+        super(Component.translatable("pmchat.sharedmedia.title"));
         this.parent = parent;
         this.peer = peer;
     }
@@ -102,7 +102,7 @@ public class PmContactMediaScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         if (fullscreenImg != null) {
             renderFullscreenImage(ctx);
             return;
@@ -111,7 +111,7 @@ public class PmContactMediaScreen extends Screen {
         ctx.fill(px, py, px + pw, py + ph, PANEL);
         ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
 
-        Text title = Text.translatable("pmchat.sharedmedia.title_of", peer);
+        Component title = Component.translatable("pmchat.sharedmedia.title_of", peer);
         ctx.drawText(textRenderer, trim(title.getString(), pw - 40), px + 12, py + 9, TEXT, false);
 
         String x = "✕";
@@ -122,9 +122,9 @@ public class PmContactMediaScreen extends Screen {
 
         // Вкладки
         String[] labels = {
-                Text.translatable("pmchat.sharedmedia.tab.all").getString(),
-                Text.translatable("pmchat.sharedmedia.tab.voice").getString(),
-                Text.translatable("pmchat.sharedmedia.tab.media").getString(),
+                Component.translatable("pmchat.sharedmedia.tab.all").getString(),
+                Component.translatable("pmchat.sharedmedia.tab.voice").getString(),
+                Component.translatable("pmchat.sharedmedia.tab.media").getString(),
         };
         int ty = py + 24;
         int tx = px + 10;
@@ -145,7 +145,7 @@ public class PmContactMediaScreen extends Screen {
         List<PmMessage> items = filtered();
         rowRects.clear();
         if (items.isEmpty()) {
-            ctx.drawText(textRenderer, Text.translatable("pmchat.sharedmedia.empty"),
+            ctx.drawText(textRenderer, Component.translatable("pmchat.sharedmedia.empty"),
                     px + 12, listTop + 6, SUBTLE, false);
         }
         int rowH = 24;
@@ -165,7 +165,7 @@ public class PmContactMediaScreen extends Screen {
         ctx.disableScissor();
     }
 
-    private void renderRow(DrawContext ctx, PmMessage m, int x, int y, int w, int h) {
+    private void renderRow(GuiGraphics ctx, PmMessage m, int x, int y, int w, int h) {
         String[] voice = PmWire.parseVoice(m.text);
         String[] img = PmWire.parseImg(m.text);
         String[] vid = PmWire.parseVid(m.text);
@@ -174,7 +174,7 @@ public class PmContactMediaScreen extends Screen {
         if (voice != null) {
             PmIcons.draw(ctx, PmIcons.VOICE, x, y + (h - iconSz) / 2, iconSz, iconSz, 0xFF9CC4DC);
             boolean playing = PmVoice.isPlaying(voice[1]);
-            String label = Text.translatable("pmchat.sharedmedia.voice_dur", fmtDuration(voice[2])).getString();
+            String label = Component.translatable("pmchat.sharedmedia.voice_dur", fmtDuration(voice[2])).getString();
             ctx.drawText(textRenderer, label, x + iconSz + 6, y + 2, playing ? ACCENT : TEXT, false);
         } else if (img != null) {
             PmImages.Entry e = PmImages.get(img[0], img[1]);
@@ -184,18 +184,18 @@ public class PmContactMediaScreen extends Screen {
             } else {
                 PmIcons.draw(ctx, PmIcons.PHOTO, x, y + (h - iconSz) / 2, iconSz, iconSz, 0xFF9CC4DC);
             }
-            ctx.drawText(textRenderer, Text.translatable("pmchat.sharedmedia.photo"),
+            ctx.drawText(textRenderer, Component.translatable("pmchat.sharedmedia.photo"),
                     x + iconSz + 6, y + 2, TEXT, false);
         } else if (vid != null) {
             PmIcons.draw(ctx, PmIcons.PLAY, x, y + (h - iconSz) / 2, iconSz, iconSz, 0xFF9CC4DC);
-            ctx.drawText(textRenderer, Text.translatable("pmchat.sharedmedia.video"),
+            ctx.drawText(textRenderer, Component.translatable("pmchat.sharedmedia.video"),
                     x + iconSz + 6, y + 2, TEXT, false);
         }
         ctx.drawText(textRenderer, when, x + w - textRenderer.getWidth(when), y + 2, SUBTLE, false);
     }
 
     /** Затемнённый оверлей с картинкой, вписанной в окно (как в PmScreen). */
-    private void renderFullscreenImage(DrawContext ctx) {
+    private void renderFullscreenImage(GuiGraphics ctx) {
         PmImages.Entry e = fullscreenImg;
         ctx.fill(0, 0, width, height, 0xE6000000);
         if (e.state == PmImages.State.READY && e.currentTexture() != null && e.width > 0 && e.height > 0) {
@@ -208,7 +208,7 @@ public class PmContactMediaScreen extends Screen {
             ctx.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy, 0f, 0f,
                     w, h, e.width, e.height, e.width, e.height);
         }
-        Text hint = Text.translatable("pmchat.image.close");
+        Component hint = Component.translatable("pmchat.image.close");
         ctx.drawText(textRenderer, hint, (width - textRenderer.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
     }
 
@@ -288,7 +288,7 @@ public class PmContactMediaScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

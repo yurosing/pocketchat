@@ -6,11 +6,11 @@ import com.pmchat.client.PmMessage;
 import com.pmchat.client.PmWire;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 /**
  * Вопрос-пароль конверта (5.7) — таймер уже вышел, но открытие требует ещё
@@ -30,12 +30,12 @@ public class PmEnvelopeUnlockScreen extends Screen {
     private int px, py;
     private int BG, BORDER, LABEL, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
 
-    private TextFieldWidget answerField;
-    private Text status = Text.empty();
+    private EditBox answerField;
+    private Component status = Component.empty();
     private int statusColor = 0xFFAAAAAA;
 
     public PmEnvelopeUnlockScreen(Screen parent, PmMessage msg, String question, String answerHash) {
-        super(Text.translatable("pmchat.envelope.unlock.title"));
+        super(Component.translatable("pmchat.envelope.unlock.title"));
         this.parent = parent;
         this.msg = msg;
         this.question = question;
@@ -61,16 +61,16 @@ public class PmEnvelopeUnlockScreen extends Screen {
         int fw = PANEL_W - 28;
         int y = py + 40;
 
-        answerField = new TextFieldWidget(textRenderer, fx, y, fw, 16, Text.translatable("pmchat.envelope.answer"));
+        answerField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.answer"));
         answerField.setMaxLength(60);
         addDrawableChild(answerField);
         y += 22;
 
         addDrawableChild(FlatButton.centered(textRenderer, fx, y, (fw - 6) / 2, 18,
-                Text.translatable("pmchat.envelope.unlock.open"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
+                Component.translatable("pmchat.envelope.unlock.open"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> tryOpen()));
         addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
-                Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
     private void tryOpen() {
@@ -80,13 +80,13 @@ public class PmEnvelopeUnlockScreen extends Screen {
             PmChatClient.getHistory().save();
             close();
         } else {
-            status = Text.translatable("pmchat.envelope.unlock.wrong");
+            status = Component.translatable("pmchat.envelope.unlock.wrong");
             statusColor = 0xFFE07A6A;
         }
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
@@ -110,7 +110,7 @@ public class PmEnvelopeUnlockScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

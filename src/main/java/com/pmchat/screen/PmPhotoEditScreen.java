@@ -5,16 +5,16 @@ import com.pmchat.client.PmConfig;
 import com.pmchat.client.PmPhotoEdit;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.EditBox;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.NativeImageBackedTexture;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
@@ -68,10 +68,10 @@ public class PmPhotoEditScreen extends Screen {
     private boolean cropHasSelection;
 
     // Текст прямо на фото: точка клика (координаты картинки), -1 — не задана
-    private TextFieldWidget captionField;
+    private EditBox captionField;
     private float textAnchorX = -1f, textAnchorY = -1f;
 
-    private Identifier textureId;
+    private ResourceLocation textureId;
     private NativeImageBackedTexture texture;
     private NativeImage nativeImage;   // переиспользуемый буфер — пересоздаём только при смене размера
     private int texW, texH;
@@ -81,7 +81,7 @@ public class PmPhotoEditScreen extends Screen {
     private int BORDER, LABEL, TITLE, BTN_BG, BTN_HOVER, BTN_BORDER, VALUE;
 
     public PmPhotoEditScreen(PmScreen parent, Path sourceFile) {
-        super(Text.translatable("pmchat.photoedit.title"));
+        super(Component.translatable("pmchat.photoedit.title"));
         this.parent = parent;
         this.sourceFile = sourceFile;
     }
@@ -102,7 +102,7 @@ public class PmPhotoEditScreen extends Screen {
             try {
                 current = PmPhotoEdit.load(sourceFile);
                 original = PmPhotoEdit.copy(current);
-                textureId = Identifier.of("pmchat", "photoedit/" + System.nanoTime());
+                textureId = ResourceLocation.of("pmchat", "photoedit/" + System.nanoTime());
             } catch (Exception e) {
                 loadError = true;
             }
@@ -173,10 +173,10 @@ public class PmPhotoEditScreen extends Screen {
         if (cropMode && cropHasSelection) {
             int by = toolsY - 22;
             addDrawableChild(FlatButton.centered(textRenderer, width / 2 - 90, by, 84, 18,
-                    Text.translatable("pmchat.photoedit.applycrop"),
+                    Component.translatable("pmchat.photoedit.applycrop"),
                     0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> applyCrop()));
             addDrawableChild(FlatButton.centered(textRenderer, width / 2 + 6, by, 84, 18,
-                    Text.translatable("pmchat.photoedit.cancel"),
+                    Component.translatable("pmchat.photoedit.cancel"),
                     0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A, btn -> {
                         cropHasSelection = false;
                         init();
@@ -186,15 +186,15 @@ public class PmPhotoEditScreen extends Screen {
         // Текст прямо на фото: кликните по фото, наберите текст, выберите цвет выше
         if (textMode) {
             int fy = toolsY - 42;
-            captionField = new TextFieldWidget(textRenderer, width / 2 - 140, fy, 220, 16,
-                    Text.translatable("pmchat.photoedit.captionhint"));
+            captionField = new EditBox(textRenderer, width / 2 - 140, fy, 220, 16,
+                    Component.translatable("pmchat.photoedit.captionhint"));
             captionField.setMaxLength(200);
             captionField.setText(captionInput);
             captionField.setSuggestion(captionInput.isEmpty()
-                    ? Text.translatable("pmchat.photoedit.captionhint").getString() : "");
+                    ? Component.translatable("pmchat.photoedit.captionhint").getString() : "");
             addDrawableChild(captionField);
             addDrawableChild(FlatButton.centered(textRenderer, width / 2 + 86, fy - 1, 60, 18,
-                    Text.translatable("pmchat.photoedit.applytext"),
+                    Component.translatable("pmchat.photoedit.applytext"),
                     0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> applyCaption()));
         }
 
@@ -202,21 +202,21 @@ public class PmPhotoEditScreen extends Screen {
         int actY = height - 26;
         int ax = width / 2 - actW - actGap / 2;
         addDrawableChild(FlatButton.centered(textRenderer, ax, actY, actW, actH,
-                Text.translatable("pmchat.photoedit.cancel"),
+                Component.translatable("pmchat.photoedit.cancel"),
                 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A, btn -> close()));
         addDrawableChild(FlatButton.centered(textRenderer, width / 2 + actGap / 2, actY, actW, actH,
-                Text.translatable("pmchat.photoedit.send"),
+                Component.translatable("pmchat.photoedit.send"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> doSend()));
     }
 
     private FlatButton tool(int x, int y, int w, int h, String key, boolean active, FlatButton.PressAction action) {
-        return FlatButton.centered(textRenderer, x, y, w, h, Text.translatable(key),
+        return FlatButton.centered(textRenderer, x, y, w, h, Component.translatable(key),
                 active ? BTN_HOVER : BTN_BG, BTN_HOVER, active ? VALUE : BTN_BORDER,
                 active ? 0xFFFFFFFF : LABEL, action);
     }
 
     private FlatButton swatch(int x, int y, int size, int color, boolean active, Runnable pick) {
-        return FlatButton.centered(textRenderer, x, y, size, size, Text.literal(active ? "●" : ""),
+        return FlatButton.centered(textRenderer, x, y, size, size, Component.literal(active ? "●" : ""),
                 color, color, active ? 0xFFFFFFFF : BTN_BORDER, 0xFFFFFFFF, btn -> {
                     pick.run();
                     init();
@@ -225,7 +225,7 @@ public class PmPhotoEditScreen extends Screen {
 
     private FlatButton sizeButton(int x, int y, int w, int h, int i, boolean active, Runnable pick) {
         String dot = "●".repeat(i + 1);
-        return FlatButton.centered(textRenderer, x, y, w, h, Text.literal(dot),
+        return FlatButton.centered(textRenderer, x, y, w, h, Component.literal(dot),
                 active ? BTN_HOVER : BTN_BG, BTN_HOVER, active ? VALUE : BTN_BORDER,
                 active ? 0xFFFFFFFF : LABEL, btn -> {
                     pick.run();
@@ -375,7 +375,7 @@ public class PmPhotoEditScreen extends Screen {
             if (nativeImage == null || texW != w || texH != h) {
                 NativeImage img = new NativeImage(NativeImage.Format.RGBA, w, h, false);
                 NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "pmchat-photoedit", img);
-                MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, tex);
+                Minecraft.getInstance().getTextureManager().registerTexture(textureId, tex);
                 NativeImageBackedTexture old = texture;
                 texture = tex;
                 nativeImage = img;
@@ -478,15 +478,15 @@ public class PmPhotoEditScreen extends Screen {
     // ---------- рендер ----------
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0xE6000000);
 
-        String titleStr = Text.translatable("pmchat.photoedit.title").getString();
+        String titleStr = Component.translatable("pmchat.photoedit.title").getString();
         context.drawText(textRenderer, titleStr, width / 2 - textRenderer.getWidth(titleStr) / 2, 8,
                 TITLE, false);
 
         if (loadError) {
-            String err = Text.translatable("pmchat.photoedit.error").getString();
+            String err = Component.translatable("pmchat.photoedit.error").getString();
             context.drawText(textRenderer, err, width / 2 - textRenderer.getWidth(err) / 2, height / 2,
                     0xFFE07A6A, false);
             super.render(context, mouseX, mouseY, delta);
@@ -503,7 +503,7 @@ public class PmPhotoEditScreen extends Screen {
                 context.drawStrokedRectangle(r[0] - 1, r[1] - 1, r[2] + 2, r[3] + 2, BORDER);
             }
             if (drawMode) {
-                String hint = Text.translatable("pmchat.photoedit.drawhint").getString();
+                String hint = Component.translatable("pmchat.photoedit.drawhint").getString();
                 context.drawText(textRenderer, hint, width / 2 - textRenderer.getWidth(hint) / 2,
                         height - 92, LABEL, false);
             }
@@ -513,7 +513,7 @@ public class PmPhotoEditScreen extends Screen {
                 context.fill(x1, y1, x2, y2, 0x33FFFFFF);
                 context.drawStrokedRectangle(x1, y1, x2 - x1, y2 - y1, 0xFFFFFFFF);
             } else if (cropMode) {
-                String hint = Text.translatable("pmchat.photoedit.crophint").getString();
+                String hint = Component.translatable("pmchat.photoedit.crophint").getString();
                 context.drawText(textRenderer, hint, width / 2 - textRenderer.getWidth(hint) / 2,
                         height - 92, LABEL, false);
             }
@@ -527,7 +527,7 @@ public class PmPhotoEditScreen extends Screen {
                         context.drawText(textRenderer, preview, (int) s[0] + 6, (int) s[1] - 4, color, true);
                     }
                 } else {
-                    String hint = Text.translatable("pmchat.photoedit.texthint").getString();
+                    String hint = Component.translatable("pmchat.photoedit.texthint").getString();
                     context.drawText(textRenderer, hint, width / 2 - textRenderer.getWidth(hint) / 2,
                             height - 108, LABEL, false);
                 }
@@ -544,13 +544,13 @@ public class PmPhotoEditScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override
     public void removed() {
         if (textureId != null) {
-            MinecraftClient.getInstance().getTextureManager().destroyTexture(textureId);
+            Minecraft.getInstance().getTextureManager().destroyTexture(textureId);
         }
         super.removed();
     }

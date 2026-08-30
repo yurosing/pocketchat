@@ -1,9 +1,9 @@
 package com.pmchat.client;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.NativeImageBackedTexture;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
@@ -33,18 +33,18 @@ public final class PmImages {
 
     public static class Entry {
         public volatile State state = State.LOADING;
-        public volatile Identifier textureId;
+        public volatile ResourceLocation textureId;
         public volatile int width;
         public volatile int height;
 
         // Анимация (GIF): кадры и задержки
-        public volatile Identifier[] frames;
+        public volatile ResourceLocation[] frames;
         public volatile int[] delaysMs;
         public volatile int totalDelayMs;
 
         /** Текущая текстура: для GIF — кадр по времени, иначе статичная. */
-        public Identifier currentTexture() {
-            Identifier[] f = frames;
+        public ResourceLocation currentTexture() {
+            ResourceLocation[] f = frames;
             if (f == null || f.length == 0 || totalDelayMs <= 0) return textureId;
             long t = System.currentTimeMillis() % totalDelayMs;
             for (int i = 0; i < f.length; i++) {
@@ -125,7 +125,7 @@ public final class PmImages {
 
     /** Регистрирует байты как текстуру(ы) в Entry: PNG статично, GIF — кадрами. */
     private static void register(String id, byte[] bytes, Entry entry) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         String safe = id.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9._-]", "_");
         try {
             if (safe.endsWith(".gif") || PmVideo.isVideo(safe)) {
@@ -133,11 +133,11 @@ public final class PmImages {
                 client.execute(() -> {
                     try {
                         int n = gif.images().size();
-                        Identifier[] ids = new Identifier[n];
+                        ResourceLocation[] ids = new ResourceLocation[n];
                         int[] delays = new int[n];
                         int total = 0;
                         for (int i = 0; i < n; i++) {
-                            Identifier texId = Identifier.of("pmchat", "img/" + safe + "_f" + i);
+                            ResourceLocation texId = ResourceLocation.of("pmchat", "img/" + safe + "_f" + i);
                             NativeImage img = gif.images().get(i);
                             final String frameName = safe + "_f" + i;
                             client.getTextureManager().registerTexture(texId,
@@ -162,7 +162,7 @@ public final class PmImages {
                 NativeImage image = NativeImage.read(bytes);
                 client.execute(() -> {
                     try {
-                        Identifier texId = Identifier.of("pmchat", "img/" + safe);
+                        ResourceLocation texId = ResourceLocation.of("pmchat", "img/" + safe);
                         client.getTextureManager().registerTexture(texId,
                                 new NativeImageBackedTexture(() -> "pmchat-" + safe, image));
                         entry.width = image.getWidth();

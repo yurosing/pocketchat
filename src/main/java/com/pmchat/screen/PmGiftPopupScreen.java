@@ -3,10 +3,10 @@ package com.pmchat.screen;
 import com.pmchat.client.PmBackend;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 /**
  * Всплывающая анимация полученного подарка (4.2) — в духе Telegram: значок
@@ -28,7 +28,7 @@ public class PmGiftPopupScreen extends Screen {
     private final int rarityColor;
 
     public PmGiftPopupScreen(String from, PmBackend.Gift gift, String giftIdFallback) {
-        super(Text.translatable("pmchat.gift.popup.title"));
+        super(Component.translatable("pmchat.gift.popup.title"));
         this.from = from == null ? "" : from;
         this.gift = gift;
         this.giftIdFallback = giftIdFallback == null ? "" : giftIdFallback;
@@ -40,7 +40,7 @@ public class PmGiftPopupScreen extends Screen {
         clearChildren();
         int cw = 90;
         addDrawableChild(FlatButton.centered(textRenderer, width / 2 - cw / 2, height / 2 + 88, cw, 18,
-                Text.translatable("pmchat.gift.popup.thanks"), 0xFF20321F, 0xFF2A422A, rarityColor, 0xFFE8F0E0,
+                Component.translatable("pmchat.gift.popup.thanks"), 0xFF20321F, 0xFF2A422A, rarityColor, 0xFFE8F0E0,
                 btn -> close()));
     }
 
@@ -57,7 +57,7 @@ public class PmGiftPopupScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         float t = (System.currentTimeMillis() - openedAt) / 1000f;
         int dimAlpha = (int) Math.min(150, t / 0.25f * 150);
         context.fill(0, 0, width, height, withAlpha(0x000000, dimAlpha));
@@ -92,29 +92,29 @@ public class PmGiftPopupScreen extends Screen {
         drawScaledCentered(context, icon, cx, cy - 18, 5.2f * intro * pulse, withAlpha(0xFFFFFF, (int) (255 * fade)));
 
         // Подпись: от кого и что подарили.
-        Text fromText = Text.translatable("pmchat.gift.popup.from", from);
-        Text nameText = Text.literal(name);
+        Component fromText = Component.translatable("pmchat.gift.popup.from", from);
+        Component nameText = Component.literal(name);
         drawCentered(context, fromText.getString(), cx, cy + 56, withAlpha(0xFFFFFF, (int) (220 * fade)));
         drawCentered(context, nameText.getString(), cx, cy + 70, withAlpha(rarityColor, (int) (255 * fade)));
 
         super.render(context, mouseX, mouseY, delta);
     }
 
-    private void drawCentered(DrawContext ctx, String s, int centerX, int y, int color) {
-        ctx.drawText(textRenderer, Text.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
+    private void drawCentered(GuiGraphics ctx, String s, int centerX, int y, int color) {
+        ctx.drawText(textRenderer, Component.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
     }
 
     /** Текст с масштабом вокруг точки (centerX, y — центр по вертикали). */
-    private void drawScaledCentered(DrawContext ctx, String s, int centerX, int y, float scale, int color) {
+    private void drawScaledCentered(GuiGraphics ctx, String s, int centerX, int y, float scale, int color) {
         var m = ctx.getMatrices();
         m.pushMatrix();
         m.translate(centerX, y);
         m.scale(scale, scale);
-        ctx.drawText(textRenderer, Text.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
+        ctx.drawText(textRenderer, Component.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
         m.popMatrix();
     }
 
-    private static void fillCircle(DrawContext ctx, int cx, int cy, int r, int color) {
+    private static void fillCircle(GuiGraphics ctx, int cx, int cy, int r, int color) {
         for (int dy = -r; dy <= r; dy++) {
             int dx = (int) Math.sqrt((double) r * r - dy * dy);
             ctx.fill(cx - dx, cy + dy, cx + dx, cy + dy + 1, color);
@@ -135,7 +135,7 @@ public class PmGiftPopupScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(null);
+        Minecraft.getInstance().setScreen(null);
     }
 
     @Override

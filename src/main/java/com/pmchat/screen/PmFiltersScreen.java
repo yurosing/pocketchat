@@ -4,11 +4,11 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +50,7 @@ public class PmFiltersScreen extends Screen {
     private final List<int[]> tiles = new ArrayList<>();
 
     public PmFiltersScreen(Screen parent) {
-        super(Text.translatable("pmchat.filters.title"));
+        super(Component.translatable("pmchat.filters.title"));
         this.parent = parent;
     }
 
@@ -85,7 +85,7 @@ public class PmFiltersScreen extends Screen {
         }
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
-                Text.translatable("pmchat.settings.done"),
+                Component.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
     }
 
@@ -106,9 +106,9 @@ public class PmFiltersScreen extends Screen {
     }
 
     private int addToggle(int y, String labelKey, boolean on, Runnable toggle) {
-        labels.add(new Object[]{Text.translatable(labelKey).getString(), px + 10, y + 3, LABEL});
+        labels.add(new Object[]{Component.translatable(labelKey).getString(), px + 10, y + 3, LABEL});
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 92, y, 84, 14,
-                Text.translatable(on ? "pmchat.set.on" : "pmchat.set.off"),
+                Component.translatable(on ? "pmchat.set.on" : "pmchat.set.off"),
                 BTN_BG, BTN_HOVER, BTN_BORDER, on ? 0xFF8FD8A8 : VALUE, btn -> {
                     toggle.run();
                     config.save();
@@ -119,12 +119,12 @@ public class PmFiltersScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
 
-        Text title = Text.translatable("pmchat.filters.title");
+        Component title = Component.translatable("pmchat.filters.title");
         context.drawText(textRenderer, title,
                 px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
 
@@ -143,7 +143,7 @@ public class PmFiltersScreen extends Screen {
             context.drawText(textRenderer, count,
                     t[0] + (t[2] - textRenderer.getWidth(count)) / 2, t[1] + 14, VALUE, false);
             // Подпись снизу (в 1–2 строки)
-            String label = Text.translatable(categoryKey(cat)).getString();
+            String label = Component.translatable(categoryKey(cat)).getString();
             List<String> lines = wrap(label, t[2] - 8);
             int ly = t[1] + t[3] - lines.size() * 10 - 4;
             for (String line : lines) {
@@ -177,7 +177,7 @@ public class PmFiltersScreen extends Screen {
         int mx = (int) click.x(), my = (int) click.y();
         for (int[] t : tiles) {
             if (mx >= t[0] && mx < t[0] + t[2] && my >= t[1] && my < t[1] + t[3]) {
-                MinecraftClient.getInstance().setScreen(new PmFilterListScreen(this, t[4]));
+                Minecraft.getInstance().setScreen(new PmFilterListScreen(this, t[4]));
                 return true;
             }
         }
@@ -192,7 +192,7 @@ public class PmFiltersScreen extends Screen {
     public void close() {
         config.save();
         PmChatClient.reloadPatterns();
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

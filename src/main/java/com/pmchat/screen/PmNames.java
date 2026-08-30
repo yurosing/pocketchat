@@ -1,8 +1,8 @@
 package com.pmchat.screen;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.network.chat.Component;
 
 /**
  * Полный отображаемый ник игрока — как его прислал сервер в списке игроков
@@ -14,23 +14,23 @@ public final class PmNames {
     private PmNames() {
     }
 
-    private static PlayerListEntry entry(String name) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+    private static PlayerInfo entry(String name) {
+        Minecraft mc = Minecraft.getInstance();
         if (name == null || mc.getNetworkHandler() == null) return null;
         return mc.getNetworkHandler().getPlayerListEntry(name);
     }
 
-    /** Отформатированный ник с префиксом/суффиксом как Text (или простой ник). */
-    public static Text displayText(String name) {
-        PlayerListEntry e = entry(name);
+    /** Отформатированный ник с префиксом/суффиксом как Component (или простой ник). */
+    public static Component displayText(String name) {
+        PlayerInfo e = entry(name);
         if (e != null) {
-            Text dn = e.getDisplayName();
+            Component dn = e.getDisplayName();
             if (dn != null) {
                 String s = dn.getString();
                 if (s != null && !s.isBlank()) return dn;
             }
         }
-        return Text.literal(name == null ? "" : name);
+        return Component.literal(name == null ? "" : name);
     }
 
     /** Строка полного ника (для поиска роли и расчёта ширины). */

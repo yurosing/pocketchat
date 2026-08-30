@@ -5,10 +5,10 @@ import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
@@ -35,11 +35,11 @@ public class PmShopScreen extends Screen {
     private int listTop, listBottom, scroll = 0;
     private final List<Object[]> buyRects = new java.util.ArrayList<>(); // {x,y,w,h,itemId}
 
-    private Text status = Text.empty();
+    private Component status = Component.empty();
     private int statusColor = 0xFFAAAAAA;
 
     public PmShopScreen(Screen parent) {
-        super(Text.translatable("pmchat.shop.title"));
+        super(Component.translatable("pmchat.shop.title"));
         this.parent = parent;
     }
 
@@ -65,10 +65,10 @@ public class PmShopScreen extends Screen {
         listBottom = py + panelH - 30;
 
         addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 22, 80, 16,
-                Text.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
+                Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
-    private void setStatus(Text text, int color) {
+    private void setStatus(Component text, int color) {
         status = text;
         statusColor = color;
     }
@@ -76,25 +76,25 @@ public class PmShopScreen extends Screen {
     private void buy(long itemId) {
         PmBackend.buyShopItem(itemId, (ok, v, err) -> {
             if (ok) {
-                setStatus(Text.translatable("pmchat.admin.ok"), 0xFF8FD8A8);
+                setStatus(Component.translatable("pmchat.admin.ok"), 0xFF8FD8A8);
                 init();
             } else {
-                setStatus(Text.translatable("pmchat.admin.fail", String.valueOf(err)), 0xFFE07A6A);
+                setStatus(Component.translatable("pmchat.admin.fail", String.valueOf(err)), 0xFFE07A6A);
             }
         });
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
         context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
 
-        Text title = getTitle();
+        Component title = getTitle();
         context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
         Long bal = PmBackend.cachedSelfBalance();
-        String balStr = Text.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
+        String balStr = Component.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
         context.drawText(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
 
         buyRects.clear();
@@ -119,7 +119,7 @@ public class PmShopScreen extends Screen {
             y += ROW_H;
         }
         if (items.isEmpty()) {
-            context.drawText(textRenderer, Text.translatable("pmchat.shop.empty"), px + 12, listTop + 2, SUBTLE, false);
+            context.drawText(textRenderer, Component.translatable("pmchat.shop.empty"), px + 12, listTop + 2, SUBTLE, false);
         }
 
         if (!status.getString().isEmpty()) {
@@ -159,7 +159,7 @@ public class PmShopScreen extends Screen {
 
     @Override
     public void close() {
-        MinecraftClient.getInstance().setScreen(parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

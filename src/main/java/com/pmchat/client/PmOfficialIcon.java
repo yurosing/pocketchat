@@ -1,12 +1,12 @@
 package com.pmchat.client;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.resource.Resource;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.NativeImageBackedTexture;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,8 +20,8 @@ import java.util.Optional;
  */
 public final class PmOfficialIcon {
 
-    private static final Identifier RESOURCE = Identifier.of("pmchat", "textures/gui/pocketchat_logo.png");
-    private static final Identifier TEXTURE_ID = Identifier.of("pmchat", "pocketchat_logo");
+    private static final ResourceLocation RESOURCE = ResourceLocation.of("pmchat", "textures/gui/pocketchat_logo.png");
+    private static final ResourceLocation TEXTURE_ID = ResourceLocation.of("pmchat", "pocketchat_logo");
 
     private static boolean attempted;
     private static boolean ready;
@@ -34,7 +34,7 @@ public final class PmOfficialIcon {
     private static void ensureLoaded() {
         if (attempted) return;
         attempted = true;
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         Optional<Resource> res = client.getResourceManager().getResource(RESOURCE);
         if (res.isEmpty()) {
             PmChatClient.LOGGER.debug("PocketChat official icon resource not found: {}", RESOURCE);
@@ -59,7 +59,7 @@ public final class PmOfficialIcon {
     }
 
     /** Рисует иконку вписанной в квадрат size×size (обрезая лишнее по центру, как аватар). */
-    public static void draw(DrawContext context, int x, int y, int size) {
+    public static void draw(GuiGraphics context, int x, int y, int size) {
         ensureLoaded();
         if (!ready) return;
         float scale = Math.max((float) size / width, (float) size / height);

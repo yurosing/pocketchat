@@ -1,9 +1,9 @@
 package com.pmchat.client;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.NativeImageBackedTexture;
+import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
@@ -116,7 +116,7 @@ public final class PmVlc {
     /** Один открытый сеанс проигрывания — одно видео, один плеер VLC. */
     public static class Session {
         private final EmbeddedMediaPlayer player;
-        private final Identifier textureId;
+        private final ResourceLocation textureId;
         private NativeImageBackedTexture texture; // пересоздаётся под размер кадра (render thread)
         private NativeImage frameImage;           // переиспользуемый буфер кадра (render thread)
         private int texW = -1, texH = -1;
@@ -138,13 +138,13 @@ public final class PmVlc {
 
         Session(String url, String audioSlaveUrl) {
             this.player = factory.mediaPlayers().newEmbeddedMediaPlayer();
-            this.textureId = Identifier.of("pmchat", "video/" + System.nanoTime());
+            this.textureId = ResourceLocation.of("pmchat", "video/" + System.nanoTime());
             // Заглушка-текстура, пока не пришёл первый кадр (иначе drawTexture по
             // незарегистрированному id). Настоящая текстура нужного размера
             // создаётся в tick() на render-потоке, когда известны размеры кадра.
             NativeImage placeholder = new NativeImage(NativeImage.Format.RGBA, 2, 2, false);
             this.texture = new NativeImageBackedTexture(() -> "pmchat-video", placeholder);
-            MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, texture);
+            Minecraft.getInstance().getTextureManager().registerTexture(textureId, texture);
 
             BufferFormatCallback formatCb = new BufferFormatCallback() {
                 @Override
@@ -244,7 +244,7 @@ public final class PmVlc {
                 if (frameImage == null || texW != w || texH != h) {
                     NativeImage img = new NativeImage(NativeImage.Format.RGBA, w, h, false);
                     NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "pmchat-video", img);
-                    MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, tex);
+                    Minecraft.getInstance().getTextureManager().registerTexture(textureId, tex);
                     NativeImageBackedTexture old = texture;
                     texture = tex;
                     frameImage = img;
@@ -278,7 +278,7 @@ public final class PmVlc {
             }
         }
 
-        public Identifier textureId() {
+        public ResourceLocation textureId() {
             return textureId;
         }
 
@@ -374,8 +374,8 @@ public final class PmVlc {
                     player.release();
                 } catch (Exception ignored) {
                 }
-                MinecraftClient.getInstance().execute(() ->
-                        MinecraftClient.getInstance().getTextureManager().destroyTexture(textureId));
+                Minecraft.getInstance().execute(() ->
+                        Minecraft.getInstance().getTextureManager().destroyTexture(textureId));
             }
         }
     }
