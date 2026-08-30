@@ -1,5 +1,8 @@
 plugins {
-    id 'fabric-loom' version '1.17.20'
+    // 26.1+ needs the rewritten `net.fabricmc.fabric-loom` plugin (not the old bare
+    // `fabric-loom` id) — that's the one that skips mappings/remapping entirely for
+    // unobfuscated Minecraft versions.
+    id 'net.fabricmc.fabric-loom' version '1.17.20'
     id 'maven-publish'
     // Version declared once here; :api-mod applies it and does the actual publishing.
     id 'com.vanniktech.maven.publish' version '0.30.0' apply false

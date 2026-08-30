@@ -116,7 +116,10 @@ body so existing implementors keep compiling.
 
 ## Build & release
 
-- Gradle + **fabric-loom** (1.17.20), **Java 25**, MC 26.2. **26.1+ ships fully
+- Gradle + **`net.fabricmc.fabric-loom`** (1.17.20 — the rewritten plugin id for
+  26.1+; the old bare `fabric-loom` id is a different, older plugin that still
+  expects a mappings dependency and will fail with "Configuration 'mappings' has
+  no dependencies"), **Java 25**, MC 26.2. **26.1+ ships fully
   unobfuscated** (real names baked into the jar) — Mojang doesn't even publish a
   mappings file for these versions, so there is **no `mappings` line in `build.gradle`
   and no `yarn_mappings` property at all**, and mod dependencies (fabric-loader,
