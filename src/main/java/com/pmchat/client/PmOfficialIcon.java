@@ -1,8 +1,8 @@
 package com.pmchat.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.NativeImageBackedTexture;
 import net.minecraft.server.packs.resources.Resource;
@@ -59,7 +59,7 @@ public final class PmOfficialIcon {
     }
 
     /** Рисует иконку вписанной в квадрат size×size (обрезая лишнее по центру, как аватар). */
-    public static void draw(GuiGraphics context, int x, int y, int size) {
+    public static void draw(GuiGraphicsExtractor context, int x, int y, int size) {
         ensureLoaded();
         if (!ready) return;
         float scale = Math.max((float) size / width, (float) size / height);
@@ -68,7 +68,7 @@ public final class PmOfficialIcon {
         int ix = x + (size - w) / 2;
         int iy = y + (size - h) / 2;
         context.enableScissor(x, y, x + size, y + size);
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, TEXTURE_ID, ix, iy,
+        context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_ID, ix, iy,
                 0f, 0f, w, h, width, height, width, height);
         context.disableScissor();
     }

@@ -1,6 +1,6 @@
 package com.pmchat.screen;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Свои пиксельные иконки для кнопок мессенджера — не зависим от шрифта Minecraft.
@@ -16,7 +16,7 @@ public final class PmIcons {
      * Рисует иконку по центру прямоугольника x0,y0,w,h цветом color (ARGB).
      * '#' — полный пиксель, '+' — 55% (сглаживание углов), '.' — 28%.
      */
-    public static void draw(GuiGraphics ctx, String[] bmp, int x0, int y0, int w, int h, int color) {
+    public static void draw(GuiGraphicsExtractor ctx, String[] bmp, int x0, int y0, int w, int h, int color) {
         int gw = bmp[0].length();
         int gh = bmp.length;
         int ox = x0 + (w - gw) / 2;

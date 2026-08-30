@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.MutableComponent;
@@ -179,17 +179,17 @@ public class PmProfilePostsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, 0xC0000000);
         ctx.fill(px, py, px + pw, py + ph, BG);
-        ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
+        ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = Component.translatable("pmchat.posts.title_of", player);
-        ctx.drawText(textRenderer, trim(title.getString(), pw - 40), px + 12, py + 8, TITLE, false);
+        ctx.text(textRenderer, trim(title.getString(), pw - 40), px + 12, py + 8, TITLE, false);
         String x = "✕";
         boolean hovX = closeRect != null && mouseX >= closeRect[0] && mouseX < closeRect[0] + closeRect[2]
                 && mouseY >= closeRect[1] && mouseY < closeRect[1] + closeRect[3];
-        ctx.drawText(textRenderer, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
+        ctx.text(textRenderer, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
 
         int fx = px + 12;
         int fw = pw - 24;
@@ -199,9 +199,9 @@ public class PmProfilePostsScreen extends Screen {
         deleteRects.clear();
         ctx.enableScissor(px + 1, listTop, px + pw - 1, listBottom);
         if (posts == null) {
-            ctx.drawText(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
+            ctx.text(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
         } else if (posts.isEmpty()) {
-            ctx.drawText(textRenderer, Component.translatable("pmchat.posts.empty"), fx, listTop + 4, LABEL, false);
+            ctx.text(textRenderer, Component.translatable("pmchat.posts.empty"), fx, listTop + 4, LABEL, false);
         } else {
             int y = listTop - scroll;
             for (PmBackend.ProfilePost p : posts) {
@@ -210,16 +210,16 @@ public class PmProfilePostsScreen extends Screen {
                 if (y + rowH >= listTop && y <= listBottom) {
                     ctx.fill(fx, y, fx + fw, y + rowH - 2, BTN_BG);
                     String head = p.author + (p.at > 0 ? "  ·  " + fmt.format(new Date(p.at)) : "");
-                    ctx.drawText(textRenderer, trim(head, fw - 24), fx + 4, y + 2, ACCENT, false);
+                    ctx.text(textRenderer, trim(head, fw - 24), fx + 4, y + 2, ACCENT, false);
                     int ly = y + 12;
                     for (String line : wrapLines(p.content, fw - 8)) {
-                        ctx.drawText(textRenderer, parseMarkup(line), fx + 4, ly, VALUE, false);
+                        ctx.text(textRenderer, parseMarkup(line), fx + 4, ly, VALUE, false);
                         ly += 10;
                     }
                     if (self) {
                         int dx = fx + fw - 12, dy = y + 2;
                         boolean hov = mouseX >= dx - 2 && mouseX < dx + 8 && mouseY >= dy - 1 && mouseY < dy + 9;
-                        ctx.drawText(textRenderer, "✖", dx, dy, hov ? 0xFFE07A6A : LABEL, false);
+                        ctx.text(textRenderer, "✖", dx, dy, hov ? 0xFFE07A6A : LABEL, false);
                         deleteRects.add(new Object[]{dx - 2, dy - 1, 10, 10, p.id});
                     }
                 }
@@ -229,10 +229,10 @@ public class PmProfilePostsScreen extends Screen {
         ctx.disableScissor();
 
         if (!status.getString().isEmpty()) {
-            ctx.drawText(textRenderer, status, fx, py + ph - 36, statusColor, false);
+            ctx.text(textRenderer, status, fx, py + ph - 36, statusColor, false);
         }
 
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
     }
 
     /** Наивный перенос по словам под ширину — публикации короткие, точность до пикселя не нужна. */
@@ -254,7 +254,7 @@ public class PmProfilePostsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
         for (Object[] r : deleteRects) {
             if (mx >= (int) r[0] && mx < (int) r[0] + (int) r[2]

@@ -6,8 +6,8 @@ import com.pmchat.client.PmServerMedia;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -190,22 +190,22 @@ public class PmStreamsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         if (sm.streamVersion() != lastSeenVersion && !startMode && donateTarget == null) {
             reinit();
         }
 
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
+        context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable("pmchat.streams.title");
-        context.drawText(textRenderer, title,
+        context.text(textRenderer, title,
                 px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
 
         if (!pluginPresent() && !startMode && donateTarget == null) {
             String note = Component.translatable("pmchat.streams.noplugin_note").getString();
-            context.drawText(textRenderer, trimTo(note, PANEL_W - 24),
+            context.text(textRenderer, trimTo(note, PANEL_W - 24),
                     px + (PANEL_W - textRenderer.getWidth(trimTo(note, PANEL_W - 24))) / 2, py + 19, SUBTLE, false);
         }
 
@@ -215,42 +215,42 @@ public class PmStreamsScreen extends Screen {
 
         String rmsg = sm.lastDonateMsg();
         if (rmsg != null && System.currentTimeMillis() - sm.lastDonateAt() < 4000) {
-            context.drawText(textRenderer, trimTo(rmsg, PANEL_W - 24),
+            context.text(textRenderer, trimTo(rmsg, PANEL_W - 24),
                     px + 12, py + panelH - 34, sm.lastDonateOk() ? 0xFF6FBF8B : 0xFFE0574C, false);
         } else if (localMsg != null && System.currentTimeMillis() - localMsgAt < 4000) {
-            context.drawText(textRenderer, trimTo(localMsg, PANEL_W - 24),
+            context.text(textRenderer, trimTo(localMsg, PANEL_W - 24),
                     px + 12, py + panelH - 34, 0xFFE0574C, false);
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
-    private void drawList(GuiGraphics context, int mouseX, int mouseY) {
+    private void drawList(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         donateRects.clear();
         List<PmServerMedia.LiveStream> streams = sm.liveStreams();
         int listTop = py + headerH + 22;
         if (streams.isEmpty()) {
-            context.drawText(textRenderer, Component.translatable("pmchat.streams.empty"),
+            context.text(textRenderer, Component.translatable("pmchat.streams.empty"),
                     px + 14, listTop + 4, SUBTLE, false);
             return;
         }
         int y = listTop;
         for (PmServerMedia.LiveStream s : streams) {
             context.fill(px + 8, y, px + PANEL_W - 8, y + ROW_H - 4, BTN_BG);
-            context.drawStrokedRectangle(px + 8, y, PANEL_W - 16, ROW_H - 4, BORDER);
-            context.drawText(textRenderer, "● " + config.aliasOf(s.player()), px + 14, y + 4, 0xFFE07A6A, false);
+            context.outline(px + 8, y, PANEL_W - 16, ROW_H - 4, BORDER);
+            context.text(textRenderer, "● " + config.aliasOf(s.player()), px + 14, y + 4, 0xFFE07A6A, false);
             String t = s.title() == null || s.title().isBlank()
                     ? Component.translatable("pmchat.streams.notitle").getString() : s.title();
-            context.drawText(textRenderer, trimTo(t, PANEL_W - 100), px + 14, y + 16, LABEL, false);
+            context.text(textRenderer, trimTo(t, PANEL_W - 100), px + 14, y + 16, LABEL, false);
 
             boolean self = s.player().equalsIgnoreCase(PmChatClient.selfName());
             if (!self) {
                 int bx = px + PANEL_W - 70, by = y + 6, bw = 56, bh = 18;
                 boolean hov = mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + bh;
                 context.fill(bx, by, bx + bw, by + bh, hov ? BTN_HOVER : BTN_BG);
-                context.drawStrokedRectangle(bx, by, bw, bh, BTN_BORDER);
+                context.outline(bx, by, bw, bh, BTN_BORDER);
                 String lbl = Component.translatable("pmchat.streams.donate").getString();
-                context.drawText(textRenderer, lbl, bx + (bw - textRenderer.getWidth(lbl)) / 2, by + 5,
+                context.text(textRenderer, lbl, bx + (bw - textRenderer.getWidth(lbl)) / 2, by + 5,
                         0xFFF0C34E, false);
                 donateRects.add(new Object[]{bx, by, bw, bh, s.player()});
             }
@@ -265,7 +265,7 @@ public class PmStreamsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         if (!startMode && donateTarget == null && pluginPresent()) {
             int mx = (int) click.x(), my = (int) click.y();
             for (Object[] r : donateRects) {

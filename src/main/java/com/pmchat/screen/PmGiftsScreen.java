@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -108,25 +108,25 @@ public class PmGiftsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         long now = System.currentTimeMillis();
         float dt = lastFrameMs == 0L ? 0f : Math.min(0.1f, (now - lastFrameMs) / 1000f);
         lastFrameMs = now;
 
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
+        context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
         Component title = getTitle();
-        context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
         if (catalogMode) {
             Long bal = PmBackend.cachedSelfBalance();
             String balStr = Component.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
-            context.drawText(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
+            context.text(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
             renderCatalogGrid(context, mouseX, mouseY, dt);
             if (!status.getString().isEmpty()) {
-                context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2,
+                context.text(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2,
                         py + PANEL_H - 46, statusColor, false);
             }
         } else if (detailIndex >= 0 && detailIndex < gifts().size()) {
@@ -135,7 +135,7 @@ public class PmGiftsScreen extends Screen {
             renderReceivedGrid(context, mouseX, mouseY, dt);
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     /**
@@ -144,7 +144,7 @@ public class PmGiftsScreen extends Screen {
      * позади значка (не только на ховере — иначе сетка выглядит мёртвой, пока не
      * водишь мышью), дышащий значок и плавный «поп»-масштаб карточки при наведении.
      */
-    private void drawCardBase(GuiGraphics context, int x, int y, int index, String icon, int rarity,
+    private void drawCardBase(GuiGraphicsExtractor context, int x, int y, int index, String icon, int rarity,
                                boolean hover, boolean dim, float dt) {
         long now = System.currentTimeMillis();
         double t = now / 1000.0 + index * 0.37;
@@ -159,7 +159,7 @@ public class PmGiftsScreen extends Screen {
         // Карточка со скруглением + лёгкий градиент к центру цвета редкости.
         PmScreen.fillRound(context, x, y, CELL, CELL, 8, dim ? BTN_BG : (0x30000000 | (rarity & 0xFFFFFF)));
         PmScreen.fillRound(context, x + 1, y + 1, CELL - 2, CELL - 2, 7, 0x20FFFFFF);
-        context.drawStrokedRectangle(x, y, CELL, CELL, dim ? BTN_BORDER : lerpAlpha(rarity, 0x60 + (int) (hAnim * 0x50)));
+        context.outline(x, y, CELL, CELL, dim ? BTN_BORDER : lerpAlpha(rarity, 0x60 + (int) (hAnim * 0x50)));
 
         if (!dim) {
             // Свечение кольцами — пульсирует по фазе, сдвинутой для каждой карточки.
@@ -211,7 +211,7 @@ public class PmGiftsScreen extends Screen {
     }
 
     /** {@link #fillCircle} с обрезкой по прямоугольнику карточки — свечение не должно вылезать на соседей. */
-    private static void fillCircleClamped(GuiGraphics ctx, int cx, int cy, int r, int color, int minX, int minY, int maxX, int maxY) {
+    private static void fillCircleClamped(GuiGraphicsExtractor ctx, int cx, int cy, int r, int color, int minX, int minY, int maxX, int maxY) {
         for (int dy = -r; dy <= r; dy++) {
             int yy = cy + dy;
             if (yy < minY || yy >= maxY) continue;
@@ -221,12 +221,12 @@ public class PmGiftsScreen extends Screen {
         }
     }
 
-    private void renderCatalogGrid(GuiGraphics context, int mouseX, int mouseY, float dt) {
+    private void renderCatalogGrid(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         cardRects.clear();
         List<PmBackend.Gift> cat = PmBackend.cachedCatalog();
         if (cat.isEmpty()) {
             Component empty = Component.translatable("pmchat.shop.empty");
-            context.drawText(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
+            context.text(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
             return;
         }
         Long selfBal = PmBackend.cachedSelfBalance();
@@ -246,7 +246,7 @@ public class PmGiftsScreen extends Screen {
             drawCardBase(context, x, y, i, g.icon, rarity, hover, !afford, dt);
 
             String priceStr = PmBackend.formatCoins(g.price);
-            context.drawText(textRenderer, priceStr, x + (CELL - textRenderer.getWidth(priceStr)) / 2,
+            context.text(textRenderer, priceStr, x + (CELL - textRenderer.getWidth(priceStr)) / 2,
                     y + CELL - 13, afford ? PmBackend.CURRENCY_COLOR : 0xFF9A6A6A, false);
 
             cardRects.add(new Object[]{x, y, CELL, CELL, i});
@@ -272,12 +272,12 @@ public class PmGiftsScreen extends Screen {
         });
     }
 
-    private void renderReceivedGrid(GuiGraphics context, int mouseX, int mouseY, float dt) {
+    private void renderReceivedGrid(GuiGraphicsExtractor context, int mouseX, int mouseY, float dt) {
         cardRects.clear();
         List<PmBackend.ReceivedGift> got = gifts();
         if (got.isEmpty()) {
             Component empty = Component.translatable("pmchat.profile.gifts.empty");
-            context.drawText(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
+            context.text(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
             return;
         }
 
@@ -301,7 +301,7 @@ public class PmGiftsScreen extends Screen {
             int badgeColor = 0xFF000000 | (from.toLowerCase(Locale.ROOT).hashCode() & 0xFFFFFF);
             fillCircle(context, x + CELL - 13, y + 13, 12, badgeColor);
             String initial = from.substring(0, 1).toUpperCase(Locale.ROOT);
-            context.drawText(textRenderer, initial, x + CELL - 13 - textRenderer.getWidth(initial) / 2, y + 13 - 4, 0xFFFFFFFF, false);
+            context.text(textRenderer, initial, x + CELL - 13 - textRenderer.getWidth(initial) / 2, y + 13 - 4, 0xFFFFFFFF, false);
 
             cardRects.add(new Object[]{x, y, CELL, CELL, i});
 
@@ -315,10 +315,10 @@ public class PmGiftsScreen extends Screen {
         }
 
         Component caption = Component.translatable("pmchat.gifts.caption", PmNames.displayString(player));
-        context.drawText(textRenderer, caption, px + (PANEL_W - textRenderer.getWidth(caption)) / 2, py + PANEL_H - 40, SUBTLE, false);
+        context.text(textRenderer, caption, px + (PANEL_W - textRenderer.getWidth(caption)) / 2, py + PANEL_H - 40, SUBTLE, false);
     }
 
-    private void renderDetail(GuiGraphics context, PmBackend.ReceivedGift g) {
+    private void renderDetail(GuiGraphicsExtractor context, PmBackend.ReceivedGift g) {
         PmBackend.Gift def = PmBackend.giftById(g.giftId);
         String icon = def != null ? def.icon : (g.giftId == null || g.giftId.isEmpty() ? "•" : g.giftId);
         int rarity = PmBackend.rarityColor(def != null ? def.rarity : null);
@@ -354,21 +354,21 @@ public class PmGiftsScreen extends Screen {
         }
     }
 
-    private void drawCentered(GuiGraphics ctx, String s, int centerX, int y, int color) {
-        ctx.drawText(textRenderer, Component.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
+    private void drawCentered(GuiGraphicsExtractor ctx, String s, int centerX, int y, int color) {
+        ctx.text(textRenderer, Component.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
     }
 
     /** Текст с масштабом вокруг точки (centerX, y — центр по вертикали). */
-    private void drawScaledCentered(GuiGraphics ctx, String s, int centerX, int y, float scale, int color) {
-        var m = ctx.getMatrices();
+    private void drawScaledCentered(GuiGraphicsExtractor ctx, String s, int centerX, int y, float scale, int color) {
+        var m = ctx.pose();
         m.pushMatrix();
         m.translate(centerX, y);
         m.scale(scale, scale);
-        ctx.drawText(textRenderer, Component.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
+        ctx.text(textRenderer, Component.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
         m.popMatrix();
     }
 
-    private static void fillCircle(GuiGraphics ctx, int cx, int cy, int r, int color) {
+    private static void fillCircle(GuiGraphicsExtractor ctx, int cx, int cy, int r, int color) {
         for (int dy = -r; dy <= r; dy++) {
             int dx = (int) Math.sqrt((double) r * r - dy * dy);
             ctx.fill(cx - dx, cy + dy, cx + dx, cy + dy + 1, color);
@@ -376,7 +376,7 @@ public class PmGiftsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         if (catalogMode || detailIndex < 0) {
             double mx = click.x(), my = click.y();
             for (Object[] rect : cardRects) {

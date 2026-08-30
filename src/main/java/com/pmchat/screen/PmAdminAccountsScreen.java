@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -103,12 +103,12 @@ public class PmAdminAccountsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
+        context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.drawText(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
 
         int y = listTop;
         int visible = accounts.size();
@@ -118,25 +118,25 @@ public class PmAdminAccountsScreen extends Screen {
             if (hovered) context.fill(px + 6, y, px + PANEL_W - 6, y + ROW_H - 1, 0x22FFFFFF);
 
             String badge = (a.official ? "★ " : a.verified ? "✓ " : "");
-            context.drawText(textRenderer, badge + a.username, px + 10, y + 2,
+            context.text(textRenderer, badge + a.username, px + 10, y + 2,
                     a.official ? 0xFFF0C34E : a.verified ? 0xFF4CC26A : LABEL, false);
             String balanceStr = String.valueOf(a.balance);
-            context.drawText(textRenderer, balanceStr,
+            context.text(textRenderer, balanceStr,
                     px + PANEL_W - 14 - textRenderer.getWidth(balanceStr), y + 2, VALUE, false);
             net.minecraft.network.chat.Component lastSeen = PmBackend.humanizeLastSeen(a.lastSeenAt, config.preciseLastSeen && a.sharePrecise);
-            context.drawText(textRenderer, lastSeen, px + 10, y + 13, LABEL, false);
+            context.text(textRenderer, lastSeen, px + 10, y + 13, LABEL, false);
             y += ROW_H;
         }
 
         if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, px + 10, listTop + 2, statusColor, false);
+            context.text(textRenderer, status, px + 10, listTop + 2, statusColor, false);
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         double mouseX = click.x();
         double mouseY = click.y();
         if (mouseX >= px + 8 && mouseX < px + PANEL_W - 8 && mouseY >= listTop && mouseY < listBottom) {

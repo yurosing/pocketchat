@@ -7,7 +7,7 @@ import com.pmchat.client.PmPalettes;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -452,25 +452,25 @@ public class PmSettingsScreen extends Screen {
     private final java.util.List<Object[]> optionLabels = new java.util.ArrayList<>();
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
+        context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable("pmchat.settings.title");
-        context.drawText(textRenderer, title,
+        context.text(textRenderer, title,
                 px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
         for (Object[] entry : optionLabels) {
-            context.drawText(textRenderer, Component.translatable((String) entry[0]),
+            context.text(textRenderer, Component.translatable((String) entry[0]),
                     px + 10, (int) entry[1] + 3, LABEL, false);
         }
 
         if (tab == 4 && dmPriceField != null && !dmPriceStatus.getString().isEmpty()) {
-            context.drawText(textRenderer, dmPriceStatus, px + 12, py + panelH - 40, dmPriceStatusColor, false);
+            context.text(textRenderer, dmPriceStatus, px + 12, py + panelH - 40, dmPriceStatusColor, false);
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     private void reinit() {

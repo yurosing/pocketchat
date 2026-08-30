@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -85,17 +85,17 @@ public class PmShopScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
+        context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = getTitle();
-        context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
         Long bal = PmBackend.cachedSelfBalance();
         String balStr = Component.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
-        context.drawText(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
+        context.text(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
 
         buyRects.clear();
         List<PmBackend.ShopItem> items = PmBackend.cachedShopItems();
@@ -103,30 +103,30 @@ public class PmShopScreen extends Screen {
         for (int i = scroll; i < items.size() && y + ROW_H <= listBottom; i++) {
             PmBackend.ShopItem item = items.get(i);
             context.fill(px + 8, y, px + PANEL_W - 8, y + ROW_H - 2, 0x22FFFFFF);
-            context.drawText(textRenderer, item.name, px + 12, y + 3, LABEL, false);
+            context.text(textRenderer, item.name, px + 12, y + 3, LABEL, false);
             String desc = trim(item.description, PANEL_W - 24 - 70);
-            context.drawText(textRenderer, desc, px + 12, y + 15, SUBTLE, false);
+            context.text(textRenderer, desc, px + 12, y + 15, SUBTLE, false);
 
             int btnW = 62, btnH = ROW_H - 8;
             int btnX = px + PANEL_W - 12 - btnW, btnY = y + 4;
             boolean hover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, hover ? BTN_HOVER : BTN_BG);
-            context.drawStrokedRectangle(btnX, btnY, btnW, btnH, BORDER);
+            context.outline(btnX, btnY, btnW, btnH, BORDER);
             String priceStr = PmBackend.formatCoins(item.price) + "/" + item.durationDays + "d";
-            context.drawText(textRenderer, priceStr, btnX + (btnW - textRenderer.getWidth(priceStr)) / 2, btnY + 4, PmBackend.CURRENCY_COLOR, false);
+            context.text(textRenderer, priceStr, btnX + (btnW - textRenderer.getWidth(priceStr)) / 2, btnY + 4, PmBackend.CURRENCY_COLOR, false);
             buyRects.add(new Object[]{btnX, btnY, btnW, btnH, item.id});
 
             y += ROW_H;
         }
         if (items.isEmpty()) {
-            context.drawText(textRenderer, Component.translatable("pmchat.shop.empty"), px + 12, listTop + 2, SUBTLE, false);
+            context.text(textRenderer, Component.translatable("pmchat.shop.empty"), px + 12, listTop + 2, SUBTLE, false);
         }
 
         if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + panelH - 40, statusColor, false);
+            context.text(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + panelH - 40, statusColor, false);
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     private String trim(String text, int maxWidth) {
@@ -136,7 +136,7 @@ public class PmShopScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         double mx = click.x(), my = click.y();
         for (Object[] rect : buyRects) {
             int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];

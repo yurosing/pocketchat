@@ -2,7 +2,7 @@ package com.pmchat.mixin;
 
 import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmMedia;
-import net.minecraft.client.gui.Click;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.ChatScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class ChatScreenMixin {
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void pmchat$mediaBarClick(Click click, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
+    private void pmchat$mediaBarClick(MouseButtonEvent click, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
         if (!PmChatClient.getConfig().mediaBarWhileTyping) return;
         PmMedia media = PmMedia.get();
         if (media.hasActive() && media.isMinimized()

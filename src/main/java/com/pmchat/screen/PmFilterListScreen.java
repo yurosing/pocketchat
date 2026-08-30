@@ -5,11 +5,11 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -169,20 +169,20 @@ public class PmFilterListScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         ctx.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
-        ctx.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
+        ctx.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable(PmFiltersScreen.categoryKey(category));
-        ctx.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
+        ctx.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
 
         int listTop = py + 48;
         int listBottom = py + panelH - 30;
         rowButtons.clear();
 
         if (size() == 0) {
-            ctx.drawText(textRenderer, Component.translatable("pmchat.filters.empty"),
+            ctx.text(textRenderer, Component.translatable("pmchat.filters.empty"),
                     px + 12, listTop + 4, SECTION, false);
         }
 
@@ -202,7 +202,7 @@ public class PmFilterListScreen extends Screen {
                 int ly = y + 4;
                 for (int li = 0; li < lines.size(); li++) {
                     String line = lines.get(li) + (li == lines.size() - 1 ? tag : "");
-                    ctx.drawText(textRenderer, line, px + 12, ly, VALUE, false);
+                    ctx.text(textRenderer, line, px + 12, ly, VALUE, false);
                     ly += 10;
                 }
                 // Кнопки ✎ и ✕
@@ -224,17 +224,17 @@ public class PmFilterListScreen extends Screen {
         // Подсказка про Tab для ников — справа от кнопки «Назад», чтобы не
         // перекрывалась ею (кнопка занимает px+10..px+80 внизу).
         if (!isText()) {
-            ctx.drawText(textRenderer, Component.translatable("pmchat.filters.tabhint"),
+            ctx.text(textRenderer, Component.translatable("pmchat.filters.tabhint"),
                     px + 90, py + panelH - 20, SECTION, false);
         }
 
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
     }
 
-    private void drawMini(GuiGraphics ctx, int x, int y, String glyph, int color, int mx, int my) {
+    private void drawMini(GuiGraphicsExtractor ctx, int x, int y, String glyph, int color, int mx, int my) {
         boolean hov = mx >= x && mx < x + 16 && my >= y && my < y + 14;
         ctx.fill(x, y, x + 16, y + 14, hov ? 0xFF2A4A5C : 0xFF101A16);
-        ctx.drawText(textRenderer, glyph, x + 8 - textRenderer.getWidth(glyph) / 2, y + 3, color, false);
+        ctx.text(textRenderer, glyph, x + 8 - textRenderer.getWidth(glyph) / 2, y + 3, color, false);
     }
 
     private List<String> wrap(String text, int maxW) {
@@ -254,7 +254,7 @@ public class PmFilterListScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
         for (int[] b : rowButtons) {
             if (mx >= b[0] && mx < b[0] + b[2] && my >= b[1] && my < b[1] + b[3]) {
@@ -289,8 +289,8 @@ public class PmFilterListScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.getKeycode() == GLFW.GLFW_KEY_TAB && !isText() && field != null && field.isFocused()) {
+    public boolean keyPressed(KeyEvent input) {
+        if (input.key() == GLFW.GLFW_KEY_TAB && !isText() && field != null && field.isFocused()) {
             completeNick();
             return true;
         }

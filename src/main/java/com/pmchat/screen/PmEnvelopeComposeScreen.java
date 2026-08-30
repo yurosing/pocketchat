@@ -6,7 +6,7 @@ import com.pmchat.client.PmWire;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -193,15 +193,15 @@ public class PmEnvelopeComposeScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
+        context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.drawText(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
 
         for (Object[] entry : fieldLabels) {
-            context.drawText(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
+            context.text(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
         }
 
         if (skinRect != null) {
@@ -209,20 +209,20 @@ public class PmEnvelopeComposeScreen extends Screen {
             boolean hov = inRect(mouseX, mouseY, skinRect);
             context.fill(skinRect[0], skinRect[1], skinRect[0] + skinRect[2], skinRect[1] + skinRect[3],
                     hov ? BTN_HOVER : BTN_BG);
-            context.drawStrokedRectangle(skinRect[0], skinRect[1], skinRect[2], skinRect[3], BTN_BORDER);
+            context.outline(skinRect[0], skinRect[1], skinRect[2], skinRect[3], BTN_BORDER);
             String label = PmWire.envelopeIcon(skin) + "  " + Component.translatable(PmWire.envelopeLabelKey(skin)).getString()
                     + "  (" + Component.translatable("pmchat.envelope.skin.next").getString() + ")";
             label = trimToButton(label, skinRect[2] - 6);
-            context.drawText(textRenderer, label,
+            context.text(textRenderer, label,
                     skinRect[0] + (skinRect[2] - textRenderer.getWidth(label)) / 2, skinRect[1] + 4,
                     PmWire.envelopeColor(skin), false);
         }
 
         if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 12, statusColor, false);
+            context.text(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 12, statusColor, false);
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     private boolean inRect(int mx, int my, int[] r) {
@@ -230,7 +230,7 @@ public class PmEnvelopeComposeScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
         if (inRect(mx, my, skinRect)) {
             skinIndex = (skinIndex + 1) % PmWire.ENVELOPE_SKINS.length;

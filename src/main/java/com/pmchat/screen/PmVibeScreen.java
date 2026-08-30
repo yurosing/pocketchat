@@ -6,7 +6,7 @@ import com.pmchat.client.PmVibe;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -61,12 +61,12 @@ public class PmVibeScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
+        context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.drawText(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
 
         int listTop = py + 24;
         int listBottom = py + PANEL_H - 28;
@@ -75,21 +75,21 @@ public class PmVibeScreen extends Screen {
 
         rowRects.clear();
         if (tracks.isEmpty()) {
-            context.drawText(textRenderer, trim(Component.translatable("pmchat.vibe.empty").getString(), fw), fx, listTop, LABEL, false);
+            context.text(textRenderer, trim(Component.translatable("pmchat.vibe.empty").getString(), fw), fx, listTop, LABEL, false);
         } else {
             int y = listTop;
             for (Path f : tracks) {
                 if (y + 15 > listBottom) break;
                 boolean hov = mouseX >= fx && mouseX < fx + fw && mouseY >= y && mouseY < y + 14;
                 context.fill(fx, y, fx + fw, y + 14, hov ? BTN_HOVER : BTN_BG);
-                context.drawStrokedRectangle(fx, y, fw, 14, BTN_BORDER);
-                context.drawText(textRenderer, "♪ " + trim(f.getFileName().toString(), fw - 12), fx + 5, y + 3, VALUE, false);
+                context.outline(fx, y, fw, 14, BTN_BORDER);
+                context.text(textRenderer, "♪ " + trim(f.getFileName().toString(), fw - 12), fx + 5, y + 3, VALUE, false);
                 rowRects.add(new int[]{fx, y, fw, 14});
                 y += 16;
             }
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     private String trim(String s, int maxW) {
@@ -99,7 +99,7 @@ public class PmVibeScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
         for (int i = 0; i < rowRects.size(); i++) {
             int[] r = rowRects.get(i);

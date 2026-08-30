@@ -5,8 +5,8 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -119,40 +119,40 @@ public class PmFiltersScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
+        context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable("pmchat.filters.title");
-        context.drawText(textRenderer, title,
+        context.text(textRenderer, title,
                 px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
 
         for (Object[] l : labels) {
-            context.drawText(textRenderer, (String) l[0], (int) l[1], (int) l[2], (int) l[3], false);
+            context.text(textRenderer, (String) l[0], (int) l[1], (int) l[2], (int) l[3], false);
         }
 
         // Плитки
         for (int[] t : tiles) {
             boolean hov = mouseX >= t[0] && mouseX < t[0] + t[2] && mouseY >= t[1] && mouseY < t[1] + t[3];
             context.fill(t[0], t[1], t[0] + t[2], t[1] + t[3], hov ? TILE_HOVER : TILE_BG);
-            context.drawStrokedRectangle(t[0], t[1], t[2], t[3], TILE_BORDER);
+            context.outline(t[0], t[1], t[2], t[3], TILE_BORDER);
             int cat = t[4];
             String count = String.valueOf(categoryCount(config, cat));
             // Крупное число по центру
-            context.drawText(textRenderer, count,
+            context.text(textRenderer, count,
                     t[0] + (t[2] - textRenderer.getWidth(count)) / 2, t[1] + 14, VALUE, false);
             // Подпись снизу (в 1–2 строки)
             String label = Component.translatable(categoryKey(cat)).getString();
             List<String> lines = wrap(label, t[2] - 8);
             int ly = t[1] + t[3] - lines.size() * 10 - 4;
             for (String line : lines) {
-                context.drawText(textRenderer, line,
+                context.text(textRenderer, line,
                         t[0] + (t[2] - textRenderer.getWidth(line)) / 2, ly, SECTION, false);
                 ly += 10;
             }
         }
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     private List<String> wrap(String text, int maxW) {
@@ -173,7 +173,7 @@ public class PmFiltersScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
         for (int[] t : tiles) {
             if (mx >= t[0] && mx < t[0] + t[2] && my >= t[1] && my < t[1] + t[3]) {

@@ -3,10 +3,10 @@ package com.pmchat.screen;
 import com.pmchat.client.PmChatClient;
 import com.pmchat.client.PmConfig;
 import com.pmchat.client.PmMedia;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.Click;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.Util;
 import org.lwjgl.glfw.GLFW;
@@ -59,17 +59,17 @@ public class PmMediaScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         // Тёмная заливка вместо renderBackground(): его блюр падает
         // «Can only blur once per frame», если кадр уже размывался.
         ctx.fill(0, 0, width, height, BG);
         // Панель
         ctx.fill(px, py, px + pw, py + ph, PANEL);
-        ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
+        ctx.outline(px, py, pw, ph, BORDER);
 
         // Заголовок
         Component title = Component.translatable("pmchat.media.title");
-        ctx.drawText(textRenderer, title, px + 12, py + 10, TEXT, false);
+        ctx.text(textRenderer, title, px + 12, py + 10, TEXT, false);
         // Кнопка «открыть папку музыки»
         Component openLbl = Component.translatable("pmchat.media.openfolder");
         int owL = textRenderer.getWidth(openLbl) + 16;
@@ -77,8 +77,8 @@ public class PmMediaScreen extends Screen {
         openFolderRect = new int[]{oX, oY, owL, 16};
         boolean hovOpen = in(mouseX, mouseY, openFolderRect);
         ctx.fill(oX, oY, oX + owL, oY + 16, hovOpen ? ROW_HOVER : ROW);
-        ctx.drawStrokedRectangle(oX, oY, owL, 16, BORDER);
-        ctx.drawText(textRenderer, openLbl, oX + 8, oY + 4, hovOpen ? TEXT : SUBTLE, false);
+        ctx.outline(oX, oY, owL, 16, BORDER);
+        ctx.text(textRenderer, openLbl, oX + 8, oY + 4, hovOpen ? TEXT : SUBTLE, false);
 
         int listTop = py + 30;
         int listBottom = py + ph - 8;
@@ -89,9 +89,9 @@ public class PmMediaScreen extends Screen {
         int y = listTop - scroll;
         int rowH = 18;
         if (entries.isEmpty()) {
-            ctx.drawText(textRenderer, Component.translatable("pmchat.media.empty"),
+            ctx.text(textRenderer, Component.translatable("pmchat.media.empty"),
                     px + 12, listTop + 6, SUBTLE, false);
-            ctx.drawText(textRenderer, Component.translatable("pmchat.media.hint"),
+            ctx.text(textRenderer, Component.translatable("pmchat.media.hint"),
                     px + 12, listTop + 20, SUBTLE, false);
         }
         ctx.enableScissor(px + 1, listTop, px + pw - 1, listBottom);
@@ -105,9 +105,9 @@ public class PmMediaScreen extends Screen {
                 String label = dir ? f.getName() + "  ♫" : PmMedia.get().hasActive() ? f.getName() : f.getName();
                 int count = dir ? countAudio(f) : 0;
                 String right = dir ? count + " " + Component.translatable("pmchat.media.tracks").getString() : "";
-                ctx.drawText(textRenderer, trim(label, pw - 60), px + 26, y + 5, TEXT, false);
+                ctx.text(textRenderer, trim(label, pw - 60), px + 26, y + 5, TEXT, false);
                 if (!right.isEmpty()) {
-                    ctx.drawText(textRenderer, right, px + pw - 12 - textRenderer.getWidth(right), y + 5, SUBTLE, false);
+                    ctx.text(textRenderer, right, px + pw - 12 - textRenderer.getWidth(right), y + 5, SUBTLE, false);
                 }
                 rowRects.add(new Object[]{px + 6, y, pw - 12, rowH, f});
             }
@@ -149,7 +149,7 @@ public class PmMediaScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
         // Клик по окошку-плееру (управление)
         if (PmMedia.get().hasActive() && PmMedia.get().handleMiniClick(mx, my)) {
@@ -191,8 +191,8 @@ public class PmMediaScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        int k = input.getKeycode();
+    public boolean keyPressed(KeyEvent input) {
+        int k = input.key();
         if (k == GLFW.GLFW_KEY_SPACE) {
             PmMedia.get().togglePause();
             return true;

@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -127,19 +127,19 @@ public class PmBotEditScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, 0xC0000000);
         ctx.fill(px, py, px + pw, py + ph, BG);
-        ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
+        ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = getTitle();
-        ctx.drawText(textRenderer, trim(title.getString(), pw - 16), px + 8, py + 8, TITLE, false);
+        ctx.text(textRenderer, trim(title.getString(), pw - 16), px + 8, py + 8, TITLE, false);
 
         if (!status.getString().isEmpty()) {
-            ctx.drawText(textRenderer, status, px + 12, py + ph - 16, statusColor, false);
+            ctx.text(textRenderer, status, px + 12, py + ph - 16, statusColor, false);
         }
 
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
     }
 
     private String trim(String s, int maxW) {

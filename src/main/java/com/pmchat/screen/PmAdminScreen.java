@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -254,7 +254,7 @@ public class PmAdminScreen extends Screen {
         });
     }
 
-    private void drawDashboard(GuiGraphics context, int mouseX, int mouseY) {
+    private void drawDashboard(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int top = HEADER_H + TAB_H * tabRows + 14;
         int cx = width / 2;
 
@@ -265,7 +265,7 @@ public class PmAdminScreen extends Screen {
         drawPanel(context, cx - pillW / 2, top, pillW, 20);
         String pillText = online ? "● ONLINE" : dashStatus == null ? "…" : "● OFFLINE";
         int pillColor = online ? OK : dashStatus == null ? SUBTLE : BAD;
-        context.drawText(textRenderer, pillText,
+        context.text(textRenderer, pillText,
                 cx - textRenderer.getWidth(pillText) / 2, top + 6, pillColor, false);
 
         int tilesY = top + 32;
@@ -291,33 +291,33 @@ public class PmAdminScreen extends Screen {
             drawPanel(context, x, tilesY, tileW, 56);
             context.fill(x, tilesY, x + tileW, tilesY + 2, accent[i]);
             String num = dashStatus != null ? String.valueOf(values[i]) : "—";
-            context.drawText(textRenderer, num, x + (tileW - textRenderer.getWidth(num)) / 2, tilesY + 14, TEXT_MAIN, false);
-            context.drawText(textRenderer, labels[i], x + (tileW - textRenderer.getWidth(labels[i])) / 2, tilesY + 38, SUBTLE, false);
+            context.text(textRenderer, num, x + (tileW - textRenderer.getWidth(num)) / 2, tilesY + 14, TEXT_MAIN, false);
+            context.text(textRenderer, labels[i], x + (tileW - textRenderer.getWidth(labels[i])) / 2, tilesY + 38, SUBTLE, false);
         }
 
         if (dashStatus != null) {
             String uptime = Component.translatable("pmchat.admin.dash.uptime", formatUptime(dashStatus.uptimeSec)).getString();
-            context.drawText(textRenderer, uptime, cx - textRenderer.getWidth(uptime) / 2, tilesY + 70, SUBTLE, false);
+            context.text(textRenderer, uptime, cx - textRenderer.getWidth(uptime) / 2, tilesY + 70, SUBTLE, false);
         } else if (dashError) {
             Component err = Component.translatable("pmchat.admin.dash.fail");
-            context.drawText(textRenderer, err, cx - textRenderer.getWidth(err) / 2, tilesY + 70, BAD, false);
+            context.text(textRenderer, err, cx - textRenderer.getWidth(err) / 2, tilesY + 70, BAD, false);
         }
 
         // Заголовок и состояние блока переключателей фич (кнопки уже добавлены в buildDashboard)
         int cardW = Math.min(420, width - 40);
         int fx = cx - cardW / 2 + 12;
         Component featTitle = Component.translatable("pmchat.admin.feature.title");
-        context.drawText(textRenderer, featTitle, fx, height - 140, SUBTLE, false);
+        context.text(textRenderer, featTitle, fx, height - 140, SUBTLE, false);
         int colW = (cardW - 24 - 8) / 3;
         for (int i = 0; i < FEATURES.length; i++) {
             boolean enabled = PmBackend.isFeatureEnabled(FEATURES[i]);
             int col = fx + i * (colW + 4);
             String state = enabled ? "●" : "○";
-            context.drawText(textRenderer, state, col, height - 100, enabled ? OK : BAD, false);
+            context.text(textRenderer, state, col, height - 100, enabled ? OK : BAD, false);
         }
 
         if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
+            context.text(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -701,7 +701,7 @@ public class PmAdminScreen extends Screen {
         });
     }
 
-    private void drawShop(GuiGraphics context, int mouseX, int mouseY) {
+    private void drawShop(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         shopRowRects.clear();
         shopDeleteRects.clear();
         int cardW = Math.min(420, width - 40);
@@ -719,14 +719,14 @@ public class PmAdminScreen extends Screen {
 
             String line = item.name + " — " + item.price + "/" + item.durationDays + "d";
             String trimmed = trim(line, right - left - 60);
-            context.drawText(textRenderer, trimmed, left + 8, y + 6, TEXT_MAIN, false);
+            context.text(textRenderer, trimmed, left + 8, y + 6, TEXT_MAIN, false);
 
             int btnX = right - 46, btnY = y + 2, btnW = 40, btnH = ROW_H - 6;
             boolean btnHover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
-            context.drawStrokedRectangle(btnX, btnY, btnW, btnH, NEON_DIM);
+            context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
             Component del = Component.translatable("pmchat.admin.shop.delete");
-            context.drawText(textRenderer, del, btnX + (btnW - textRenderer.getWidth(del)) / 2, btnY + 3, BAD, false);
+            context.text(textRenderer, del, btnX + (btnW - textRenderer.getWidth(del)) / 2, btnY + 3, BAD, false);
             shopDeleteRects.add(new Object[]{btnX, btnY, btnW, btnH, item.id});
             shopRowRects.add(new Object[]{left, y, right - left - 46, ROW_H - 2, item.id});
 
@@ -734,9 +734,9 @@ public class PmAdminScreen extends Screen {
         }
 
         if (shopItems.isEmpty() && !status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, left + 8, shopListTop + 2, statusColor, false);
+            context.text(textRenderer, status, left + 8, shopListTop + 2, statusColor, false);
         } else if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
+            context.text(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -911,7 +911,7 @@ public class PmAdminScreen extends Screen {
                         ok ? OK : BAD));
     }
 
-    private void drawRoles(GuiGraphics context, int mouseX, int mouseY) {
+    private void drawRoles(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         roleRowRects.clear();
         roleDeleteRects.clear();
         int cardW = Math.min(420, width - 40);
@@ -929,14 +929,14 @@ public class PmAdminScreen extends Screen {
 
             String line = (r.prefix.isEmpty() ? "" : r.prefix + " ") + r.name + " (" + r.key + ")";
             String trimmed = trim(line, right - left - 60);
-            context.drawText(textRenderer, trimmed, left + 8, y + 6, r.color, false);
+            context.text(textRenderer, trimmed, left + 8, y + 6, r.color, false);
 
             int btnX = right - 46, btnY = y + 2, btnW = 40, btnH = ROW_H - 6;
             boolean btnHover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
-            context.drawStrokedRectangle(btnX, btnY, btnW, btnH, NEON_DIM);
+            context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
             Component del = Component.translatable("pmchat.admin.shop.delete");
-            context.drawText(textRenderer, del, btnX + (btnW - textRenderer.getWidth(del)) / 2, btnY + 3, BAD, false);
+            context.text(textRenderer, del, btnX + (btnW - textRenderer.getWidth(del)) / 2, btnY + 3, BAD, false);
             roleDeleteRects.add(new Object[]{btnX, btnY, btnW, btnH, r.key});
             roleRowRects.add(new Object[]{left, y, right - left - 46, ROW_H - 2, r.key});
 
@@ -944,9 +944,9 @@ public class PmAdminScreen extends Screen {
         }
 
         if (roleDefs.isEmpty() && !status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, left + 8, roleListTop + 2, statusColor, false);
+            context.text(textRenderer, status, left + 8, roleListTop + 2, statusColor, false);
         } else if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
+            context.text(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -1021,7 +1021,7 @@ public class PmAdminScreen extends Screen {
         });
     }
 
-    private void drawBots(GuiGraphics context, int mouseX, int mouseY) {
+    private void drawBots(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         botApproveRects.clear();
         botRejectRects.clear();
         int cardW = Math.min(420, width - 40);
@@ -1030,7 +1030,7 @@ public class PmAdminScreen extends Screen {
         int right = cx + cardW / 2;
 
         if (botPending.isEmpty()) {
-            context.drawText(textRenderer, Component.translatable("pmchat.admin.bots.pending.empty"),
+            context.text(textRenderer, Component.translatable("pmchat.admin.bots.pending.empty"),
                     left, botListTop, SUBTLE, false);
             return;
         }
@@ -1043,20 +1043,20 @@ public class PmAdminScreen extends Screen {
             context.fill(left, y, left + 2, y + ROW_H - 2, NEON_DIM);
 
             String line = p.owner + ": " + p.name + " (" + p.price + ")";
-            context.drawText(textRenderer, trim(line, right - left - 100), left + 8, y + 6, TEXT_MAIN, false);
+            context.text(textRenderer, trim(line, right - left - 100), left + 8, y + 6, TEXT_MAIN, false);
 
             int btnW = 44, btnH = ROW_H - 6, btnY = y + 2;
             int rejX = right - btnW - 2, apprX = rejX - btnW - 4;
             boolean apprHover = mouseX >= apprX && mouseX < apprX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
             boolean rejHover = mouseX >= rejX && mouseX < rejX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
             context.fill(apprX, btnY, apprX + btnW, btnY + btnH, apprHover ? BTN_HOVER : BTN_BG);
-            context.drawStrokedRectangle(apprX, btnY, btnW, btnH, OK);
+            context.outline(apprX, btnY, btnW, btnH, OK);
             Component approve = Component.translatable("pmchat.admin.bots.approve");
-            context.drawText(textRenderer, approve, apprX + (btnW - textRenderer.getWidth(approve)) / 2, btnY + 3, OK, false);
+            context.text(textRenderer, approve, apprX + (btnW - textRenderer.getWidth(approve)) / 2, btnY + 3, OK, false);
             context.fill(rejX, btnY, rejX + btnW, btnY + btnH, rejHover ? BTN_HOVER : BTN_BG);
-            context.drawStrokedRectangle(rejX, btnY, btnW, btnH, BAD);
+            context.outline(rejX, btnY, btnW, btnH, BAD);
             Component reject = Component.translatable("pmchat.admin.bots.reject");
-            context.drawText(textRenderer, reject, rejX + (btnW - textRenderer.getWidth(reject)) / 2, btnY + 3, BAD, false);
+            context.text(textRenderer, reject, rejX + (btnW - textRenderer.getWidth(reject)) / 2, btnY + 3, BAD, false);
 
             botApproveRects.add(new Object[]{apprX, btnY, btnW, btnH, p.id});
             botRejectRects.add(new Object[]{rejX, btnY, btnW, btnH, p.id});
@@ -1107,7 +1107,7 @@ public class PmAdminScreen extends Screen {
 
     private final java.util.List<Object[]> resolveBtnRects = new java.util.ArrayList<>();
 
-    private void drawList(GuiGraphics context, int mouseX, int mouseY, boolean reportsTab) {
+    private void drawList(GuiGraphicsExtractor context, int mouseX, int mouseY, boolean reportsTab) {
         resolveBtnRects.clear();
         int cardW = Math.min(680, width - 40);
         int cx = width / 2;
@@ -1130,14 +1130,14 @@ public class PmAdminScreen extends Screen {
                 line = t.username + ": " + t.message;
             }
             String trimmed = trim(line, right - left - 90);
-            context.drawText(textRenderer, trimmed, left + 8, y + 6, TEXT_MAIN, false);
+            context.text(textRenderer, trimmed, left + 8, y + 6, TEXT_MAIN, false);
 
             int btnX = right - 62, btnY = y + 2, btnW = 54, btnH = ROW_H - 6;
             boolean btnHover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
-            context.drawStrokedRectangle(btnX, btnY, btnW, btnH, NEON_DIM);
+            context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
             Component resolve = Component.translatable("pmchat.admin.resolve");
-            context.drawText(textRenderer, resolve, btnX + (btnW - textRenderer.getWidth(resolve)) / 2, btnY + 3, OK, false);
+            context.text(textRenderer, resolve, btnX + (btnW - textRenderer.getWidth(resolve)) / 2, btnY + 3, OK, false);
             resolveBtnRects.add(new Object[]{btnX, btnY, btnW, btnH, reportsTab
                     ? reports.get(i).id : tickets.get(i).id});
 
@@ -1145,7 +1145,7 @@ public class PmAdminScreen extends Screen {
         }
 
         if (!status.getString().isEmpty()) {
-            context.drawText(textRenderer, status, left + 8, listTop + 2, statusColor, false);
+            context.text(textRenderer, status, left + 8, listTop + 2, statusColor, false);
         }
     }
 
@@ -1168,37 +1168,37 @@ public class PmAdminScreen extends Screen {
         statusColor = color;
     }
 
-    private void drawPanel(GuiGraphics context, int x, int y, int w, int h) {
+    private void drawPanel(GuiGraphicsExtractor context, int x, int y, int w, int h) {
         context.fill(x, y, x + w, y + h, PANEL);
-        context.drawStrokedRectangle(x, y, w, h, NEON_DIM);
+        context.outline(x, y, w, h, NEON_DIM);
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, BG);
         // Тонкая неоновая линия под шапкой — акцент в стиле киберпанк.
         context.fill(0, 0, width, HEADER_H, PANEL);
         context.fill(0, HEADER_H - 2, width, HEADER_H, NEON);
 
         Component title = Component.translatable("pmchat.admin.title");
-        context.drawText(textRenderer, title, 12, 10, TITLE, false);
+        context.text(textRenderer, title, 12, 10, TITLE, false);
 
         String backend = config.backendUrl == null ? "" : config.backendUrl;
-        context.drawText(textRenderer, backend, width - 12 - textRenderer.getWidth(backend), 10, SUBTLE, false);
+        context.text(textRenderer, backend, width - 12 - textRenderer.getWidth(backend), 10, SUBTLE, false);
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         for (Object[] entry : formSections) {
-            context.drawText(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], TITLE, false);
+            context.text(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], TITLE, false);
         }
         for (Object[] entry : formLabels) {
-            context.drawText(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], SUBTLE, false);
+            context.text(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], SUBTLE, false);
         }
         if (tab == 7 && roleColorField != null && rolePrefixField != null) {
             int sx = rolePrefixField.getX() + rolePrefixField.getWidth() + 5;
             int sy = roleColorField.getY();
             context.fill(sx, sy, sx + 16, sy + 16, previewColor(roleColorField.getText()));
-            context.drawStrokedRectangle(sx, sy, 16, 16, NEON_DIM);
+            context.outline(sx, sy, 16, 16, NEON_DIM);
         }
 
         switch (tab) {
@@ -1210,7 +1210,7 @@ public class PmAdminScreen extends Screen {
             case 8 -> drawBots(context, mouseX, mouseY);
             default -> {
                 if (!status.getString().isEmpty()) {
-                    context.drawText(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2,
+                    context.text(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2,
                             height - 46, statusColor, false);
                 }
             }
@@ -1218,7 +1218,7 @@ public class PmAdminScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         if ((tab == 3 || tab == 4) && !resolveBtnRects.isEmpty()) {
             double mx = click.x(), my = click.y();
             for (Object[] rect : resolveBtnRects) {

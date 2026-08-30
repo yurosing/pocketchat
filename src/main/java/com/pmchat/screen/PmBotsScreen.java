@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -232,39 +232,39 @@ public class PmBotsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, 0xC0000000);
         ctx.fill(px, py, px + pw, py + ph, BG);
-        ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
+        ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = getTitle();
-        ctx.drawText(textRenderer, title, px + 12, py + 8, TITLE, false);
+        ctx.text(textRenderer, title, px + 12, py + 8, TITLE, false);
         String x = "✕";
         boolean hovX = closeRect != null && mouseX >= closeRect[0] && mouseX < closeRect[0] + closeRect[2]
                 && mouseY >= closeRect[1] && mouseY < closeRect[1] + closeRect[3];
-        ctx.drawText(textRenderer, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
+        ctx.text(textRenderer, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
 
         int fx = px + 12;
         int fw = pw - 24;
         int y = py + 24 + 19;
         if (createPrice > 0) {
-            ctx.drawText(textRenderer, Component.translatable("pmchat.bots.priceline", createPrice), fx, y, LABEL, false);
+            ctx.text(textRenderer, Component.translatable("pmchat.bots.priceline", createPrice), fx, y, LABEL, false);
             y += 10;
         }
         y += 22; // строка кнопок «Создать»/«Магазин»
 
         // Список ботов (текстовая часть; кнопки рисует super.render)
         if (bots == null) {
-            ctx.drawText(textRenderer, Component.translatable("pmchat.bots.loading"), fx, y, LABEL, false);
+            ctx.text(textRenderer, Component.translatable("pmchat.bots.loading"), fx, y, LABEL, false);
         } else if (bots.isEmpty()) {
-            ctx.drawText(textRenderer, Component.translatable("pmchat.bots.none"), fx, y, LABEL, false);
+            ctx.text(textRenderer, Component.translatable("pmchat.bots.none"), fx, y, LABEL, false);
         } else {
             int rowH = 30;
             int listBottom = py + ph - 78;
             for (PmBackend.BotInfo b : bots) {
                 if (y + rowH > listBottom) break;
                 String head = "@" + b.username + (b.name.isBlank() ? "" : "  " + b.name);
-                ctx.drawText(textRenderer, trim(head, fw), fx, y, VALUE, false);
+                ctx.text(textRenderer, trim(head, fw), fx, y, VALUE, false);
                 y += rowH;
             }
         }
@@ -281,7 +281,7 @@ public class PmBotsScreen extends Screen {
                 boolean hov = mouseX >= fx && mouseX < fx + fw && mouseY >= ry && mouseY < ry + rowH;
                 ctx.fill(fx, ry, fx + fw, ry + rowH - 1, hov ? BTN_HOVER : BTN_BG);
                 String label = "@" + b.username + (b.name.isBlank() ? "" : "  " + b.name);
-                ctx.drawText(textRenderer, trim(label, fw - 6), fx + 3, ry + 3, VALUE, false);
+                ctx.text(textRenderer, trim(label, fw - 6), fx + 3, ry + 3, VALUE, false);
                 searchRowRects.add(new Object[]{fx, ry, fw, rowH - 1, b.username});
                 ry += rowH;
             }
@@ -289,14 +289,14 @@ public class PmBotsScreen extends Screen {
 
         // Статус
         if (!status.getString().isEmpty()) {
-            ctx.drawText(textRenderer, status, fx, py + ph - 54, statusColor, false);
+            ctx.text(textRenderer, status, fx, py + ph - 54, statusColor, false);
         }
 
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
         for (Object[] r : searchRowRects) {
             if (mx >= (int) r[0] && mx < (int) r[0] + (int) r[2]

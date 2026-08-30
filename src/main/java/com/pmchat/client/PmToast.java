@@ -3,7 +3,7 @@ package com.pmchat.client;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.toasts.Toast;
 import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.network.chat.Component;
@@ -39,18 +39,18 @@ public class PmToast implements Toast {
     }
 
     @Override
-    public void draw(GuiGraphics context, Font textRenderer, long startTime) {
+    public void draw(GuiGraphicsExtractor context, Font textRenderer, long startTime) {
         context.fill(0, 0, getWidth(), getHeight(), 0xE61C3644);
-        context.drawStrokedRectangle(0, 0, getWidth(), getHeight(), ACCENT);
+        context.outline(0, 0, getWidth(), getHeight(), ACCENT);
         context.fill(0, 0, 3, getHeight(), ACCENT);
 
-        context.drawText(textRenderer, Component.literal("✉ " + sender), 9, 7, ACCENT, false);
+        context.text(textRenderer, Component.literal("✉ " + sender), 9, 7, ACCENT, false);
         String text = preview;
         int maxW = getWidth() - 18;
         if (textRenderer.getWidth(text) > maxW) {
             text = textRenderer.trimToWidth(text, maxW - textRenderer.getWidth("…")) + "…";
         }
-        context.drawText(textRenderer, Component.literal(text), 9, 19, 0xFFEDF3F0, false);
+        context.text(textRenderer, Component.literal(text), 9, 19, 0xFFEDF3F0, false);
     }
 
     @Override

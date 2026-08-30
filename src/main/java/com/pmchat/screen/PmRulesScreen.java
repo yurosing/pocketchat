@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -160,13 +160,13 @@ public class PmRulesScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
+        context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = getTitle();
-        context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 10, TITLE, false);
+        context.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 10, TITLE, false);
         context.fill(px + 12, py + 24, px + PANEL_W - 12, py + 25, BORDER);
 
         int textW = PANEL_W - 32;
@@ -180,7 +180,7 @@ public class PmRulesScreen extends Screen {
 
         drawBox(context, rulesBoxY, rulesBoxH);
         int ry = py + rulesBoxY + 5;
-        context.drawText(textRenderer, header, tx + 4, ry, SUBTLE, false);
+        context.text(textRenderer, header, tx + 4, ry, SUBTLE, false);
         ry += 12;
         for (String rule : rules) {
             ry = drawBullet(context, rule, tx + 4, ry, textW - 18);
@@ -189,24 +189,24 @@ public class PmRulesScreen extends Screen {
         int fy = py + rulesBoxY + rulesBoxH + 10;
         drawWrapped(context, footer, tx, fy, textW, SUBTLE);
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
-    private void drawBox(GuiGraphics context, int boxY, int boxH) {
-        context.drawStrokedRectangle(px + 10, py + boxY, PANEL_W - 20, boxH, BORDER);
+    private void drawBox(GuiGraphicsExtractor context, int boxY, int boxH) {
+        context.outline(px + 10, py + boxY, PANEL_W - 20, boxH, BORDER);
     }
 
-    private void drawWrapped(GuiGraphics context, String text, int x, int y, int maxW, int color) {
+    private void drawWrapped(GuiGraphicsExtractor context, String text, int x, int y, int maxW, int color) {
         for (var line : textRenderer.wrapLines(Component.literal(text), maxW)) {
-            context.drawText(textRenderer, line, x, y, color, false);
+            context.text(textRenderer, line, x, y, color, false);
             y += 10;
         }
     }
 
-    private int drawBullet(GuiGraphics context, String text, int x, int y, int maxW) {
-        context.drawText(textRenderer, "•", x, y, 0xFFE07A6A, false);
+    private int drawBullet(GuiGraphicsExtractor context, String text, int x, int y, int maxW) {
+        context.text(textRenderer, "•", x, y, 0xFFE07A6A, false);
         for (var line : textRenderer.wrapLines(Component.literal(text), maxW)) {
-            context.drawText(textRenderer, line, x + 10, y, LABEL, false);
+            context.text(textRenderer, line, x + 10, y, LABEL, false);
             y += 10;
         }
         return y;

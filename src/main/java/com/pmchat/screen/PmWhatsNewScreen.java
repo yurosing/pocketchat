@@ -6,7 +6,7 @@ import com.pmchat.client.PmUpdate;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.chat.Component;
@@ -100,17 +100,17 @@ public class PmWhatsNewScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(px + 2, py, px + PANEL_W - 2, py + panelH, BG);
         context.fill(px, py + 2, px + PANEL_W, py + panelH - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, panelH, BORDER);
+        context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable("pmchat.whatsnew.title");
-        context.drawText(textRenderer, title,
+        context.text(textRenderer, title,
                 px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
 
         Component ver = Component.translatable("pmchat.whatsnew.version", PmUpdate.currentVersion());
-        context.drawText(textRenderer, ver,
+        context.text(textRenderer, ver,
                 px + (PANEL_W - textRenderer.getWidth(ver)) / 2, py + 22, SUBTLE, false);
 
         // Разделитель под шапкой
@@ -119,13 +119,13 @@ public class PmWhatsNewScreen extends Screen {
         int y = py + 43;
         for (int i = 0; i < lines.size(); i++) {
             if (firstLine.get(i)) {
-                context.drawText(textRenderer, "✦", px + 14, y, 0xFF6FBF8B, false);
+                context.text(textRenderer, "✦", px + 14, y, 0xFF6FBF8B, false);
             }
-            context.drawText(textRenderer, lines.get(i), px + 28, y, LABEL, false);
+            context.text(textRenderer, lines.get(i), px + 28, y, LABEL, false);
             y += LINE_H;
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     @Override

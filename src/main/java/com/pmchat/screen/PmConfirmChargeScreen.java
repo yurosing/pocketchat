@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -72,24 +72,24 @@ public class PmConfirmChargeScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0x90000000);
         context.fill(px + 2, py, px + PANEL_W - 2, py + PANEL_H, BG);
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
-        context.drawStrokedRectangle(px, py, PANEL_W, PANEL_H, BORDER);
+        context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
         Component title = getTitle();
-        context.drawText(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
 
         Component ask = Component.translatable("pmchat.dm.confirm.ask", target, PmBackend.formatCoins(price));
         drawWrapped(context, ask, px + 12, py + 24, PANEL_W - 24, LABEL);
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
-    private void drawWrapped(GuiGraphics context, Component text, int x, int y, int maxW, int color) {
+    private void drawWrapped(GuiGraphicsExtractor context, Component text, int x, int y, int maxW, int color) {
         for (var line : textRenderer.wrapLines(text, maxW)) {
-            context.drawText(textRenderer, line, x, y, color, false);
+            context.text(textRenderer, line, x, y, color, false);
             y += 10;
         }
     }

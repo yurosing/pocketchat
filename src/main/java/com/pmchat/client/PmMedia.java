@@ -4,8 +4,8 @@ import com.pmchat.screen.PmIcons;
 import com.pmchat.screen.PmTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 import java.io.File;
@@ -356,7 +356,7 @@ public final class PmMedia {
      * на наведение (внутри экрана) или просто показать (поверх HUD). Возвращает
      * прямоугольник окна, чтобы вызывающий знал занятую область.
      */
-    public int[] renderMini(GuiGraphics ctx, int mouseX, int mouseY, boolean interactive) {
+    public int[] renderMini(GuiGraphicsExtractor ctx, int mouseX, int mouseY, boolean interactive) {
         Minecraft mc = Minecraft.getInstance();
         Font tr = mc.textRenderer;
         int sw = mc.getWindow().getScaledWidth();
@@ -379,7 +379,7 @@ public final class PmMedia {
 
         // Фон + рамка — палитра текущей темы мода (3.8), не жёстко зашитый зелёный
         ctx.fill(x0 - 2, y0 - 2, x0 + mw + 2, y0 + mh + 2, (th.bg & 0xFFFFFF) | 0xF0000000);
-        ctx.drawStrokedRectangle(x0 - 2, y0 - 2, mw + 4, mh + 4, th.border);
+        ctx.outline(x0 - 2, y0 - 2, mw + 4, mh + 4, th.border);
 
         renderVideoArt(ctx, tr, x0, y0, mw, mediaH, th);
 
@@ -402,7 +402,7 @@ public final class PmMedia {
         return winRect;
     }
 
-    private void renderVideoArt(GuiGraphics ctx, Font tr, int x0, int y0, int mw, int h, PmTheme th) {
+    private void renderVideoArt(GuiGraphicsExtractor ctx, Font tr, int x0, int y0, int mw, int h, PmTheme th) {
         PmVlc.Session s = session;
         if (s != null && s.width() > 0 && s.height() > 0) {
             int vw = s.width(), vh = s.height();
@@ -411,18 +411,18 @@ public final class PmMedia {
             int hh = Math.max(1, Math.round(vh * scale));
             int ix = x0 + (mw - w) / 2, iy = y0 + (h - hh) / 2;
             ctx.fill(x0, y0, x0 + mw, y0 + h, 0xFF050907);
-            ctx.drawTexture(RenderPipelines.GUI_TEXTURED, s.textureId(), ix, iy, 0f, 0f, w, hh, vw, vh, vw, vh);
+            ctx.blit(RenderPipelines.GUI_TEXTURED, s.textureId(), ix, iy, 0f, 0f, w, hh, vw, vh, vw, vh);
         } else {
             ctx.fill(x0, y0, x0 + mw, y0 + h, th.bg);
             Component st = Component.translatable("pmchat.video.decoding");
-            ctx.drawText(tr, st, x0 + (mw - tr.getWidth(st)) / 2, y0 + h / 2 - 4, th.label, false);
+            ctx.text(tr, st, x0 + (mw - tr.getWidth(st)) / 2, y0 + h / 2 - 4, th.label, false);
         }
         if (s != null && s.isFinished()) {
             // Кадр доиграл — предлагаем пересмотреть (клик по окошку/play перезапустит)
             ctx.fill(x0, y0, x0 + mw, y0 + h, 0x99050907);
             Component again = Component.translatable("pmchat.video.again");
             PmIcons.draw(ctx, PmIcons.PLAY, x0 + mw / 2 - 8, y0 + h / 2 - 12, 16, 16, th.title);
-            ctx.drawText(tr, again, x0 + (mw - tr.getWidth(again)) / 2, y0 + h / 2 + 6, th.title, false);
+            ctx.text(tr, again, x0 + (mw - tr.getWidth(again)) / 2, y0 + h / 2 + 6, th.title, false);
         } else if (s != null && !s.isPlaying()) {
             PmIcons.draw(ctx, PmIcons.PLAY, x0 + mw / 2 - 8, y0 + h / 2 - 8, 16, 16, th.title);
         }
@@ -434,7 +434,7 @@ public final class PmMedia {
      * крестик справа, тонкая полоска прогресса по нижней кромке. Полоска не
      * забирает фокус — клики мимо неё проходят на экран под ней.
      */
-    private int[] renderMusicBar(GuiGraphics ctx, Font tr, int sw,
+    private int[] renderMusicBar(GuiGraphicsExtractor ctx, Font tr, int sw,
                                  int mouseX, int mouseY, boolean interactive) {
         PmTheme th = theme();
         int h = 22;
@@ -470,7 +470,7 @@ public final class PmMedia {
         if (avail > 40) {
             int subW = tr.getWidth(sub) + 10;
             drawMarquee(ctx, tr, title, tx, (h - tr.fontHeight) / 2, avail - subW, th.title);
-            ctx.drawText(tr, trim(tr, sub, subW), volX - 16 - subW + 4, (h - tr.fontHeight) / 2, th.label, false);
+            ctx.text(tr, trim(tr, sub, subW), volX - 16 - subW + 4, (h - tr.fontHeight) / 2, th.label, false);
         }
 
         boolean playing = session != null && session.isPlaying();
@@ -488,7 +488,7 @@ public final class PmMedia {
     }
 
     /** Значок громкости + короткий перетаскиваемый трек — общий для музыкальной полоски и мини-окна видео. */
-    private void renderVolumeControl(GuiGraphics ctx, int x, int y, int trackW, int barH,
+    private void renderVolumeControl(GuiGraphicsExtractor ctx, int x, int y, int trackW, int barH,
                                       int mouseX, int mouseY, boolean interactive, PmTheme th) {
         int iconSz = 11;
         PmIcons.draw(ctx, PmIcons.VOLUME, x, (barH - iconSz) / 2 + y, iconSz, iconSz, th.label);
@@ -528,10 +528,10 @@ public final class PmMedia {
      * Рисует текст в пределах ширины maxW; если не влезает — плавно прокручивает
      * его по горизонтали (бесшовно, с разрывом), обрезая по scissor.
      */
-    private static void drawMarquee(GuiGraphics ctx, Font tr, String text, int x, int y, int maxW, int color) {
+    private static void drawMarquee(GuiGraphicsExtractor ctx, Font tr, String text, int x, int y, int maxW, int color) {
         int tw = tr.getWidth(text);
         if (tw <= maxW) {
-            ctx.drawText(tr, text, x, y, color, false);
+            ctx.text(tr, text, x, y, color, false);
             return;
         }
         int gap = 24;                 // разрыв между повторами
@@ -539,12 +539,12 @@ public final class PmMedia {
         int speed = 30;               // пикселей в секунду
         int off = (int) ((System.currentTimeMillis() / 1000.0 * speed) % period);
         ctx.enableScissor(x, y - 1, x + maxW, y + tr.fontHeight + 1);
-        ctx.drawText(tr, text, x - off, y, color, false);
-        ctx.drawText(tr, text, x - off + period, y, color, false); // второй экземпляр для бесшовности
+        ctx.text(tr, text, x - off, y, color, false);
+        ctx.text(tr, text, x - off + period, y, color, false); // второй экземпляр для бесшовности
         ctx.disableScissor();
     }
 
-    private void renderControlBar(GuiGraphics ctx, Font tr, int x0, int y0, int mw, int h,
+    private void renderControlBar(GuiGraphicsExtractor ctx, Font tr, int x0, int y0, int mw, int h,
                                   int mouseX, int mouseY, boolean interactive, PmTheme th) {
         ctx.fill(x0, y0, x0 + mw, y0 + h, th.btnBg);
         PmVlc.Session s = session;
@@ -574,16 +574,16 @@ public final class PmMedia {
         // Время справа
         if (s != null) {
             String time = fmt(s.timeMs()) + "/" + fmt(s.lengthMs());
-            ctx.drawText(tr, time, x0 + mw - tr.getWidth(time) - 6, by + 6, th.label, false);
+            ctx.text(tr, time, x0 + mw - tr.getWidth(time) - 6, by + 6, th.label, false);
         }
     }
 
-    private void drawBtn(GuiGraphics ctx, int[] r, String[] icon, int mx, int my, boolean interactive, PmTheme th) {
+    private void drawBtn(GuiGraphicsExtractor ctx, int[] r, String[] icon, int mx, int my, boolean interactive, PmTheme th) {
         if (r == null) return;
         drawBtnIcon(ctx, r, icon, mx, my, interactive, th.label, th);
     }
 
-    private void drawBtnIcon(GuiGraphics ctx, int[] r, String[] icon, int mx, int my, boolean interactive, int col, PmTheme th) {
+    private void drawBtnIcon(GuiGraphicsExtractor ctx, int[] r, String[] icon, int mx, int my, boolean interactive, int col, PmTheme th) {
         if (r == null) return;
         boolean hov = interactive && inRect(mx, my, r);
         ctx.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hov ? th.btnHover : th.btnBg);

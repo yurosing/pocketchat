@@ -1,8 +1,8 @@
 package com.pmchat.screen;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
@@ -73,7 +73,7 @@ public class FlatButton extends AbstractWidget {
     }
 
     @Override
-    public void onClick(Click click, boolean doubled) {
+    public void onClick(MouseButtonEvent click, boolean doubled) {
         pressAnim = 1f;
         action.onPress(this);
     }
@@ -88,7 +88,7 @@ public class FlatButton extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    protected void renderWidget(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         int x0 = getX();
         int y0 = getY();
         int w = getWidth();
@@ -119,9 +119,9 @@ public class FlatButton extends AbstractWidget {
         int textY = y0 + (getHeight() - textRenderer.fontHeight) / 2;
         if (centered) {
             int textX = x0 + getWidth() / 2 - textRenderer.getWidth(message) / 2;
-            context.drawText(textRenderer, message, textX, textY, textColor, false);
+            context.text(textRenderer, message, textX, textY, textColor, false);
         } else {
-            context.drawText(textRenderer, message, x0 + 6, textY, textColor, false);
+            context.text(textRenderer, message, x0 + 6, textY, textColor, false);
         }
     }
 

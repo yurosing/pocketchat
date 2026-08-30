@@ -7,14 +7,14 @@ import com.pmchat.client.PmImages;
 import com.pmchat.client.PmMessage;
 import com.pmchat.client.PmVoice;
 import com.pmchat.client.PmWire;
-import net.minecraft.client.gl.RenderPipelines;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.Util;
 import org.lwjgl.glfw.GLFW;
@@ -102,23 +102,23 @@ public class PmContactMediaScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         if (fullscreenImg != null) {
             renderFullscreenImage(ctx);
             return;
         }
         ctx.fill(0, 0, width, height, BG);
         ctx.fill(px, py, px + pw, py + ph, PANEL);
-        ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
+        ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = Component.translatable("pmchat.sharedmedia.title_of", peer);
-        ctx.drawText(textRenderer, trim(title.getString(), pw - 40), px + 12, py + 9, TEXT, false);
+        ctx.text(textRenderer, trim(title.getString(), pw - 40), px + 12, py + 9, TEXT, false);
 
         String x = "✕";
         int xw = textRenderer.getWidth(x) + 8;
         closeRect = new int[]{px + pw - xw - 6, py + 5, xw, 14};
         boolean hovX = in(mouseX, mouseY, closeRect);
-        ctx.drawText(textRenderer, x, closeRect[0] + 4, closeRect[1] + 3, hovX ? TEXT : SUBTLE, false);
+        ctx.text(textRenderer, x, closeRect[0] + 4, closeRect[1] + 3, hovX ? TEXT : SUBTLE, false);
 
         // Вкладки
         String[] labels = {
@@ -135,8 +135,8 @@ public class PmContactMediaScreen extends Screen {
             boolean sel = tab == i;
             boolean hov = mouseY >= ty && mouseY < ty + 16 && mouseX >= tx && mouseX < tx + w;
             ctx.fill(tx, ty, tx + w, ty + 16, sel ? ROW_HOVER : (hov ? ROW : PANEL));
-            ctx.drawStrokedRectangle(tx, ty, w, 16, sel ? ACCENT : BORDER);
-            ctx.drawText(textRenderer, labels[i], tx + 7, ty + 4, sel ? TEXT : SUBTLE, false);
+            ctx.outline(tx, ty, w, 16, sel ? ACCENT : BORDER);
+            ctx.text(textRenderer, labels[i], tx + 7, ty + 4, sel ? TEXT : SUBTLE, false);
             tx += w + 4;
         }
 
@@ -145,7 +145,7 @@ public class PmContactMediaScreen extends Screen {
         List<PmMessage> items = filtered();
         rowRects.clear();
         if (items.isEmpty()) {
-            ctx.drawText(textRenderer, Component.translatable("pmchat.sharedmedia.empty"),
+            ctx.text(textRenderer, Component.translatable("pmchat.sharedmedia.empty"),
                     px + 12, listTop + 6, SUBTLE, false);
         }
         int rowH = 24;
@@ -165,7 +165,7 @@ public class PmContactMediaScreen extends Screen {
         ctx.disableScissor();
     }
 
-    private void renderRow(GuiGraphics ctx, PmMessage m, int x, int y, int w, int h) {
+    private void renderRow(GuiGraphicsExtractor ctx, PmMessage m, int x, int y, int w, int h) {
         String[] voice = PmWire.parseVoice(m.text);
         String[] img = PmWire.parseImg(m.text);
         String[] vid = PmWire.parseVid(m.text);
@@ -175,27 +175,27 @@ public class PmContactMediaScreen extends Screen {
             PmIcons.draw(ctx, PmIcons.VOICE, x, y + (h - iconSz) / 2, iconSz, iconSz, 0xFF9CC4DC);
             boolean playing = PmVoice.isPlaying(voice[1]);
             String label = Component.translatable("pmchat.sharedmedia.voice_dur", fmtDuration(voice[2])).getString();
-            ctx.drawText(textRenderer, label, x + iconSz + 6, y + 2, playing ? ACCENT : TEXT, false);
+            ctx.text(textRenderer, label, x + iconSz + 6, y + 2, playing ? ACCENT : TEXT, false);
         } else if (img != null) {
             PmImages.Entry e = PmImages.get(img[0], img[1]);
             if (e.state == PmImages.State.READY && e.currentTexture() != null) {
-                ctx.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(), x, y, 0f, 0f,
+                ctx.blit(RenderPipelines.GUI_TEXTURED, e.currentTexture(), x, y, 0f, 0f,
                         iconSz, iconSz, e.width, e.height, e.width, e.height);
             } else {
                 PmIcons.draw(ctx, PmIcons.PHOTO, x, y + (h - iconSz) / 2, iconSz, iconSz, 0xFF9CC4DC);
             }
-            ctx.drawText(textRenderer, Component.translatable("pmchat.sharedmedia.photo"),
+            ctx.text(textRenderer, Component.translatable("pmchat.sharedmedia.photo"),
                     x + iconSz + 6, y + 2, TEXT, false);
         } else if (vid != null) {
             PmIcons.draw(ctx, PmIcons.PLAY, x, y + (h - iconSz) / 2, iconSz, iconSz, 0xFF9CC4DC);
-            ctx.drawText(textRenderer, Component.translatable("pmchat.sharedmedia.video"),
+            ctx.text(textRenderer, Component.translatable("pmchat.sharedmedia.video"),
                     x + iconSz + 6, y + 2, TEXT, false);
         }
-        ctx.drawText(textRenderer, when, x + w - textRenderer.getWidth(when), y + 2, SUBTLE, false);
+        ctx.text(textRenderer, when, x + w - textRenderer.getWidth(when), y + 2, SUBTLE, false);
     }
 
     /** Затемнённый оверлей с картинкой, вписанной в окно (как в PmScreen). */
-    private void renderFullscreenImage(GuiGraphics ctx) {
+    private void renderFullscreenImage(GuiGraphicsExtractor ctx) {
         PmImages.Entry e = fullscreenImg;
         ctx.fill(0, 0, width, height, 0xE6000000);
         if (e.state == PmImages.State.READY && e.currentTexture() != null && e.width > 0 && e.height > 0) {
@@ -205,15 +205,15 @@ public class PmContactMediaScreen extends Screen {
             int h = Math.max(1, Math.round(e.height * scale));
             int ix = (width - w) / 2;
             int iy = (height - h) / 2;
-            ctx.drawTexture(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy, 0f, 0f,
+            ctx.blit(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy, 0f, 0f,
                     w, h, e.width, e.height, e.width, e.height);
         }
         Component hint = Component.translatable("pmchat.image.close");
-        ctx.drawText(textRenderer, hint, (width - textRenderer.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
+        ctx.text(textRenderer, hint, (width - textRenderer.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
         if (fullscreenImg != null) {
             fullscreenImg = null;
@@ -278,8 +278,8 @@ public class PmContactMediaScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (fullscreenImg != null && input.getKeycode() == GLFW.GLFW_KEY_ESCAPE) {
+    public boolean keyPressed(KeyEvent input) {
+        if (fullscreenImg != null && input.key() == GLFW.GLFW_KEY_ESCAPE) {
             fullscreenImg = null;
             return true;
         }

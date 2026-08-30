@@ -4,7 +4,7 @@ import com.pmchat.client.PmBackend;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -57,7 +57,7 @@ public class PmGiftPopupScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         float t = (System.currentTimeMillis() - openedAt) / 1000f;
         int dimAlpha = (int) Math.min(150, t / 0.25f * 150);
         context.fill(0, 0, width, height, withAlpha(0x000000, dimAlpha));
@@ -97,24 +97,24 @@ public class PmGiftPopupScreen extends Screen {
         drawCentered(context, fromText.getString(), cx, cy + 56, withAlpha(0xFFFFFF, (int) (220 * fade)));
         drawCentered(context, nameText.getString(), cx, cy + 70, withAlpha(rarityColor, (int) (255 * fade)));
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
-    private void drawCentered(GuiGraphics ctx, String s, int centerX, int y, int color) {
-        ctx.drawText(textRenderer, Component.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
+    private void drawCentered(GuiGraphicsExtractor ctx, String s, int centerX, int y, int color) {
+        ctx.text(textRenderer, Component.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
     }
 
     /** Текст с масштабом вокруг точки (centerX, y — центр по вертикали). */
-    private void drawScaledCentered(GuiGraphics ctx, String s, int centerX, int y, float scale, int color) {
-        var m = ctx.getMatrices();
+    private void drawScaledCentered(GuiGraphicsExtractor ctx, String s, int centerX, int y, float scale, int color) {
+        var m = ctx.pose();
         m.pushMatrix();
         m.translate(centerX, y);
         m.scale(scale, scale);
-        ctx.drawText(textRenderer, Component.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
+        ctx.text(textRenderer, Component.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
         m.popMatrix();
     }
 
-    private static void fillCircle(GuiGraphics ctx, int cx, int cy, int r, int color) {
+    private static void fillCircle(GuiGraphicsExtractor ctx, int cx, int cy, int r, int color) {
         for (int dy = -r; dy <= r; dy++) {
             int dx = (int) Math.sqrt((double) r * r - dy * dy);
             ctx.fill(cx - dx, cy + dy, cx + dx, cy + dy + 1, color);
@@ -122,7 +122,7 @@ public class PmGiftPopupScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         // Клик мимо кнопки тоже закрывает всплывашку — но не раньше, чем анимация
         // появления закончится, иначе случайный клик в момент показа её сразу скроет.
         if (super.mouseClicked(click, doubled)) return true;

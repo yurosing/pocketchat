@@ -6,7 +6,7 @@ import com.pmchat.client.PmConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -288,17 +288,17 @@ public class PmBotStoreScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, 0xC0000000);
         ctx.fill(px, py, px + pw, py + ph, BG);
-        ctx.drawStrokedRectangle(px, py, pw, ph, BORDER);
+        ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = getTitle();
-        ctx.drawText(textRenderer, title, px + 12, py + 8, TITLE, false);
+        ctx.text(textRenderer, title, px + 12, py + 8, TITLE, false);
         String x = "✕";
         boolean hovX = closeRect != null && mouseX >= closeRect[0] && mouseX < closeRect[0] + closeRect[2]
                 && mouseY >= closeRect[1] && mouseY < closeRect[1] + closeRect[3];
-        ctx.drawText(textRenderer, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
+        ctx.text(textRenderer, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
 
         String[] labels = {
                 Component.translatable("pmchat.botstore.tab.market").getString(),
@@ -310,8 +310,8 @@ public class PmBotStoreScreen extends Screen {
             boolean sel = tab == i;
             boolean hov = mouseY >= ty && mouseY < ty + 16 && mouseX >= tabRects[i] && mouseX < tabRects[i] + tabW[i];
             ctx.fill(tabRects[i], ty, tabRects[i] + tabW[i], ty + 16, sel ? BTN_HOVER : (hov ? BTN_BG : BG));
-            ctx.drawStrokedRectangle(tabRects[i], ty, tabW[i], 16, sel ? ACCENT : BORDER);
-            ctx.drawText(textRenderer, labels[i], tabRects[i] + 7, ty + 4, sel ? TITLE : LABEL, false);
+            ctx.outline(tabRects[i], ty, tabW[i], 16, sel ? ACCENT : BORDER);
+            ctx.text(textRenderer, labels[i], tabRects[i] + 7, ty + 4, sel ? TITLE : LABEL, false);
         }
 
         int fx = px + 12;
@@ -323,9 +323,9 @@ public class PmBotStoreScreen extends Screen {
             int listBottom = py + ph - 8;
             ctx.enableScissor(px + 1, listTop, px + pw - 1, listBottom);
             if (market == null) {
-                ctx.drawText(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
+                ctx.text(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
             } else if (market.isEmpty()) {
-                ctx.drawText(textRenderer, Component.translatable("pmchat.botstore.empty"), fx, listTop + 4, LABEL, false);
+                ctx.text(textRenderer, Component.translatable("pmchat.botstore.empty"), fx, listTop + 4, LABEL, false);
             } else {
                 int rowH = 32;
                 int y = listTop - scroll;
@@ -333,13 +333,13 @@ public class PmBotStoreScreen extends Screen {
                     if (y + rowH >= listTop && y <= listBottom) {
                         ctx.fill(fx, y, fx + fw, y + rowH - 2, BTN_BG);
                         String head = l.name + "  ·  @" + l.owner;
-                        ctx.drawText(textRenderer, trim(head, fw - 60), fx + 4, y + 3, VALUE, false);
+                        ctx.text(textRenderer, trim(head, fw - 60), fx + 4, y + 3, VALUE, false);
                         String priceStr = l.price > 0
                                 ? Component.translatable("pmchat.botstore.pricetag", l.price).getString()
                                 : Component.translatable("pmchat.botstore.freetag").getString();
                         String subLine = priceStr + (l.description != null && !l.description.isBlank()
                                 ? "  ·  " + l.description : "");
-                        ctx.drawText(textRenderer, trim(subLine, fw - 60), fx + 4, y + 16, LABEL, false);
+                        ctx.text(textRenderer, trim(subLine, fw - 60), fx + 4, y + 16, LABEL, false);
                     }
                     y += rowH;
                 }
@@ -347,47 +347,47 @@ public class PmBotStoreScreen extends Screen {
             ctx.disableScissor();
         } else if (tab == TAB_SUBMIT) {
             if (submitPrice > 0) {
-                ctx.drawText(textRenderer, Component.translatable("pmchat.botstore.feeline", submitPrice),
+                ctx.text(textRenderer, Component.translatable("pmchat.botstore.feeline", submitPrice),
                         fx, py + ph - 62, LABEL, false);
             }
             if (selectedFile != null) {
-                ctx.drawText(textRenderer, Component.translatable("pmchat.botstore.selected", selectedFile.getName()),
+                ctx.text(textRenderer, Component.translatable("pmchat.botstore.selected", selectedFile.getName()),
                         fx, py + ph - 52, LABEL, false);
             }
         } else {
             int listTop = contentTop;
             int bottom = py + ph - 8;
             if (mine == null) {
-                ctx.drawText(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop, LABEL, false);
+                ctx.text(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop, LABEL, false);
             } else if (mine.isEmpty()) {
-                ctx.drawText(textRenderer, Component.translatable("pmchat.botstore.noneofmine"), fx, listTop, LABEL, false);
+                ctx.text(textRenderer, Component.translatable("pmchat.botstore.noneofmine"), fx, listTop, LABEL, false);
             } else {
                 int rowH = 26;
                 int y = listTop;
                 for (PmBackend.BotListing l : mine) {
                     if (y + rowH > bottom) break;
-                    ctx.drawText(textRenderer, trim(l.name, fw - 70), fx, y, VALUE, false);
+                    ctx.text(textRenderer, trim(l.name, fw - 70), fx, y, VALUE, false);
                     int statColor = switch (l.status) {
                         case "approved" -> 0xFF8FD8A8;
                         case "rejected" -> 0xFFE07A6A;
                         default -> 0xFFF0C34E;
                     };
                     String statLabel = Component.translatable("pmchat.botstore.status." + l.status).getString();
-                    ctx.drawText(textRenderer, statLabel, fx + fw - textRenderer.getWidth(statLabel), y, statColor, false);
+                    ctx.text(textRenderer, statLabel, fx + fw - textRenderer.getWidth(statLabel), y, statColor, false);
                     y += rowH;
                 }
             }
         }
 
         if (!status.getString().isEmpty()) {
-            ctx.drawText(textRenderer, status, fx, py + ph - 38, statusColor, false);
+            ctx.text(textRenderer, status, fx, py + ph - 38, statusColor, false);
         }
 
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x(), my = (int) click.y();
         if (closeRect != null && mx >= closeRect[0] && mx < closeRect[0] + closeRect[2]
                 && my >= closeRect[1] && my < closeRect[1] + closeRect[3]) {
