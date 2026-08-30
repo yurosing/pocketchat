@@ -39,18 +39,18 @@ public class PmToast implements Toast {
     }
 
     @Override
-    public void draw(GuiGraphicsExtractor context, Font textRenderer, long startTime) {
+    public void draw(GuiGraphicsExtractor context, Font font, long startTime) {
         context.fill(0, 0, getWidth(), getHeight(), 0xE61C3644);
         context.outline(0, 0, getWidth(), getHeight(), ACCENT);
         context.fill(0, 0, 3, getHeight(), ACCENT);
 
-        context.text(textRenderer, Component.literal("✉ " + sender), 9, 7, ACCENT, false);
+        context.text(font, Component.literal("✉ " + sender), 9, 7, ACCENT, false);
         String text = preview;
         int maxW = getWidth() - 18;
-        if (textRenderer.getWidth(text) > maxW) {
-            text = textRenderer.trimToWidth(text, maxW - textRenderer.getWidth("…")) + "…";
+        if (font.getWidth(text) > maxW) {
+            text = font.trimToWidth(text, maxW - font.getWidth("…")) + "…";
         }
-        context.text(textRenderer, Component.literal(text), 9, 19, 0xFFEDF3F0, false);
+        context.text(font, Component.literal(text), 9, 19, 0xFFEDF3F0, false);
     }
 
     @Override

@@ -51,7 +51,7 @@ public class PmEnvelopeUnlockScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
         PANEL_W = Math.max(180, Math.min(220, width - 24));
         PANEL_H = Math.min(100, height - 16);
         px = (width - PANEL_W) / 2;
@@ -61,15 +61,15 @@ public class PmEnvelopeUnlockScreen extends Screen {
         int fw = PANEL_W - 28;
         int y = py + 40;
 
-        answerField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.answer"));
+        answerField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.envelope.answer"));
         answerField.setMaxLength(60);
-        addDrawableChild(answerField);
+        addRenderableWidget(answerField);
         y += 22;
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y, (fw - 6) / 2, 18,
+        addRenderableWidget(FlatButton.centered(font, fx, y, (fw - 6) / 2, 18,
                 Component.translatable("pmchat.envelope.unlock.open"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> tryOpen()));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
+        addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
@@ -91,11 +91,11 @@ public class PmEnvelopeUnlockScreen extends Screen {
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.text(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
-        context.text(textRenderer, trim(question, PANEL_W - 24), px + 14, py + 24, LABEL, false);
+        context.text(font, getTitle(), px + (PANEL_W - font.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(font, trim(question, PANEL_W - 24), px + 14, py + 24, LABEL, false);
 
         if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 12, statusColor, false);
+            context.text(font, status, px + (PANEL_W - font.getWidth(status)) / 2, py + PANEL_H - 12, statusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);
@@ -103,8 +103,8 @@ public class PmEnvelopeUnlockScreen extends Screen {
 
     private String trim(String s, int maxW) {
         if (s == null) return "";
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 

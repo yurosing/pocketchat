@@ -46,7 +46,7 @@ public class PmSupportScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
         PANEL_W = Math.max(180, Math.min(260, width - 24));
         PANEL_H = Math.min(110, height - 16);
         px = (width - PANEL_W) / 2;
@@ -56,19 +56,19 @@ public class PmSupportScreen extends Screen {
         int fw = PANEL_W - 32;
         int y = py + 26;
 
-        messageField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.support.hint"));
+        messageField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.support.hint"));
         messageField.setMaxLength(500);
         String hint = Component.translatable("pmchat.support.hint").getString();
         messageField.setSuggestion(hint);
         messageField.setResponder(s -> messageField.setSuggestion(s.isEmpty() ? hint : null));
-        addDrawableChild(messageField);
+        addRenderableWidget(messageField);
         y += 24;
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, y, fw, 16,
                 Component.translatable("pmchat.support.send"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                 btn -> send()));
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
@@ -94,10 +94,10 @@ public class PmSupportScreen extends Screen {
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
         Component title = getTitle();
-        context.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
 
         if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 40, statusColor, false);
+            context.text(font, status, px + (PANEL_W - font.getWidth(status)) / 2, py + PANEL_H - 40, statusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);

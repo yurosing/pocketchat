@@ -393,12 +393,12 @@ public class PmScreen extends Screen {
 
     /** Пульсирующая скруглённая «пилюля» бейджа непрочитанных у правого края строки. */
     private void drawBadge(GuiGraphicsExtractor context, int rightX, int y, String text) {
-        int bw = textRenderer.getWidth(text) + 6;
+        int bw = font.getWidth(text) + 6;
         int x = rightX - bw;
         float pulse = 0.5f + 0.5f * (float) Math.sin(System.currentTimeMillis() / 320.0);
         int bg = tintTowards(BADGE_BG, 0xFFFFFFFF, 0.12f * pulse);
         fillRound(context, x, y + 3, bw, 10, 5, bg);
-        context.text(textRenderer, text, x + 3, y + 4, 0xFFFFFFFF, false);
+        context.text(font, text, x + 3, y + 4, 0xFFFFFFFF, false);
     }
 
     // Групповой чат (6.9): режим создания + поля
@@ -609,7 +609,7 @@ public class PmScreen extends Screen {
         int y = py + 22;
         int rowH = 18;
 
-        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+        addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                 Component.literal("▶ " + Component.translatable("pmchat.media.pick").getString()),
                 WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
                     closeModes();
@@ -618,7 +618,7 @@ public class PmScreen extends Screen {
                     rebuild();
                 }));
         y += rowH + 2;
-        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+        addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                 Component.literal("▤ " + Component.translatable("pmchat.tip.poll").getString()),
                 WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
                     closeModes();
@@ -629,7 +629,7 @@ public class PmScreen extends Screen {
         // Только в личном диалоге — глобальный чат/каналы/группы такое не поддерживают.
         if (isPlayerTab(selected)) {
             y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+            addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                     Component.literal("✉ " + Component.translatable("pmchat.envelope.compose").getString()),
                     WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF7E9AAB, btn -> {
                         moreMenuOpen = false;
@@ -640,7 +640,7 @@ public class PmScreen extends Screen {
         if (isPlayerTab(selected)) {
             boolean vibeActive = com.pmchat.client.PmVibe.isActiveFor(selected);
             y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+            addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                     Component.literal("♪ " + Component.translatable(vibeActive
                             ? "pmchat.vibe.stop" : "pmchat.vibe.open").getString()),
                     WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, vibeActive ? 0xFF8FD8A8 : 0xFF6FBF8B, btn -> {
@@ -653,7 +653,7 @@ public class PmScreen extends Screen {
                     }));
         }
         y += rowH + 2;
-        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+        addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                 Component.literal("$ " + Component.translatable("pmchat.tip.money").getString()),
                 WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFF0C34E, btn -> {
                     closeModes();
@@ -661,7 +661,7 @@ public class PmScreen extends Screen {
                     rebuild();
                 }));
         y += rowH + 2;
-        addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+        addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                 Component.literal("▥ " + Component.translatable("pmchat.tip.stats").getString()),
                 WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
                     closeModes();
@@ -673,7 +673,7 @@ public class PmScreen extends Screen {
         if (isPlayerTab(selected)) {
             String peer = selected; // фиксируем собеседника на момент постройки меню
             y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+            addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                     Component.literal("☺ " + Component.translatable("pmchat.profile.open").getString()),
                     WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B, btn -> {
                         moreMenuOpen = false;
@@ -685,7 +685,7 @@ public class PmScreen extends Screen {
         // Анимация/запись в реальном времени — отдельный следующий шаг.
         if (isPlayerTab(selected)) {
             y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+            addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                     Component.literal("◉ " + Component.translatable("pmchat.tip.circle").getString()),
                     WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFFE07A6A, btn -> {
                         moreMenuOpen = false;
@@ -697,7 +697,7 @@ public class PmScreen extends Screen {
         if (isPlayerTab(selected)) {
             String peer = selected;
             y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+            addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                     Component.literal("▦ " + Component.translatable("pmchat.sharedmedia.open").getString()),
                     WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF9CC4DC, btn -> {
                         moreMenuOpen = false;
@@ -711,7 +711,7 @@ public class PmScreen extends Screen {
             String convId = selected;
             boolean muted = config.isMutedThread(convId);
             y += rowH + 2;
-            addDrawableChild(FlatButton.centered(textRenderer, x, y, w, rowH,
+            addRenderableWidget(FlatButton.centered(font, x, y, w, rowH,
                     Component.literal("♪ " + Component.translatable(muted ? "pmchat.tip.unmute" : "pmchat.tip.mute").getString()),
                     WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, muted ? WBTN_TEXT : 0xFF8FD8A8, btn -> {
                         config.toggleMutedThread(convId);
@@ -776,7 +776,7 @@ public class PmScreen extends Screen {
         int innerW = w - pad * 2;
 
         // Крестик закрытия
-        addDrawableChild(FlatButton.centered(textRenderer, x + w - 22, y + 8, 16, 14,
+        addRenderableWidget(FlatButton.centered(font, x + w - 22, y + 8, 16, 14,
                 Component.literal("✕"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
                     callMenuOpen = false;
                     rebuild();
@@ -784,7 +784,7 @@ public class PmScreen extends Screen {
 
         if (callActiveHere()) {
             // В звонке: только кнопка «Завершить» (тип/пароль — настройки до звонка)
-            addDrawableChild(FlatButton.centered(textRenderer, x + pad, y + CALL_ACT_Y, innerW, 22,
+            addRenderableWidget(FlatButton.centered(font, x + pad, y + CALL_ACT_Y, innerW, 22,
                     Component.translatable("pmchat.call.hangup"),
                     0xFF7A2E2E, 0xFF8A3636, 0xFFB05050, 0xFFF6DADA, btn -> {
                         PmChatClient.endCall();
@@ -799,7 +799,7 @@ public class PmScreen extends Screen {
         for (int i = 0; i < 3; i++) {
             final int idx = i;
             boolean sel = config.voiceGroupType == i;
-            addDrawableChild(FlatButton.centered(textRenderer, x + pad + i * (tw + 4), y + CALL_TYPE_Y, tw, 16,
+            addRenderableWidget(FlatButton.centered(font, x + pad + i * (tw + 4), y + CALL_TYPE_Y, tw, 16,
                     Component.translatable(typeKeys[i]),
                     sel ? ACCENT_BG : WBTN_BG, sel ? ACCENT_HOVER : WBTN_BG_HOVER,
                     sel ? ACCENT_BORDER : WBTN_BORDER, sel ? ACCENT_TEXT : WBTN_TEXT, btn -> {
@@ -810,7 +810,7 @@ public class PmScreen extends Screen {
         }
 
         // Тумблер пароля
-        addDrawableChild(FlatButton.centered(textRenderer, x + pad, y + CALL_PASS_Y, innerW, 15,
+        addRenderableWidget(FlatButton.centered(font, x + pad, y + CALL_PASS_Y, innerW, 15,
                 Component.translatable(config.voiceGroupPassword
                         ? "pmchat.call.pass.on" : "pmchat.call.pass.off"),
                 WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
@@ -820,7 +820,7 @@ public class PmScreen extends Screen {
                     rebuild();
                 }));
 
-        addDrawableChild(FlatButton.centered(textRenderer, x + pad, y + CALL_ACT_Y, innerW, 22,
+        addRenderableWidget(FlatButton.centered(font, x + pad, y + CALL_ACT_Y, innerW, 22,
                 Component.translatable("pmchat.call.start"),
                 ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> {
                     PmChatClient.startCall(selected);
@@ -860,10 +860,10 @@ public class PmScreen extends Screen {
         int dotCol = activeHere ? (on ? 0xFF6FBF8B : 0xFF2E5F46) : 0xFF54748A;
         String status = Component.translatable(activeHere
                 ? "pmchat.call.status.active" : "pmchat.call.status.idle").getString();
-        int sw = textRenderer.getWidth(status);
+        int sw = font.getWidth(status);
         int sx = cx - (sw + 10) / 2;
         context.fill(sx, y + CALL_STATUS_Y + 1, sx + 6, y + CALL_STATUS_Y + 7, dotCol);
-        context.text(textRenderer, Component.literal(status), sx + 10, y + CALL_STATUS_Y, SUBTLE, false);
+        context.text(font, Component.literal(status), sx + 10, y + CALL_STATUS_Y, SUBTLE, false);
 
         // Крупный таймер
         String dur = activeHere ? fmtDuration(PmChatClient.callDurationSeconds()) : "--:--";
@@ -893,7 +893,7 @@ public class PmScreen extends Screen {
                 rx += size + gap;
             }
             if (ids.size() > shown) {
-                context.text(textRenderer, "+" + (ids.size() - shown), rx + 2, ry + 4, SUBTLE, false);
+                context.text(font, "+" + (ids.size() - shown), rx + 2, ry + 4, SUBTLE, false);
             }
         } else {
             // Метка «тип войс-группы» над кнопками выбора
@@ -918,8 +918,8 @@ public class PmScreen extends Screen {
         fillCircle(context, x + size / 2, y + size / 2, size / 2, bg);
         if (name != null && !name.isEmpty()) {
             String ini = name.substring(0, 1).toUpperCase(java.util.Locale.ROOT);
-            context.text(textRenderer, ini,
-                    x + size / 2 - textRenderer.getWidth(ini) / 2, y + size / 2 - 4, 0xFFFFFFFF, false);
+            context.text(font, ini,
+                    x + size / 2 - font.getWidth(ini) / 2, y + size / 2 - 4, 0xFFFFFFFF, false);
         }
     }
 
@@ -939,7 +939,7 @@ public class PmScreen extends Screen {
     }
 
     private void drawCentered(GuiGraphicsExtractor ctx, String s, int centerX, int y, int color) {
-        ctx.text(textRenderer, Component.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
+        ctx.text(font, Component.literal(s), centerX - font.getWidth(s) / 2, y, color, false);
     }
 
     /** Текст с масштабом вокруг точки (centerX, y — верх строки). */
@@ -948,7 +948,7 @@ public class PmScreen extends Screen {
         m.pushMatrix();
         m.translate(centerX, y);
         m.scale(scale, scale);
-        ctx.text(textRenderer, Component.literal(s), -textRenderer.getWidth(s) / 2, 0, color, false);
+        ctx.text(font, Component.literal(s), -font.getWidth(s) / 2, 0, color, false);
         m.popMatrix();
     }
 
@@ -999,34 +999,34 @@ public class PmScreen extends Screen {
         int cx = px + LEFT_W + 8;
         int cw = PANEL_W - LEFT_W - 16;
         int y = py + 40;
-        pollQ = new EditBox(textRenderer, cx, y, cw, 16, Component.translatable("pmchat.poll.q"));
+        pollQ = new EditBox(font, cx, y, cw, 16, Component.translatable("pmchat.poll.q"));
         pollQ.setMaxLength(80);
         pollQ.setSuggestion(pollQ.getValue().isEmpty() ? Component.translatable("pmchat.poll.q").getString() : "");
         pollQ.setResponder(s -> pollQ.setSuggestion(s.isEmpty() ? Component.translatable("pmchat.poll.q").getString() : ""));
-        addDrawableChild(pollQ);
+        addRenderableWidget(pollQ);
         y += 20;
         for (int i = 0; i < pollOpts.length; i++) {
             int fi = i;
-            pollOpts[i] = new EditBox(textRenderer, cx, y, cw, 14,
+            pollOpts[i] = new EditBox(font, cx, y, cw, 14,
                     Component.literal(Component.translatable("pmchat.poll.opt").getString() + " " + (i + 1)));
             pollOpts[i].setMaxLength(48);
             String hint = Component.translatable("pmchat.poll.opt").getString() + " " + (i + 1);
             pollOpts[i].setSuggestion(hint);
             pollOpts[i].setResponder(s -> pollOpts[fi].setSuggestion(s.isEmpty() ? hint : ""));
-            addDrawableChild(pollOpts[i]);
+            addRenderableWidget(pollOpts[i]);
             y += 17;
         }
-        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 110, 14,
+        addRenderableWidget(FlatButton.centered(font, cx, y, 110, 14,
                 Component.translatable(pollMulti ? "pmchat.poll.multi.on" : "pmchat.poll.multi.off"),
                 WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
                     pollMulti = !pollMulti;
                     rebuild();
                 }));
         y += 18;
-        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 90, 16,
+        addRenderableWidget(FlatButton.centered(font, cx, y, 90, 16,
                 Component.translatable("pmchat.poll.create"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT,
                 btn -> createPoll()));
-        addDrawableChild(FlatButton.centered(textRenderer, cx + 96, y, 60, 16,
+        addRenderableWidget(FlatButton.centered(font, cx + 96, y, 60, 16,
                 Component.translatable("pmchat.poll.cancel"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT,
                 btn -> { pollMode = false; rebuild(); }));
     }
@@ -1052,23 +1052,23 @@ public class PmScreen extends Screen {
         int cw = PANEL_W - LEFT_W - 20;
         int y = py + 40;
         String nameHint = Component.translatable("pmchat.group.name").getString();
-        groupNameField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(nameHint));
+        groupNameField = new EditBox(font, cx, y, cw, 16, Component.literal(nameHint));
         groupNameField.setMaxLength(24);
         groupNameField.setSuggestion(nameHint);
         groupNameField.setResponder(s -> groupNameField.setSuggestion(s.isEmpty() ? nameHint : ""));
-        addDrawableChild(groupNameField);
+        addRenderableWidget(groupNameField);
         y += 42;
         String memHint = Component.translatable("pmchat.group.members.hint").getString();
-        groupMembersField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(memHint));
+        groupMembersField = new EditBox(font, cx, y, cw, 16, Component.literal(memHint));
         groupMembersField.setMaxLength(160);
         groupMembersField.setSuggestion(memHint);
         groupMembersField.setResponder(s -> groupMembersField.setSuggestion(s.isEmpty() ? memHint : ""));
-        addDrawableChild(groupMembersField);
+        addRenderableWidget(groupMembersField);
         y += 30;
-        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 100, 16,
+        addRenderableWidget(FlatButton.centered(font, cx, y, 100, 16,
                 Component.translatable("pmchat.group.create"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT,
                 btn -> createGroupFromComposer()));
-        addDrawableChild(FlatButton.centered(textRenderer, cx + 106, y, 60, 16,
+        addRenderableWidget(FlatButton.centered(font, cx + 106, y, 60, 16,
                 Component.translatable("pmchat.poll.cancel"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT,
                 btn -> { groupCreateMode = false; rebuild(); }));
     }
@@ -1093,11 +1093,11 @@ public class PmScreen extends Screen {
 
     private void renderGroupCreate(GuiGraphicsExtractor context) {
         int cx = px + LEFT_W + 10;
-        context.text(textRenderer, Component.translatable("pmchat.group.title"), cx, py + 10, TITLE, false);
+        context.text(font, Component.translatable("pmchat.group.title"), cx, py + 10, TITLE, false);
         context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
-        context.text(textRenderer, Component.translatable("pmchat.group.name"), cx, py + 30, SUBTLE, false);
-        context.text(textRenderer, Component.translatable("pmchat.group.members"), cx, py + 72, SUBTLE, false);
-        context.text(textRenderer, Component.translatable("pmchat.group.hint"),
+        context.text(font, Component.translatable("pmchat.group.name"), cx, py + 30, SUBTLE, false);
+        context.text(font, Component.translatable("pmchat.group.members"), cx, py + 72, SUBTLE, false);
+        context.text(font, Component.translatable("pmchat.group.hint"),
                 cx, py + PANEL_H - 40, SUBTLE, false);
     }
 
@@ -1108,23 +1108,23 @@ public class PmScreen extends Screen {
         int cw = PANEL_W - LEFT_W - 20;
         int y = py + 40;
         String nameHint = Component.translatable("pmchat.broadcast.name").getString();
-        broadcastNameField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(nameHint));
+        broadcastNameField = new EditBox(font, cx, y, cw, 16, Component.literal(nameHint));
         broadcastNameField.setMaxLength(32);
         broadcastNameField.setSuggestion(nameHint);
         broadcastNameField.setResponder(s -> broadcastNameField.setSuggestion(s.isEmpty() ? nameHint : ""));
-        addDrawableChild(broadcastNameField);
+        addRenderableWidget(broadcastNameField);
         y += 42;
         String descHint = Component.translatable("pmchat.broadcast.desc.hint").getString();
-        broadcastDescField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(descHint));
+        broadcastDescField = new EditBox(font, cx, y, cw, 16, Component.literal(descHint));
         broadcastDescField.setMaxLength(160);
         broadcastDescField.setSuggestion(descHint);
         broadcastDescField.setResponder(s -> broadcastDescField.setSuggestion(s.isEmpty() ? descHint : ""));
-        addDrawableChild(broadcastDescField);
+        addRenderableWidget(broadcastDescField);
         y += 30;
-        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 100, 16,
+        addRenderableWidget(FlatButton.centered(font, cx, y, 100, 16,
                 Component.translatable("pmchat.broadcast.create"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT,
                 btn -> createBroadcastFromComposer()));
-        addDrawableChild(FlatButton.centered(textRenderer, cx + 106, y, 60, 16,
+        addRenderableWidget(FlatButton.centered(font, cx + 106, y, 60, 16,
                 Component.translatable("pmchat.poll.cancel"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT,
                 btn -> { broadcastCreateMode = false; rebuild(); }));
     }
@@ -1144,11 +1144,11 @@ public class PmScreen extends Screen {
 
     private void renderBroadcastCreate(GuiGraphicsExtractor context) {
         int cx = px + LEFT_W + 10;
-        context.text(textRenderer, Component.translatable("pmchat.broadcast.title"), cx, py + 10, TITLE, false);
+        context.text(font, Component.translatable("pmchat.broadcast.title"), cx, py + 10, TITLE, false);
         context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
-        context.text(textRenderer, Component.translatable("pmchat.broadcast.name"), cx, py + 30, SUBTLE, false);
-        context.text(textRenderer, Component.translatable("pmchat.broadcast.desc"), cx, py + 72, SUBTLE, false);
-        context.text(textRenderer, Component.translatable("pmchat.broadcast.hint"),
+        context.text(font, Component.translatable("pmchat.broadcast.name"), cx, py + 30, SUBTLE, false);
+        context.text(font, Component.translatable("pmchat.broadcast.desc"), cx, py + 72, SUBTLE, false);
+        context.text(font, Component.translatable("pmchat.broadcast.hint"),
                 cx, py + PANEL_H - 40, SUBTLE, false);
     }
 
@@ -1159,16 +1159,16 @@ public class PmScreen extends Screen {
         int cw = PANEL_W - LEFT_W - 20;
         int y = py + 40;
         String codeHint = Component.translatable("pmchat.broadcast.code.hint").getString();
-        broadcastCodeField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(codeHint));
+        broadcastCodeField = new EditBox(font, cx, y, cw, 16, Component.literal(codeHint));
         broadcastCodeField.setMaxLength(48);
         broadcastCodeField.setSuggestion(codeHint);
         broadcastCodeField.setResponder(s -> broadcastCodeField.setSuggestion(s.isEmpty() ? codeHint : ""));
-        addDrawableChild(broadcastCodeField);
+        addRenderableWidget(broadcastCodeField);
         y += 30;
-        addDrawableChild(FlatButton.centered(textRenderer, cx, y, 100, 16,
+        addRenderableWidget(FlatButton.centered(font, cx, y, 100, 16,
                 Component.translatable("pmchat.broadcast.join"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT,
                 btn -> joinBroadcastFromComposer()));
-        addDrawableChild(FlatButton.centered(textRenderer, cx + 106, y, 60, 16,
+        addRenderableWidget(FlatButton.centered(font, cx + 106, y, 60, 16,
                 Component.translatable("pmchat.poll.cancel"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT,
                 btn -> { broadcastJoinMode = false; rebuild(); }));
     }
@@ -1186,9 +1186,9 @@ public class PmScreen extends Screen {
 
     private void renderBroadcastJoinCreate(GuiGraphicsExtractor context) {
         int cx = px + LEFT_W + 10;
-        context.text(textRenderer, Component.translatable("pmchat.broadcast.join.title"), cx, py + 10, TITLE, false);
+        context.text(font, Component.translatable("pmchat.broadcast.join.title"), cx, py + 10, TITLE, false);
         context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
-        context.text(textRenderer, Component.translatable("pmchat.broadcast.code.footer"),
+        context.text(font, Component.translatable("pmchat.broadcast.code.footer"),
                 cx, py + PANEL_H - 40, SUBTLE, false);
     }
 
@@ -1229,7 +1229,7 @@ public class PmScreen extends Screen {
         if (inputField != null) inputText = inputField.getValue();
         if (amountField != null) amountText = amountField.getValue();
 
-        clearChildren();
+        clearWidgets();
         searchField = null;
         inputField = null;
         amountField = null;
@@ -1267,7 +1267,7 @@ public class PmScreen extends Screen {
         py = (height - PANEL_H) / 2;
 
         // Полноэкранный режим (6.2)
-        addDrawableChild(FlatButton.centered(textRenderer, px + LEFT_W - 40, py + 5, 16, 13,
+        addRenderableWidget(FlatButton.centered(font, px + LEFT_W - 40, py + 5, 16, 13,
                 Component.literal(config.fullscreen ? "❐" : "⛶"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
                 config.fullscreen ? 0xFF6FBF8B : WBTN_TEXT, btn -> {
                     config.fullscreen = !config.fullscreen;
@@ -1278,7 +1278,7 @@ public class PmScreen extends Screen {
         // размер, заданный перетаскиванием уголка — иначе кнопка молча перестанет
         // на что-либо влиять, раз rebuild() отдаёт приоритет customPanelW/H.
         if (!config.fullscreen) {
-            addDrawableChild(icon(px + LEFT_W - 22, py + 5, 16, 13, PmIcons.SIZE, WBTN_TEXT, "pmchat.tip.size", btn -> {
+            addRenderableWidget(icon(px + LEFT_W - 22, py + 5, 16, 13, PmIcons.SIZE, WBTN_TEXT, "pmchat.tip.size", btn -> {
                 config.uiScale = (config.uiScale + 1) % SIZES.length;
                 config.customPanelW = 0;
                 config.customPanelH = 0;
@@ -1288,16 +1288,16 @@ public class PmScreen extends Screen {
         }
 
         // Настройки и «не беспокоить» (внизу слева)
-        addDrawableChild(icon(px + 6, py + PANEL_H - 19, 16, 13, PmIcons.SETTINGS, WBTN_TEXT, "pmchat.tip.settings", btn ->
+        addRenderableWidget(icon(px + 6, py + PANEL_H - 19, 16, 13, PmIcons.SETTINGS, WBTN_TEXT, "pmchat.tip.settings", btn ->
                 Minecraft.getInstance().setScreen(new PmSettingsScreen(this))));
-        addDrawableChild(icon(px + 26, py + PANEL_H - 19, 16, 13, PmIcons.BELL,
+        addRenderableWidget(icon(px + 26, py + PANEL_H - 19, 16, 13, PmIcons.BELL,
                 config.dnd ? 0xFFE07A6A : 0xFF8FD8A8, "pmchat.tip.dnd", btn -> {
                     config.dnd = !config.dnd;
                     config.save();
                     rebuild();
                 }));
         // музыка/плейлисты прямо в мессенджере
-        addDrawableChild(icon(px + 46, py + PANEL_H - 19, 16, 13, PmIcons.NOTE,
+        addRenderableWidget(icon(px + 46, py + PANEL_H - 19, 16, 13, PmIcons.NOTE,
                 com.pmchat.client.PmMedia.get().hasActive() ? 0xFF6FBF8B : 0xFF8FD8A8,
                 "pmchat.tip.media", btn -> {
                     boolean was = playlistOpen;
@@ -1314,44 +1314,44 @@ public class PmScreen extends Screen {
                     rebuild();
                 }));
         // «Что нового» — панелька со списком изменений релиза
-        addDrawableChild(icon(px + 66, py + PANEL_H - 19, 16, 13, PmIcons.BOOK, 0xFF9CC4DC,
+        addRenderableWidget(icon(px + 66, py + PANEL_H - 19, 16, 13, PmIcons.BOOK, 0xFF9CC4DC,
                 "pmchat.tip.whatsnew", btn ->
                         Minecraft.getInstance().setScreen(new PmWhatsNewScreen(this))));
         // Стримы: список стримящих + донат Vault-монетами (донат — только с плагином)
-        addDrawableChild(icon(px + 86, py + PANEL_H - 19, 16, 13, PmIcons.STREAM,
+        addRenderableWidget(icon(px + 86, py + PANEL_H - 19, 16, 13, PmIcons.STREAM,
                 com.pmchat.client.PmServerMedia.get().isSelfStreaming() ? 0xFFE07A6A : 0xFF9CC4DC,
                 "pmchat.tip.streams", btn ->
                         Minecraft.getInstance().setScreen(new PmStreamsScreen(this))));
         int footerX = px + 106;
         // Discord сервера — открыть приглашение, если задано в pmchat.json (discordUrl)
         if (config.discordUrl != null && !config.discordUrl.isBlank()) {
-            addDrawableChild(icon(footerX, py + PANEL_H - 19, 16, 13, PmIcons.DISCORD, 0xFF8FA7E0,
+            addRenderableWidget(icon(footerX, py + PANEL_H - 19, 16, 13, PmIcons.DISCORD, 0xFF8FA7E0,
                     "pmchat.tip.discord", btn -> PmChatClient.openDiscord()));
             footerX += 20;
         }
         // Свой профиль — отдельная кнопка, раньше открывался только из шапки чужого диалога
-        FlatButton myProfileBtn = FlatButton.centered(textRenderer, footerX, py + PANEL_H - 19, 16, 13,
+        FlatButton myProfileBtn = FlatButton.centered(font, footerX, py + PANEL_H - 19, 16, 13,
                 Component.literal("☺"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B,
                 btn -> openProfile(PmChatClient.selfName()));
         myProfileBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable("pmchat.tip.myprofile")));
-        addDrawableChild(myProfileBtn);
+        addRenderableWidget(myProfileBtn);
         footerX += 20;
 
         // Магазин возможностей — оформление/функции за монеты, ограниченный срок
         if (com.pmchat.client.PmBackend.isConfigured()) {
-            FlatButton shopBtn = FlatButton.centered(textRenderer, footerX, py + PANEL_H - 19, 16, 13,
+            FlatButton shopBtn = FlatButton.centered(font, footerX, py + PANEL_H - 19, 16, 13,
                     Component.literal(com.pmchat.client.PmBackend.CURRENCY_ICON), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
                     com.pmchat.client.PmBackend.CURRENCY_COLOR,
                     btn -> Minecraft.getInstance().setScreen(new PmShopScreen(this)));
             shopBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable("pmchat.tip.shop")));
-            addDrawableChild(shopBtn);
+            addRenderableWidget(shopBtn);
             footerX += 20;
         }
 
         // Свои боты (как в Telegram) — раньше жили в Настройках, вынесены сюда как
         // отдельный первоклассный пункт, наравне с магазином. Нужен аккаунт бэкенда.
         if (com.pmchat.client.PmBackend.hasAccount()) {
-            addDrawableChild(icon(footerX, py + PANEL_H - 19, 16, 13, PmIcons.BOT, 0xFF8FA7E0, "pmchat.bots.open",
+            addRenderableWidget(icon(footerX, py + PANEL_H - 19, 16, 13, PmIcons.BOT, 0xFF8FA7E0, "pmchat.bots.open",
                     btn -> Minecraft.getInstance().setScreen(new PmBotsScreen(this))));
             footerX += 20;
         }
@@ -1362,16 +1362,16 @@ public class PmScreen extends Screen {
         // совпадения ника Minecraft одного недостаточно.
         if (PmChatClient.canOpenAdminPanel()) {
             Component adminLabel = Component.translatable("pmchat.admin.label");
-            int adminW = textRenderer.getWidth(adminLabel) + 12;
-            FlatButton adminBtn = FlatButton.centered(textRenderer, footerX, py + PANEL_H - 19, adminW, 13,
+            int adminW = font.getWidth(adminLabel) + 12;
+            FlatButton adminBtn = FlatButton.centered(font, footerX, py + PANEL_H - 19, adminW, 13,
                     adminLabel, 0xFF5A1418, 0xFF7A1C22, 0xFFE0203C, 0xFFFF4D63,
                     btn -> Minecraft.getInstance().setScreen(new PmAdminScreen(this)));
             adminBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable("pmchat.admin.open")));
-            addDrawableChild(adminBtn);
+            addRenderableWidget(adminBtn);
         }
 
         // Поиск (слева сверху)
-        searchField = new EditBox(textRenderer, px + 6, py + 22, LEFT_W - 12, 14,
+        searchField = new EditBox(font, px + 6, py + 22, LEFT_W - 12, 14,
                 Component.translatable("pmchat.search"));
         searchField.setMaxLength(48);
         searchField.setValue(searchText);
@@ -1381,7 +1381,7 @@ public class PmScreen extends Screen {
             listScroll = 0;
             searchField.setSuggestion(s.isEmpty() ? hint : "");
         });
-        addDrawableChild(searchField);
+        addRenderableWidget(searchField);
 
         boolean isGlobal = isFeedTab();
         if (selected != null && !statsMode && !isGlobal && !groupCreateMode) {
@@ -1389,16 +1389,16 @@ public class PmScreen extends Screen {
             // Открывает профиль ИМЕННО этого игрока (selected), а не свой.
             if (isPlayerTab(selected)) {
                 String peer = selected;
-                FlatButton profBtn = FlatButton.centered(textRenderer, px + PANEL_W - 152, py + 6, 18, 14,
+                FlatButton profBtn = FlatButton.centered(font, px + PANEL_W - 152, py + 6, 18, 14,
                         Component.literal("☺"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B,
                         btn -> openProfile(peer));
                 profBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(
                         Component.translatable("pmchat.tip.profile")));
-                addDrawableChild(profBtn);
+                addRenderableWidget(profBtn);
             }
             // Меньше кнопок в ряд (по многочисленным просьбам): в строке — только
             // самое частое (стикеры, голос, фото, звонок), редкое спрятано за «⋮».
-            addDrawableChild(icon(px + PANEL_W - 130, py + 6, 18, 14, PmIcons.STICKERS, 0xFFE8A0C8, "pmchat.tip.stickers", btn -> {
+            addRenderableWidget(icon(px + PANEL_W - 130, py + 6, 18, 14, PmIcons.STICKERS, 0xFFE8A0C8, "pmchat.tip.stickers", btn -> {
                 boolean was = stickerMode;
                 closeModes();
                 stickerMode = !was;
@@ -1408,10 +1408,10 @@ public class PmScreen extends Screen {
                 }
                 rebuild();
             }));
-            addDrawableChild(icon(px + PANEL_W - 108, py + 6, 18, 14, PmIcons.VOICE,
+            addRenderableWidget(icon(px + PANEL_W - 108, py + 6, 18, 14, PmIcons.VOICE,
                     com.pmchat.client.PmVoice.isRecording() ? 0xFFE07A6A : 0xFFCB8A8A,
                     "pmchat.tip.voice", btn -> toggleVoice()));
-            addDrawableChild(icon(px + PANEL_W - 86, py + 6, 18, 14, PmIcons.PHOTO, 0xFF6FBF8B, "pmchat.tip.photo", btn -> {
+            addRenderableWidget(icon(px + PANEL_W - 86, py + 6, 18, 14, PmIcons.PHOTO, 0xFF6FBF8B, "pmchat.tip.photo", btn -> {
                 boolean was = imageMode;
                 closeModes();
                 imageMode = !was;
@@ -1425,7 +1425,7 @@ public class PmScreen extends Screen {
             if (config.isModUser(selected) && !PmChatClient.isLocalChat(selected)) {
                 boolean callingHere = PmChatClient.isCallActive()
                         && selected.equalsIgnoreCase(PmChatClient.callTarget());
-                addDrawableChild(icon(px + PANEL_W - 64, py + 6, 18, 14, PmIcons.CALL,
+                addRenderableWidget(icon(px + PANEL_W - 64, py + 6, 18, 14, PmIcons.CALL,
                         callingHere ? 0xFFE07A6A : 0xFF8FD8A8, "pmchat.tip.call", btn -> {
                             boolean was = callMenuOpen;
                             closeModes();
@@ -1434,7 +1434,7 @@ public class PmScreen extends Screen {
                         }));
             }
             // «⋮» — остальное реже нужное: видео/аудио, опрос, деньги, статистика
-            addDrawableChild(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.MORE, WBTN_TEXT, "pmchat.tip.more", btn -> {
+            addRenderableWidget(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.MORE, WBTN_TEXT, "pmchat.tip.more", btn -> {
                 moreMenuOpen = !moreMenuOpen;
                 rebuild();
             }));
@@ -1452,21 +1452,21 @@ public class PmScreen extends Screen {
                 // вместо него просто надпись (отрисовывается в render() по officialNoticeY).
                 officialNoticeY = inputY;
             } else if (moneyMode) {
-                amountField = new EditBox(textRenderer, px + LEFT_W + 8, inputY, PANEL_W - LEFT_W - 78, 16,
+                amountField = new EditBox(font, px + LEFT_W + 8, inputY, PANEL_W - LEFT_W - 78, 16,
                         Component.translatable("pmchat.money.hint"));
                 amountField.setMaxLength(12);
                 amountField.setValue(amountText);
                 String moneyHint = Component.translatable("pmchat.money.hint").getString();
                 amountField.setSuggestion(amountText.isEmpty() ? moneyHint : "");
                 amountField.setResponder(s -> amountField.setSuggestion(s.isEmpty() ? moneyHint : ""));
-                addDrawableChild(amountField);
-                addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 66, inputY, 58, 16,
+                addRenderableWidget(amountField);
+                addRenderableWidget(FlatButton.centered(font, px + PANEL_W - 66, inputY, 58, 16,
                         Component.literal("$ ➤"), 0xFF8A6A20, 0xFF9A7826, 0xFFB9862E, MONEY_TEXT, btn -> doPay()));
             } else {
-                addDrawableChild(icon(px + LEFT_W + 8, inputY, 16, 16, PmIcons.EMOJI, 0xFFF0C34E, "pmchat.tip.emoji",
+                addRenderableWidget(icon(px + LEFT_W + 8, inputY, 16, 16, PmIcons.EMOJI, 0xFFF0C34E, "pmchat.tip.emoji",
                         btn -> { boolean was = emojiMode; closeModes(); emojiMode = !was; rebuild(); }));
                 addSttButton(inputY);
-                inputField = new EditBox(textRenderer, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
+                inputField = new EditBox(font, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
                         Component.translatable("pmchat.input.hint"));
                 // обычный чат допускает небольшой перебор, чтобы счётчик 5.2 показывал
                 // «на сколько превышает», а отправку блокируем
@@ -1481,8 +1481,8 @@ public class PmScreen extends Screen {
                         PmChatClient.sendTyping(typingTarget);
                     }
                 });
-                addDrawableChild(inputField);
-                addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 28, inputY - 1, 18, 18,
+                addRenderableWidget(inputField);
+                addRenderableWidget(FlatButton.centered(font, px + PANEL_W - 28, inputY - 1, 18, 18,
                         Component.literal("➤"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> doSend()).circular());
             }
 
@@ -1493,7 +1493,7 @@ public class PmScreen extends Screen {
 
         // Кнопка аватарки группы (3.1) — в шапке группового диалога
         if (isGroupTab() && !groupCreateMode) {
-            addDrawableChild(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.PHOTO, 0xFF6FBF8B,
+            addRenderableWidget(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.PHOTO, 0xFF6FBF8B,
                     "pmchat.tip.groupavatar", btn -> {
                         cycleGroupAvatar();
                         rebuild();
@@ -1503,7 +1503,7 @@ public class PmScreen extends Screen {
         if (isBroadcastTab() && !broadcastCreateMode && !broadcastJoinMode) {
             com.pmchat.client.PmConfig.PmBroadcast b = config.findBroadcast(broadcastId());
             if (b != null && b.owner != null && b.owner.equalsIgnoreCase(PmChatClient.selfNamePublic())) {
-                addDrawableChild(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.PHOTO, 0xFFF0C34E,
+                addRenderableWidget(icon(px + PANEL_W - 26, py + 6, 18, 14, PmIcons.PHOTO, 0xFFF0C34E,
                         "pmchat.tip.broadcastavatar", btn -> {
                             cycleBroadcastAvatar(b);
                             rebuild();
@@ -1514,23 +1514,23 @@ public class PmScreen extends Screen {
         if (isGlobal && !isReadOnlyFeed() && !groupCreateMode && !broadcastCreateMode && !broadcastJoinMode) {
             // Общий чат: только эмодзи + поле + отправка
             int inputY = py + PANEL_H - 24;
-            addDrawableChild(icon(px + LEFT_W + 8, inputY, 16, 16, PmIcons.EMOJI, 0xFFF0C34E, "pmchat.tip.emoji",
+            addRenderableWidget(icon(px + LEFT_W + 8, inputY, 16, 16, PmIcons.EMOJI, 0xFFF0C34E, "pmchat.tip.emoji",
                     btn -> { boolean was = emojiMode; closeModes(); emojiMode = !was; rebuild(); }));
             addSttButton(inputY);
-            inputField = new EditBox(textRenderer, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
+            inputField = new EditBox(font, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
                     Component.translatable("pmchat.input.hint"));
             inputField.setMaxLength(MSG_LIMIT + COMPOSER_SLACK);
             inputField.setValue(inputText);
             String inputHint = Component.translatable("pmchat.input.hint").getString();
             inputField.setSuggestion(inputText.isEmpty() ? inputHint : "");
             inputField.setResponder(s -> inputField.setSuggestion(s.isEmpty() ? inputHint : ""));
-            addDrawableChild(inputField);
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 28, inputY - 1, 18, 18,
+            addRenderableWidget(inputField);
+            addRenderableWidget(FlatButton.centered(font, px + PANEL_W - 28, inputY - 1, 18, 18,
                     Component.literal("➤"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> doSend()).circular());
         }
 
         if (statsMode) {
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 66, py + 6, 60, 14,
+            addRenderableWidget(FlatButton.centered(font, px + PANEL_W - 66, py + 6, 60, 14,
                     Component.translatable("pmchat.stats.back"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, WBTN_TEXT, btn -> {
                         statsMode = false;
                         clearConfirm = false;
@@ -1542,7 +1542,7 @@ public class PmScreen extends Screen {
                 boolean isC = config.isContact(selected);
                 int starColor = com.pmchat.client.PmPalettes.CONTACT_STAR[
                         Math.floorMod(config.contactStarColor, com.pmchat.client.PmPalettes.CONTACT_STAR.length)];
-                addDrawableChild(FlatButton.centered(textRenderer,
+                addRenderableWidget(FlatButton.centered(font,
                         px + LEFT_W + 10, py + PANEL_H - 44, PANEL_W - LEFT_W - 20, 16,
                         Component.translatable(isC ? "pmchat.contact.remove" : "pmchat.contact.add"),
                         isC ? 0xFF5A4A1A : WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
@@ -1554,7 +1554,7 @@ public class PmScreen extends Screen {
 
             // Очистка диалога — с подтверждением вторым кликом
             if (selected != null) {
-                addDrawableChild(FlatButton.centered(textRenderer,
+                addRenderableWidget(FlatButton.centered(font,
                         px + LEFT_W + 10, py + PANEL_H - 24, PANEL_W - LEFT_W - 20, 16,
                         Component.translatable(clearConfirm ? "pmchat.clear.confirm" : "pmchat.clear"),
                         clearConfirm ? 0xFF6E2A22 : WBTN_BG,
@@ -1587,7 +1587,7 @@ public class PmScreen extends Screen {
 
         // Очистка ленты общего чата (без подтверждения — это кэш сессии)
         if (isGlobal && !statsMode && !groupCreateMode && !broadcastCreateMode && !broadcastJoinMode) {
-            addDrawableChild(icon(px + PANEL_W - 28, py + 6, 20, 14, PmIcons.CLEAR, 0xFFE07A6A,
+            addRenderableWidget(icon(px + PANEL_W - 28, py + 6, 20, 14, PmIcons.CLEAR, 0xFFE07A6A,
                     isBroadcastTab() && !isBroadcastOwner() ? "pmchat.tip.leave" : "pmchat.tip.clear", btn -> {
                         if (PmChatClient.GLOBAL.equals(selected)) {
                             PmChatClient.clearGlobalChat();
@@ -1610,7 +1610,7 @@ public class PmScreen extends Screen {
             // 3.2: заглушить уведомления канала/группы (как в Telegram)
             if (isBroadcastTab() || isGroupTab()) {
                 boolean muted = config.isMutedThread(selected);
-                addDrawableChild(icon(px + PANEL_W - 50, py + 6, 16, 14, PmIcons.BELL,
+                addRenderableWidget(icon(px + PANEL_W - 50, py + 6, 16, 14, PmIcons.BELL,
                         muted ? SUBTLE : 0xFF8FD8A8, "pmchat.tip.mute", btn -> {
                             config.toggleMutedThread(selected);
                             rebuild();
@@ -1618,7 +1618,7 @@ public class PmScreen extends Screen {
             }
             // 3.2: инфо/управление каналом
             if (isBroadcastTab()) {
-                addDrawableChild(icon(px + PANEL_W - 70, py + 6, 16, 14, PmIcons.BOOK, 0xFF9CC4DC,
+                addRenderableWidget(icon(px + PANEL_W - 70, py + 6, 16, 14, PmIcons.BOOK, 0xFF9CC4DC,
                         "pmchat.tip.channelinfo", btn -> Minecraft.getInstance()
                                 .setScreen(new PmChannelInfoScreen(this, broadcastId()))));
             }
@@ -1637,10 +1637,10 @@ public class PmScreen extends Screen {
                     .setTextColor(0xFFEDF3F0)
                     .setTextShadow(false)
                     .setShowBackground(true)
-                    .build(textRenderer, ew, eh, Component.translatable("pmchat.edit.editor.title"));
+                    .build(font, ew, eh, Component.translatable("pmchat.edit.editor.title"));
             editBox.setCharacterLimit(200);
             editBox.setValue(prev);
-            addDrawableChild(editBox);
+            addRenderableWidget(editBox);
             setFocused(editBox);
             editBox.setFocused(true);
         } else {
@@ -1696,7 +1696,7 @@ public class PmScreen extends Screen {
     /** Кнопка со своей пиксельной иконкой (PmIcons) и всплывающей подсказкой. */
     private FlatButton icon(int x, int y, int w, int h, String[] bmp, int color, String tipKey,
                             FlatButton.PressAction act) {
-        FlatButton b = FlatButton.centered(textRenderer, x, y, w, h, Component.translatable(tipKey),
+        FlatButton b = FlatButton.centered(font, x, y, w, h, Component.translatable(tipKey),
                 WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, color, act).withIcon(bmp);
         b.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable(tipKey)));
         return b;
@@ -1728,7 +1728,7 @@ public class PmScreen extends Screen {
                 color = WBTN_TEXT;
             }
         }
-        addDrawableChild(FlatButton.centered(textRenderer, px + LEFT_W + 28, inputY, 22, 16,
+        addRenderableWidget(FlatButton.centered(font, px + LEFT_W + 28, inputY, 22, 16,
                 Component.literal(label), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, color, btn -> {
                     switch (com.pmchat.client.PmStt.state) {
                         case READY -> com.pmchat.client.PmStt.startListening(text -> {
@@ -1764,11 +1764,11 @@ public class PmScreen extends Screen {
         String label = Integer.toString(remaining);
         int color = remaining < 0 ? 0xFFE0574C : remaining <= 10 ? 0xFFE0B040 : SUBTLE;
         int fieldRight = inputField.getX() + inputField.getWidth();
-        int tw = textRenderer.getWidth(label);
+        int tw = font.getWidth(label);
         int slide = Math.round((1f - counterAlpha) * 4f); // лёгкий подъём при появлении
         int cx = fieldRight - tw;
         int cy = inputField.getY() - 9 + slide;
-        context.text(textRenderer, label, cx, cy, applyAlpha(color, counterAlpha), false);
+        context.text(font, label, cx, cy, applyAlpha(color, counterAlpha), false);
     }
 
     private void doSend() {
@@ -1939,11 +1939,11 @@ public class PmScreen extends Screen {
                 case 2 -> Component.translatable("pmchat.sticker.tab.gifs").getString();
                 default -> stickerTabs.get(i);
             };
-            int w = textRenderer.getWidth(label) + 8;
+            int w = font.getWidth(label) + 8;
             if (tx + w > x1 - 4) break;
             boolean active = i == stickerTab;
             context.fill(tx, ty, tx + w, ty + 12, active ? ROW_SELECTED : ROW_HOVER);
-            context.text(textRenderer, label, tx + 4, ty + 2, active ? 0xFFF0C34E : NAME_TEXT, false);
+            context.text(font, label, tx + 4, ty + 2, active ? 0xFFF0C34E : NAME_TEXT, false);
             stickerTabRects.add(new Object[]{tx, ty, w, 12, i});
             tx += w + 3;
         }
@@ -1958,7 +1958,7 @@ public class PmScreen extends Screen {
         stickerScroll = Math.max(0, Math.min(stickerScroll, maxScroll));
 
         if (items.isEmpty()) {
-            context.text(textRenderer, Component.translatable(stickerTab == 0
+            context.text(font, Component.translatable(stickerTab == 0
                     ? "pmchat.sticker.norecent" : "pmchat.sticker.empty"),
                     x0 + 6, gridTop + 4, SUBTLE, false);
             return;
@@ -1986,7 +1986,7 @@ public class PmScreen extends Screen {
         }
         if (maxScroll > 0) {
             String pg = (stickerScroll + 1) + "/" + (maxScroll + 1);
-            context.text(textRenderer, pg, x1 - 6 - textRenderer.getWidth(pg), top + 5, SUBTLE, false);
+            context.text(font, pg, x1 - 6 - font.getWidth(pg), top + 5, SUBTLE, false);
         }
     }
 
@@ -2115,35 +2115,35 @@ public class PmScreen extends Screen {
         int x = px + LEFT_W + 8;
         int w = PANEL_W - LEFT_W - 16;
         context.fill(px + LEFT_W + 1, areaTop, px + PANEL_W - 1, py + PANEL_H - 2, PANEL_BG);
-        context.text(textRenderer, Component.translatable("pmchat.media.pick"), x, areaTop + 2, 0xFF9CC4DC, false);
+        context.text(font, Component.translatable("pmchat.media.pick"), x, areaTop + 2, 0xFF9CC4DC, false);
 
         // переключатель «Спойлер» — применяется к следующему отправленному видео
         Component spoilerLbl = Component.translatable("pmchat.spoiler.toggle");
-        int spoilerW = textRenderer.getWidth(spoilerLbl) + 18;
+        int spoilerW = font.getWidth(spoilerLbl) + 18;
         drawSpoilerToggle(context, mouseX, mouseY, px + PANEL_W - 10 - spoilerW, areaTop + 1);
 
         if (uploading) {
             Component label = Component.translatable("pmchat.image.uploading");
-            context.text(textRenderer, label,
-                    px + LEFT_W + (PANEL_W - LEFT_W - textRenderer.getWidth(label)) / 2,
+            context.text(font, label,
+                    px + LEFT_W + (PANEL_W - LEFT_W - font.getWidth(label)) / 2,
                     (areaTop + areaBottom) / 2, 0xFFF0C34E, false);
             return;
         }
         int y = areaTop + 16;
 
         // Видео
-        context.text(textRenderer, "▶ " + Component.translatable("pmchat.media.video").getString()
+        context.text(font, "▶ " + Component.translatable("pmchat.media.video").getString()
                 + " (config/pmchat-video)", x, y, 0xFF6FBF8B, false);
         y += 12;
         if (videoFiles.isEmpty()) {
-            context.text(textRenderer, Component.translatable("pmchat.media.empty"), x + 4, y, SUBTLE, false);
+            context.text(font, Component.translatable("pmchat.media.empty"), x + 4, y, SUBTLE, false);
             y += 12;
         } else {
             for (Path f : videoFiles) {
                 if (y + 15 > areaBottom) break;
                 boolean hov = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + 14;
                 context.fill(x, y, x + w, y + 14, hov ? ROW_SELECTED : ROW_HOVER);
-                context.text(textRenderer, "▶ " + trim(f.getFileName().toString(), w - 12), x + 5, y + 3, NAME_TEXT, false);
+                context.text(font, "▶ " + trim(f.getFileName().toString(), w - 12), x + 5, y + 3, NAME_TEXT, false);
                 mediaRects.add(new Object[]{x, y, w, 14, f, true});
                 y += 16;
             }
@@ -2152,24 +2152,24 @@ public class PmScreen extends Screen {
         // Аудио
         y += 4;
         if (y + 14 <= areaBottom) {
-            context.text(textRenderer, "♪ " + Component.translatable("pmchat.media.audio").getString()
+            context.text(font, "♪ " + Component.translatable("pmchat.media.audio").getString()
                     + " (config/pmchat-audio, WAV)", x, y, 0xFFF0C34E, false);
             y += 12;
             if (audioFiles.isEmpty()) {
-                context.text(textRenderer, Component.translatable("pmchat.media.empty"), x + 4, y, SUBTLE, false);
+                context.text(font, Component.translatable("pmchat.media.empty"), x + 4, y, SUBTLE, false);
             } else {
                 for (Path f : audioFiles) {
                     if (y + 15 > areaBottom) break;
                     boolean hov = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + 14;
                     context.fill(x, y, x + w, y + 14, hov ? ROW_SELECTED : ROW_ALT);
-                    context.text(textRenderer, "♪ " + trim(f.getFileName().toString(), w - 12), x + 5, y + 3, NAME_TEXT, false);
+                    context.text(font, "♪ " + trim(f.getFileName().toString(), w - 12), x + 5, y + 3, NAME_TEXT, false);
                     mediaRects.add(new Object[]{x, y, w, 14, f, false});
                     y += 16;
                 }
             }
         }
         if (uploadFailed) {
-            context.text(textRenderer, Component.translatable("pmchat.image.failed"), x, areaBottom - 10, 0xFFE07A6A, false);
+            context.text(font, Component.translatable("pmchat.image.failed"), x, areaBottom - 10, 0xFFE07A6A, false);
         }
     }
 
@@ -2309,8 +2309,8 @@ public class PmScreen extends Screen {
             context.fill(gx - 2, gy - 6, gx, gy - 4, WBTN_TEXT);
         }
 
-        context.text(textRenderer, Component.literal("✉"), px + 8, py + 8, 0xFF6FBF8B, false);
-        context.text(textRenderer, Component.translatable("screen.pmchat.title"), px + 20, py + 8, TITLE, false);
+        context.text(font, Component.literal("✉"), px + 8, py + 8, 0xFF6FBF8B, false);
+        context.text(font, Component.translatable("screen.pmchat.title"), px + 20, py + 8, TITLE, false);
 
         renderConversationList(context, mouseX, mouseY);
 
@@ -2327,17 +2327,17 @@ public class PmScreen extends Screen {
             // Совсем нет диалогов — подсказку пишем внизу по центру (как в Telegram
             // на пустом экране), иначе «выберите диалог слева» по центру области.
             Component hint = Component.translatable(noChats ? "pmchat.empty.nochats" : "pmchat.empty.chat");
-            int hx = px + LEFT_W + (PANEL_W - LEFT_W - textRenderer.getWidth(hint)) / 2;
+            int hx = px + LEFT_W + (PANEL_W - LEFT_W - font.getWidth(hint)) / 2;
             int hy = noChats ? py + PANEL_H - 40 : py + PANEL_H / 2 - 4;
-            context.text(textRenderer, hint, hx, hy, SUBTLE, false);
+            context.text(font, hint, hx, hy, SUBTLE, false);
         } else {
             renderChat(context, mouseX, mouseY);
         }
 
         if (officialNoticeY >= 0) {
             Component notice = Component.translatable("pmchat.official.noreply");
-            context.text(textRenderer, notice,
-                    px + LEFT_W + (PANEL_W - LEFT_W - textRenderer.getWidth(notice)) / 2, officialNoticeY + 4, SUBTLE, false);
+            context.text(font, notice,
+                    px + LEFT_W + (PANEL_W - LEFT_W - font.getWidth(notice)) / 2, officialNoticeY + 4, SUBTLE, false);
         }
 
         if (callMenuOpen) {
@@ -2362,11 +2362,11 @@ public class PmScreen extends Screen {
             if (age < 900) {
                 float fade = age < 600 ? 1f : 1f - (age - 600) / 300f;
                 Component label = Component.translatable("pmchat.copied");
-                int lw = textRenderer.getWidth(label) + 8;
+                int lw = font.getWidth(label) + 8;
                 int lx = Math.min(copiedX, width - lw - 2);
                 int ly = copiedY - 14 - Math.round(age / 90f);
                 context.fill(lx, ly, lx + lw, ly + 12, applyAlpha(0xE62E5F46, fade));
-                context.text(textRenderer, label, lx + 4, ly + 2, applyAlpha(0xFFCFEEDA, fade), false);
+                context.text(font, label, lx + 4, ly + 2, applyAlpha(0xFFCFEEDA, fade), false);
             } else {
                 copiedAt = -1;
             }
@@ -2375,10 +2375,10 @@ public class PmScreen extends Screen {
         // Подсказка режима пересылки
         if (forwardBuffer != null) {
             Component hint = Component.translatable("pmchat.fwd.pick");
-            int hw = textRenderer.getWidth(hint) + 12;
+            int hw = font.getWidth(hint) + 12;
             int hx = px + (PANEL_W - hw) / 2;
             context.fill(hx, py - 16, hx + hw, py - 3, 0xF03A6FB0);
-            context.text(textRenderer, hint, hx + 6, py - 13, 0xFFFFFFFF, false);
+            context.text(font, hint, hx + 6, py - 13, 0xFFFFFFFF, false);
         }
 
         // оверлей плейлистов прямо в панели мессенджера
@@ -2540,13 +2540,13 @@ public class PmScreen extends Screen {
                 ? media.title()
                 : (url != null ? url.replaceFirst("^https?://(www\\.)?", "") : "");
         if (title.length() > 64) title = title.substring(0, 61) + "…";
-        context.text(textRenderer, "▶ " + title, 14, 13, 0xFF9CC4DC, false);
+        context.text(font, "▶ " + title, 14, 13, 0xFF9CC4DC, false);
 
         // Описание ролика (YouTube) — значок рядом с заголовком, подгружаем лениво
         videoDescBtnRect = null;
         boolean isYt = url != null && com.pmchat.client.PmYouTube.isYouTube(url);
         if (isYt) {
-            int dbx = 14 + textRenderer.getWidth("▶ " + title) + 6;
+            int dbx = 14 + font.getWidth("▶ " + title) + 6;
             int dby = 6;
             videoDescBtnRect = new int[]{dbx, dby, 14, 14};
             boolean hovDesc = inRect(mouseX, mouseY, videoDescBtnRect);
@@ -2599,8 +2599,8 @@ public class PmScreen extends Screen {
                 context.fill(ix, iy, ix + w, iy + h, 0x99050907);
                 Component again = Component.translatable("pmchat.video.again");
                 PmIcons.draw(context, PmIcons.PLAY, ix + w / 2 - 12, iy + h / 2 - 20, 24, 24, 0xFFEDF3F0);
-                context.text(textRenderer, again,
-                        ix + (w - textRenderer.getWidth(again)) / 2, iy + h / 2 + 10, 0xFFEDF3F0, false);
+                context.text(font, again,
+                        ix + (w - font.getWidth(again)) / 2, iy + h / 2 + 10, 0xFFEDF3F0, false);
             }
         } else {
             videoImgRect = null;
@@ -2614,22 +2614,22 @@ public class PmScreen extends Screen {
             context.outline(pxc, pyc, pw, ph, 0xFF2A4A5C);
             if (stuck) {
                 Component err = Component.translatable(cookiesHint ? "pmchat.video.signin" : "pmchat.video.stuck");
-                context.text(textRenderer, err,
-                        pxc + (pw - textRenderer.getWidth(err)) / 2, pyc + 14, 0xFFE0B08A, false);
+                context.text(font, err,
+                        pxc + (pw - font.getWidth(err)) / 2, pyc + 14, 0xFFE0B08A, false);
                 if (cookiesHint) {
                     Component hint = Component.translatable("pmchat.video.signin.hint");
-                    context.text(textRenderer, hint,
-                            pxc + (pw - textRenderer.getWidth(hint)) / 2, pyc + 30, 0xFF8FA6B4, false);
+                    context.text(font, hint,
+                            pxc + (pw - font.getWidth(hint)) / 2, pyc + 30, 0xFF8FA6B4, false);
                 }
                 Component openInBrowser = Component.translatable("pmchat.video.openweb");
-                int bw2 = textRenderer.getWidth(openInBrowser) + 24;
+                int bw2 = font.getWidth(openInBrowser) + 24;
                 int bx2 = pxc + (pw - bw2) / 2, by2 = pyc + ph - 32;
                 videoFallbackRect = new int[]{bx2, by2, bw2, 18};
                 boolean hov = inRect(mouseX, mouseY, videoFallbackRect);
                 context.fill(bx2, by2, bx2 + bw2, by2 + 18, hov ? 0xFF2E5C48 : 0xFF1C3644);
                 context.outline(bx2, by2, bw2, 18, 0xFF4C8A66);
                 PmIcons.draw(context, PmIcons.LINKOUT, bx2 + 2, by2 + 4, 12, 10, 0xFF8FD8A8);
-                context.text(textRenderer, openInBrowser, bx2 + 15, by2 + 5, 0xFF8FD8A8, false);
+                context.text(font, openInBrowser, bx2 + 15, by2 + 5, 0xFF8FD8A8, false);
             } else {
                 // Загрузка: статус + бегущие точки. Для YouTube показываем стадию
                 // yt-dlp: «Получаю yt-dlp» пока качается бинарник, «Скачивание N%»
@@ -2652,8 +2652,8 @@ public class PmScreen extends Screen {
                 }
                 int dots = (int) (System.currentTimeMillis() / 350 % 4);
                 // Центруем по тексту без точек, чтобы надпись не «дышала»
-                int lx = pxc + (pw - textRenderer.getWidth(base)) / 2;
-                context.text(textRenderer, base + " " + "•".repeat(dots),
+                int lx = pxc + (pw - font.getWidth(base)) / 2;
+                context.text(font, base + " " + "•".repeat(dots),
                         lx, pyc + (ph - 8) / 2, 0xFFB8C6CE, false);
             }
         }
@@ -2683,8 +2683,8 @@ public class PmScreen extends Screen {
         // Время
         String timeStr = fmtTime(s.timeMs()) + " / " + fmtTime(s.lengthMs());
         int timeX = bx + btn + 9;
-        context.text(textRenderer, timeStr, timeX, barY + (barH - 8) / 2, 0xFF9CC4DC, false);
-        int timeEnd = timeX + textRenderer.getWidth("88:88 / 88:88");
+        context.text(font, timeStr, timeX, barY + (barH - 8) / 2, 0xFF9CC4DC, false);
+        int timeEnd = timeX + font.getWidth("88:88 / 88:88");
 
         // Правый кластер: [громкость][скорость][в браузере]
         int browserSz = 20;
@@ -2703,8 +2703,8 @@ public class PmScreen extends Screen {
         boolean hovRate = inRect(mouseX, mouseY, videoRateRect);
         context.fill(rateX, rateY, rateX + rateW, rateY + rateH, hovRate ? 0xFF2A4A5C : 0xFF16241E);
         String rateLabel = trimRate(s.getRate()) + "x";
-        context.text(textRenderer, rateLabel,
-                rateX + (rateW - textRenderer.getWidth(rateLabel)) / 2, rateY + 6, 0xFFF0C34E, false);
+        context.text(font, rateLabel,
+                rateX + (rateW - font.getWidth(rateLabel)) / 2, rateY + 6, 0xFFF0C34E, false);
 
         int cy = barY + barH / 2;
         int volW = 44;
@@ -2738,10 +2738,10 @@ public class PmScreen extends Screen {
             if ((hovSeek || videoDragSeek) && s.lengthMs() > 0) {
                 float f = Math.max(0f, Math.min(1f, (mouseX - seekX) / (float) seekW));
                 String tip = fmtTime((long) (s.lengthMs() * f));
-                int tw = textRenderer.getWidth(tip) + 8;
+                int tw = font.getWidth(tip) + 8;
                 int tx = Math.max(seekX, Math.min(seekX + seekW - tw, mouseX - tw / 2));
                 context.fill(tx, cy - 22, tx + tw, cy - 10, 0xF0223530);
-                context.text(textRenderer, tip, tx + 4, cy - 20, 0xFFEDF3F0, false);
+                context.text(font, tip, tx + 4, cy - 20, 0xFFEDF3F0, false);
             }
         }
     }
@@ -2774,11 +2774,11 @@ public class PmScreen extends Screen {
         context.outline(px0, py0, pw, ph, 0xFF2A4A5C);
         int ty = py0 + 6;
         for (String line : lines) {
-            context.text(textRenderer, line, px0 + 8, ty, 0xFFCFE0DA, false);
+            context.text(font, line, px0 + 8, ty, 0xFFCFE0DA, false);
             ty += 11;
         }
         if (truncated) {
-            context.text(textRenderer, "…", px0 + 8, ty, 0xFF8FA6B4, false);
+            context.text(font, "…", px0 + 8, ty, 0xFF8FA6B4, false);
         }
     }
 
@@ -2800,16 +2800,16 @@ public class PmScreen extends Screen {
         String header = playlistDir == null
                 ? Component.translatable("pmchat.media.title").getString()
                 : playlistDir.getName();
-        ctx.text(textRenderer, trim(header, w - 110), x0 + 10, y0 + 8, 0xFFEDF3F0, false);
+        ctx.text(font, trim(header, w - 110), x0 + 10, y0 + 8, 0xFFEDF3F0, false);
         // Кнопка «открыть папку»
         Component openLbl = Component.translatable("pmchat.media.openfolder");
-        int owL = textRenderer.getWidth(openLbl) + 14;
+        int owL = font.getWidth(openLbl) + 14;
         int oX = x1 - owL - 30, oY = y0 + 5;
         playlistFolderBtnRect = new int[]{oX, oY, owL, 15};
         boolean hovOpen = inRect(mouseX, mouseY, playlistFolderBtnRect);
         ctx.fill(oX, oY, oX + owL, oY + 15, hovOpen ? 0xFF23423A : 0xFF16241E);
         ctx.outline(oX, oY, owL, 15, 0xFF2E5C48);
-        ctx.text(textRenderer, openLbl, oX + 7, oY + 4, hovOpen ? 0xFFEDF3F0 : 0xFF8FD8A8, false);
+        ctx.text(font, openLbl, oX + 7, oY + 4, hovOpen ? 0xFFEDF3F0 : 0xFF8FD8A8, false);
         // Крестик
         int cX = x1 - 22, cY = y0 + 5;
         playlistCloseRect = new int[]{cX, cY, 15, 15};
@@ -2845,15 +2845,15 @@ public class PmScreen extends Screen {
                 boolean hov = inRow(mouseX, mouseY, x0, x1, y, rowH);
                 ctx.fill(x0 + 6, y, x1 - 6, y + rowH - 2, hov ? 0xFF23423A : 0xFF16241E);
                 PmIcons.draw(ctx, PmIcons.EXPAND, x0 + 9, y + 3, 12, 12, 0xFF8FD8A8);
-                ctx.text(textRenderer, "..", x0 + 26, y + 5, 0xFFEDF3F0, false);
+                ctx.text(font, "..", x0 + 26, y + 5, 0xFFEDF3F0, false);
                 // «играть всё» справа
                 Component pa = Component.translatable("pmchat.media.playall");
-                int paw = textRenderer.getWidth(pa) + 12;
+                int paw = font.getWidth(pa) + 12;
                 int pax = x1 - 14 - paw;
                 playlistPlayAllRect = new int[]{pax, y + 1, paw, rowH - 3};
                 boolean hovPa = inRect(mouseX, mouseY, playlistPlayAllRect);
                 ctx.fill(pax, y + 1, pax + paw, y + rowH - 2, hovPa ? 0xFF2E6E4E : 0xFF23423A);
-                ctx.text(textRenderer, pa, pax + 6, y + 5, 0xFFCFEEDA, false);
+                ctx.text(font, pa, pax + 6, y + 5, 0xFFCFEEDA, false);
                 playlistUpRect = new int[]{x0 + 6, y, pax - x0 - 6, rowH};
             }
             y += rowH;
@@ -2861,8 +2861,8 @@ public class PmScreen extends Screen {
 
         if (entries.isEmpty()) {
             ctx.disableScissor();
-            ctx.text(textRenderer, Component.translatable("pmchat.media.empty"), x0 + 10, listTop + rowH + 6, 0xFF7FA694, false);
-            ctx.text(textRenderer, Component.translatable("pmchat.media.hint"), x0 + 10, listTop + rowH + 20, 0xFF7FA694, false);
+            ctx.text(font, Component.translatable("pmchat.media.empty"), x0 + 10, listTop + rowH + 6, 0xFF7FA694, false);
+            ctx.text(font, Component.translatable("pmchat.media.hint"), x0 + 10, listTop + rowH + 20, 0xFF7FA694, false);
             if (playerH > 0) renderMusicPlayer(ctx, mouseX, mouseY, x0, x1, y1 - playerH - 4, w);
             return;
         }
@@ -2880,21 +2880,21 @@ public class PmScreen extends Screen {
                 int labelRight = x1 - 14;
                 if (dir) {
                     String cnt = countMusic(f) + "";
-                    ctx.text(textRenderer, cnt, x1 - 14 - textRenderer.getWidth(cnt), y + 5, 0xFF7FA694, false);
-                    labelRight -= textRenderer.getWidth(cnt) + 6;
+                    ctx.text(font, cnt, x1 - 14 - font.getWidth(cnt), y + 5, 0xFF7FA694, false);
+                    labelRight -= font.getWidth(cnt) + 6;
                 } else if (queueHere) {
                     // Кнопки переноса ↑/↓ (#13)
                     int au = x1 - 16, ad = au - 16;
                     boolean hu = mouseX >= au && mouseX < au + 14 && mouseY >= y + 2 && mouseY < y + 16;
                     boolean hd = mouseX >= ad && mouseX < ad + 14 && mouseY >= y + 2 && mouseY < y + 16;
-                    ctx.text(textRenderer, "▲", au + 3, y + 5, hu ? 0xFFEDF3F0 : 0xFF7FA694, false);
-                    ctx.text(textRenderer, "▼", ad + 3, y + 5, hd ? 0xFFEDF3F0 : 0xFF7FA694, false);
+                    ctx.text(font, "▲", au + 3, y + 5, hu ? 0xFFEDF3F0 : 0xFF7FA694, false);
+                    ctx.text(font, "▼", ad + 3, y + 5, hd ? 0xFFEDF3F0 : 0xFF7FA694, false);
                     playlistMoveRects.add(new int[]{au, y + 2, 14, 14, -1, qidx});
                     playlistMoveRects.add(new int[]{ad, y + 2, 14, 14, 1, qidx});
                     labelRight = ad - 4;
                 }
                 String label = f.getName();
-                ctx.text(textRenderer, trim(label, labelRight - (x0 + 26)), x0 + 26, y + 5, 0xFFEDF3F0, false);
+                ctx.text(font, trim(label, labelRight - (x0 + 26)), x0 + 26, y + 5, 0xFFEDF3F0, false);
                 playlistRowRects.add(new Object[]{x0 + 6, y, x1 - 6 - (x0 + 6), rowH, f,
                         dir ? "dir" : "track", queueHere ? qidx : -1});
             }
@@ -2932,9 +2932,9 @@ public class PmScreen extends Screen {
         int tx = plNextRect[0] + bsz + 10;
         if (s != null) {
             String time = fmtTime(s.timeMs()) + " / " + fmtTime(s.lengthMs());
-            ctx.text(textRenderer, time, x1 - 12 - textRenderer.getWidth(time), by + 4, 0xFF7FA694, false);
+            ctx.text(font, time, x1 - 12 - font.getWidth(time), by + 4, 0xFF7FA694, false);
         }
-        ctx.text(textRenderer, trim(tt, x1 - 90 - tx), tx, by + 4, 0xFFEDF3F0, false);
+        ctx.text(font, trim(tt, x1 - 90 - tx), tx, by + 4, 0xFFEDF3F0, false);
     }
 
     private void drawPlBtn(GuiGraphicsExtractor ctx, int[] r, String[] icon, int mx, int my) {
@@ -3004,9 +3004,9 @@ public class PmScreen extends Screen {
                     iconSize, iconSize, applyAlpha(0xFFEDF3F0, alpha));
         }
         Component label = Component.translatable("pmchat.spoiler.label");
-        int lw = textRenderer.getWidth(label);
+        int lw = font.getWidth(label);
         if (lw + 4 <= w) {
-            context.text(textRenderer, label, x + w / 2 - lw / 2, y + h / 2 + 6,
+            context.text(font, label, x + w / 2 - lw / 2, y + h / 2 + 6,
                     applyAlpha(0xFFEDF3F0, alpha), false);
         }
     }
@@ -3014,13 +3014,13 @@ public class PmScreen extends Screen {
     /** маленький переключатель «Спойлер» — рисует и обновляет spoilerToggleRect для клика. */
     private void drawSpoilerToggle(GuiGraphicsExtractor context, int mouseX, int mouseY, int x, int y) {
         Component label = Component.translatable("pmchat.spoiler.toggle");
-        int w = textRenderer.getWidth(label) + 18;
+        int w = font.getWidth(label) + 18;
         spoilerToggleRect = new int[]{x, y, w, 12};
         boolean hov = inRect(mouseX, mouseY, spoilerToggleRect);
         int bg = spoilerMode ? 0xFF4C8A66 : (hov ? ROW_HOVER : ROW_ALT);
         context.fill(x, y, x + w, y + 11, bg);
         PmIcons.draw(context, PmIcons.SPOILER, x + 2, y + 1, 9, 9, spoilerMode ? 0xFFEDF3F0 : SUBTLE);
-        context.text(textRenderer, label, x + 14, y + 2, spoilerMode ? 0xFFEDF3F0 : PREVIEW_TEXT, false);
+        context.text(font, label, x + 14, y + 2, spoilerMode ? 0xFFEDF3F0 : PREVIEW_TEXT, false);
     }
 
     private static String fmtTime(long ms) {
@@ -3051,7 +3051,7 @@ public class PmScreen extends Screen {
         context.blit(RenderPipelines.GUI_TEXTURED, e.currentTexture(), ix, iy,
                 0f, 0f, w, h, e.width, e.height, e.width, e.height);
         Component hint = Component.translatable("pmchat.image.close");
-        context.text(textRenderer, hint, (width - textRenderer.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
+        context.text(font, hint, (width - font.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
     }
 
     /** Папка обоев в конфиге мода. */
@@ -3156,8 +3156,8 @@ public class PmScreen extends Screen {
         if (name != null && config.isBlocked(name)) {
             fillCircle(context, x + size / 2, y + size / 2, (size + 1) / 2, 0xFF3A3F44);
             String mark = "⊘";
-            context.text(textRenderer, mark,
-                    x + size / 2 - textRenderer.getWidth(mark) / 2, y + size / 2 - 4, 0xFF8A9096, false);
+            context.text(font, mark,
+                    x + size / 2 - font.getWidth(mark) / 2, y + size / 2 - 4, 0xFF8A9096, false);
             return;
         }
         if (com.pmchat.client.PmBackend.isConfigured()) {
@@ -3181,8 +3181,8 @@ public class PmScreen extends Screen {
         int bg = 0xFF000000 | (nameColor(name) & 0x00FFFFFF);
         fillCircle(context, x + size / 2, y + size / 2, (size + 1) / 2, bg);
         String letter = name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT);
-        context.text(textRenderer, letter,
-                x + size / 2 - textRenderer.getWidth(letter) / 2, y + size / 2 - 4, 0xFFFFFFFF, false);
+        context.text(font, letter,
+                x + size / 2 - font.getWidth(letter) / 2, y + size / 2 - 4, 0xFFFFFFFF, false);
     }
 
     /**
@@ -3275,7 +3275,7 @@ public class PmScreen extends Screen {
         // месте поверх результатов поиска и всё визуально слипается в один ком.
         if (query.isEmpty()) {
         // Заголовок секции «Каналы» (общий чат, избранное, серверные каналы)
-        context.text(textRenderer, Component.translatable("pmchat.section.channels").getString().toUpperCase(Locale.ROOT),
+        context.text(font, Component.translatable("pmchat.section.channels").getString().toUpperCase(Locale.ROOT),
                 px + 7, y + 1, SUBTLE, false);
         y += 10;
 
@@ -3288,15 +3288,15 @@ public class PmScreen extends Screen {
             } else if (hovered) {
                 fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             }
-            context.text(textRenderer, "◎", px + 7, y + 4, 0xFF6FBF8B, false);
-            context.text(textRenderer,
+            context.text(font, "◎", px + 7, y + 4, 0xFF6FBF8B, false);
+            context.text(font,
                     trim(Component.translatable("pmchat.global").getString(), LEFT_W - 26), px + 18, y + 4, NAME_TEXT, false);
             List<PmMessage> global = PmChatClient.getGlobalChat();
             if (!global.isEmpty()) {
                 PmMessage last = global.get(global.size() - 1);
                 String preview = (last.sender != null ? last.sender + ": " : "")
                         + PmChatClient.previewOf(last.text != null ? last.text : "");
-                context.text(textRenderer, trim(preview, LEFT_W - 14), px + 7, y + 14, PREVIEW_TEXT, false);
+                context.text(font, trim(preview, LEFT_W - 14), px + 7, y + 14, PREVIEW_TEXT, false);
             }
             rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, PmChatClient.GLOBAL});
             y += ROW_H;
@@ -3308,12 +3308,12 @@ public class PmScreen extends Screen {
             boolean isSel = PmChatClient.SAVED.equals(selected);
             if (isSel) drawSelectedRow(context, y);
             else if (hovered) fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
-            context.text(textRenderer, "✦", px + 7, y + 4, 0xFFF0C34E, false);
-            context.text(textRenderer, trim(Component.translatable("pmchat.saved").getString(), LEFT_W - 26),
+            context.text(font, "✦", px + 7, y + 4, 0xFFF0C34E, false);
+            context.text(font, trim(Component.translatable("pmchat.saved").getString(), LEFT_W - 26),
                     px + 18, y + 4, NAME_TEXT, false);
             PmMessage last = history.lastMessage(PmChatClient.SAVED);
             if (last != null) {
-                context.text(textRenderer, trim(PmChatClient.previewOf(last.text != null ? last.text : ""), LEFT_W - 14),
+                context.text(font, trim(PmChatClient.previewOf(last.text != null ? last.text : ""), LEFT_W - 14),
                         px + 7, y + 14, PREVIEW_TEXT, false);
             }
             rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, PmChatClient.SAVED});
@@ -3326,11 +3326,11 @@ public class PmScreen extends Screen {
             boolean isSel = PmChatClient.COREPROTECT.equals(selected);
             if (isSel) drawSelectedRow(context, y);
             else if (hovered) fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
-            context.text(textRenderer, "▤", px + 7, y + 4, 0xFF9CC4DC, false);
-            context.text(textRenderer, trim("CoreProtect", LEFT_W - 26), px + 18, y + 4, NAME_TEXT, false);
+            context.text(font, "▤", px + 7, y + 4, 0xFF9CC4DC, false);
+            context.text(font, trim("CoreProtect", LEFT_W - 26), px + 18, y + 4, NAME_TEXT, false);
             List<PmMessage> cp = PmChatClient.getCoreProtectFeed();
             if (!cp.isEmpty()) {
-                context.text(textRenderer, trim(cp.get(cp.size() - 1).text, LEFT_W - 14),
+                context.text(font, trim(cp.get(cp.size() - 1).text, LEFT_W - 14),
                         px + 7, y + 14, PREVIEW_TEXT, false);
             }
             rowRects.add(new Object[]{px, y, LEFT_W, ROW_H, PmChatClient.COREPROTECT});
@@ -3348,18 +3348,18 @@ public class PmScreen extends Screen {
             } else if (hovered) {
                 fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             }
-            context.text(textRenderer, "#", px + 7, y + 4, 0xFFF0C34E, false);
+            context.text(font, "#", px + 7, y + 4, 0xFFF0C34E, false);
 
             int chUnread = PmChatClient.channelUnread(channel.id);
             int labelMax = LEFT_W - 26 - (chUnread > 0 ? 16 : 0);
-            context.text(textRenderer, trim(channel.label, labelMax), px + 16, y + 4, NAME_TEXT, false);
+            context.text(font, trim(channel.label, labelMax), px + 16, y + 4, NAME_TEXT, false);
 
             List<PmMessage> feed = PmChatClient.getChannelFeed(channel.id);
             if (!feed.isEmpty()) {
                 PmMessage last = feed.get(feed.size() - 1);
                 String preview = (last.sender != null ? last.sender + ": " : "")
                         + PmChatClient.previewOf(last.text != null ? last.text : "");
-                context.text(textRenderer, trim(preview, LEFT_W - 14), px + 7, y + 14, PREVIEW_TEXT, false);
+                context.text(font, trim(preview, LEFT_W - 14), px + 7, y + 14, PREVIEW_TEXT, false);
             }
             if (chUnread > 0) {
                 drawBadge(context, px + LEFT_W - 5, y, chUnread > 9 ? "9+" : String.valueOf(chUnread));
@@ -3381,19 +3381,19 @@ public class PmScreen extends Screen {
                 fillRound(context, px + 4, y, LEFT_W - 8, ROW_H - 1, 6, ROW_HOVER);
             }
             if (!drawGroupAvatar(context, g, px + 4, y + 3, 16)) {
-                context.text(textRenderer, "▣", px + 7, y + 4, 0xFF6FBF8B, false);
+                context.text(font, "▣", px + 7, y + 4, 0xFF6FBF8B, false);
             }
             int gUnread = PmChatClient.groupUnread(g.id);
             int labelMax = LEFT_W - 32 - (gUnread > 0 ? 16 : 0);
-            context.text(textRenderer, trim(g.name, labelMax), px + 23, y + 4, NAME_TEXT, false);
+            context.text(font, trim(g.name, labelMax), px + 23, y + 4, NAME_TEXT, false);
             List<PmMessage> feed = PmChatClient.getGroupFeed(g.id);
             if (!feed.isEmpty()) {
                 PmMessage last = feed.get(feed.size() - 1);
                 String preview = (last.sender != null ? last.sender + ": " : "")
                         + PmChatClient.previewOf(last.text != null ? last.text : "");
-                context.text(textRenderer, trim(preview, LEFT_W - 30), px + 23, y + 14, PREVIEW_TEXT, false);
+                context.text(font, trim(preview, LEFT_W - 30), px + 23, y + 14, PREVIEW_TEXT, false);
             } else {
-                context.text(textRenderer, trim(String.join(", ", g.members), LEFT_W - 30),
+                context.text(font, trim(String.join(", ", g.members), LEFT_W - 30),
                         px + 23, y + 14, PREVIEW_TEXT, false);
             }
             if (gUnread > 0) {
@@ -3406,7 +3406,7 @@ public class PmScreen extends Screen {
         if (query.isEmpty() && y + 12 <= bottom) {
             boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + 12;
             if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + 11, ROW_HOVER);
-            context.text(textRenderer, "＋ " + Component.translatable("pmchat.group.new").getString(),
+            context.text(font, "＋ " + Component.translatable("pmchat.group.new").getString(),
                     px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
             groupNewRect = new int[]{px, y, LEFT_W, 12};
             y += 14;
@@ -3414,7 +3414,7 @@ public class PmScreen extends Screen {
 
         // Публичные каналы (3.2): аналог Telegram-каналов — свои + подписки
         if (!config.broadcasts.isEmpty() && y + 10 <= bottom) {
-            context.text(textRenderer, Component.translatable("pmchat.section.broadcasts").getString().toUpperCase(Locale.ROOT),
+            context.text(font, Component.translatable("pmchat.section.broadcasts").getString().toUpperCase(Locale.ROOT),
                     px + 7, y + 1, SUBTLE, false);
             y += 10;
         }
@@ -3431,18 +3431,18 @@ public class PmScreen extends Screen {
             drawBroadcastAvatar(context, b, px + 5, y + 3, 11);
             int bUnread = PmChatClient.broadcastUnread(b.id);
             int labelMax = LEFT_W - 26 - (bUnread > 0 ? 16 : 0);
-            context.text(textRenderer, trim(b.name, labelMax), px + 18, y + 4, NAME_TEXT, false);
+            context.text(font, trim(b.name, labelMax), px + 18, y + 4, NAME_TEXT, false);
             List<PmMessage> feed = PmChatClient.getBroadcastFeed(b.id);
             if (!feed.isEmpty()) {
                 PmMessage last = feed.get(feed.size() - 1);
                 String preview = (!last.out && last.sender != null ? last.sender + ": " : "")
                         + PmChatClient.previewOf(last.text != null ? last.text : "");
-                context.text(textRenderer, trim(preview, LEFT_W - 14),
+                context.text(font, trim(preview, LEFT_W - 14),
                         px + 7, y + 14, PREVIEW_TEXT, false);
             } else {
                 int subs = (b.owner != null && b.owner.equalsIgnoreCase(PmChatClient.selfNamePublic()))
                         ? b.subscribers.size() : b.knownSubscribers;
-                context.text(textRenderer, "◈ " + subs, px + 7, y + 14, PREVIEW_TEXT, false);
+                context.text(font, "◈ " + subs, px + 7, y + 14, PREVIEW_TEXT, false);
             }
             if (bUnread > 0) {
                 drawBadge(context, px + LEFT_W - 5, y, bUnread > 9 ? "9+" : String.valueOf(bUnread));
@@ -3456,7 +3456,7 @@ public class PmScreen extends Screen {
         if (query.isEmpty() && y + 12 <= bottom) {
             boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + 12;
             if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + 11, ROW_HOVER);
-            context.text(textRenderer, "＋ " + Component.translatable("pmchat.broadcast.new").getString(),
+            context.text(font, "＋ " + Component.translatable("pmchat.broadcast.new").getString(),
                     px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
             broadcastNewRect = new int[]{px, y, LEFT_W, 12};
             y += 14;
@@ -3464,7 +3464,7 @@ public class PmScreen extends Screen {
         if (query.isEmpty() && y + 12 <= bottom) {
             boolean hovered = mouseX >= px && mouseX < px + LEFT_W && mouseY >= y && mouseY < y + 12;
             if (hovered) context.fill(px + 2, y, px + LEFT_W - 1, y + 11, ROW_HOVER);
-            context.text(textRenderer, Component.translatable("pmchat.broadcast.joinrow").getString(),
+            context.text(font, Component.translatable("pmchat.broadcast.joinrow").getString(),
                     px + 7, y + 2, hovered ? NAME_TEXT : SUBTLE, false);
             broadcastJoinRect = new int[]{px, y, LEFT_W, 12};
             y += 14;
@@ -3479,7 +3479,7 @@ public class PmScreen extends Screen {
 
         // Заголовок секции «Личные» (переписки с игроками)
         if (!names.isEmpty() && y + 10 <= bottom) {
-            context.text(textRenderer, Component.translatable("pmchat.section.chats").getString().toUpperCase(Locale.ROOT),
+            context.text(font, Component.translatable("pmchat.section.chats").getString().toUpperCase(Locale.ROOT),
                     px + 7, y + 1, SUBTLE, false);
             y += 10;
         }
@@ -3515,18 +3515,18 @@ public class PmScreen extends Screen {
             if (contact) {
                 int starColor = com.pmchat.client.PmPalettes.CONTACT_STAR[
                         Math.floorMod(config.contactStarColor, com.pmchat.client.PmPalettes.CONTACT_STAR.length)];
-                context.text(textRenderer, "★", nameX, y + 3, starColor, false);
+                context.text(font, "★", nameX, y + 3, starColor, false);
                 nameX += 8;
             }
             int nameMax = LEFT_W - (nameX - px) - 7 - (unread > 0 ? 16 : 0);
             String rowDisplayName = trim(config.aliasOf(name), nameMax);
-            context.text(textRenderer, rowDisplayName, nameX, y + 3, NAME_TEXT, false);
+            context.text(font, rowDisplayName, nameX, y + 3, NAME_TEXT, false);
             // Галочка верификации / официальный аккаунт (см. PmBackend, server-pocketchat)
             if (com.pmchat.client.PmBackend.isConfigured()) {
                 com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(name);
-                int afterNameX = nameX + textRenderer.getWidth(rowDisplayName) + 3;
+                int afterNameX = nameX + font.getWidth(rowDisplayName) + 3;
                 if (acc != null && (acc.verified || acc.official) && afterNameX + 9 <= px + LEFT_W - (unread > 0 ? 16 : 7)) {
-                    drawVerifiedBadge(context, textRenderer, afterNameX, y + 2);
+                    drawVerifiedBadge(context, font, afterNameX, y + 2);
                 }
             }
 
@@ -3534,9 +3534,9 @@ public class PmScreen extends Screen {
             // пока собеседник реально онлайн — показываем это вместо превью (как в Telegram);
             // иначе обычное превью последнего сообщения (детальный статус — в шапке чата/профиля).
             if (rowAcc != null && rowAcc.official) {
-                context.text(textRenderer, Component.translatable("pmchat.official.notice"), px + 23, y + 14, PREVIEW_TEXT, false);
+                context.text(font, Component.translatable("pmchat.official.notice"), px + 23, y + 14, PREVIEW_TEXT, false);
             } else if (rowAcc != null && rowAcc.lastSeenAt > 0 && statusColored) {
-                context.text(textRenderer, Component.translatable("pmchat.profile.lastseen.online"), px + 23, y + 14, 0xFF6FBF8B, false);
+                context.text(font, Component.translatable("pmchat.profile.lastseen.online"), px + 23, y + 14, 0xFF6FBF8B, false);
             } else {
                 PmMessage last = history.lastMessage(name);
                 if (last != null) {
@@ -3544,7 +3544,7 @@ public class PmScreen extends Screen {
                             ? "$ " + groupDigits(last.money)
                             : PmChatClient.previewOf(last.text != null ? last.text : "");
                     String preview = (last.out ? "→ " : "") + body;
-                    context.text(textRenderer, trim(preview, LEFT_W - 30), px + 23, y + 14, PREVIEW_TEXT, false);
+                    context.text(font, trim(preview, LEFT_W - 30), px + 23, y + 14, PREVIEW_TEXT, false);
                 }
             }
 
@@ -3559,7 +3559,7 @@ public class PmScreen extends Screen {
         if (names.isEmpty()) {
             Component empty = Component.translatable(history.conversationNames().isEmpty()
                     ? "pmchat.empty.list" : "pmchat.notfound");
-            context.text(textRenderer, empty, px + 8, top + 8, SUBTLE, false);
+            context.text(font, empty, px + 8, top + 8, SUBTLE, false);
         }
 
         // Плавный акцентный индикатор у левого края выбранного чата
@@ -3600,7 +3600,7 @@ public class PmScreen extends Screen {
         if (!isGlobal && !localChat) {
             // Индикатор мода собеседника в шапке
             boolean hasMod = config.isModUser(selected);
-            context.text(textRenderer, "●", headerX, py + 8, hasMod ? 0xFF6FBF8B : SUBTLE, false);
+            context.text(font, "●", headerX, py + 8, hasMod ? 0xFF6FBF8B : SUBTLE, false);
             headerX += 9;
         }
         // Роль-префикс собеседника в шапке (4.5) — назначенная админом должность
@@ -3608,46 +3608,46 @@ public class PmScreen extends Screen {
         if (isPlayerTab(selected)) {
             PmRoles.Effective rEff = PmRoles.effective(config, selected);
             if (!rEff.icon.isEmpty()) {
-                context.text(textRenderer, rEff.icon, headerX, py + 8, rEff.color, false);
-                headerX += textRenderer.getWidth(rEff.icon) + 3;
+                context.text(font, rEff.icon, headerX, py + 8, rEff.color, false);
+                headerX += font.getWidth(rEff.icon) + 3;
             }
         }
-        context.text(textRenderer, header, headerX, py + 8, TITLE, false);
-        int afterHeaderX = headerX + textRenderer.getWidth(header) + 4;
+        context.text(font, header, headerX, py + 8, TITLE, false);
+        int afterHeaderX = headerX + font.getWidth(header) + 4;
         // Галочка верификации / официальный аккаунт PocketChat (см. PmBackend, server-pocketchat)
         if (isPlayerTab(selected) && com.pmchat.client.PmBackend.isConfigured()) {
             com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);
             if (acc != null && (acc.verified || acc.official)) {
-                int badgeW = drawVerifiedBadge(context, textRenderer, afterHeaderX, py + 7);
+                int badgeW = drawVerifiedBadge(context, font, afterHeaderX, py + 7);
                 afterHeaderX += badgeW + 4;
             }
         }
         // Значок ЧС (5.5): блокировавший видит, что собеседник в чёрном списке
         if (!isGlobal && !localChat && !isFeedTab() && config.isBlocked(selected)) {
             String cs = Component.translatable("pmchat.block.badge").getString();
-            context.text(textRenderer, cs, afterHeaderX, py + 8, 0xFFE0574C, false);
-            afterHeaderX += textRenderer.getWidth(cs) + 4;
+            context.text(font, cs, afterHeaderX, py + 8, 0xFFE0574C, false);
+            afterHeaderX += font.getWidth(cs) + 4;
         }
         if (!isGlobal && !localChat && PmChatClient.isTyping(selected)) {
             int dots = (int) ((System.currentTimeMillis() / 350) % 4);
             String typing = Component.translatable("pmchat.typing").getString() + ".".repeat(dots);
-            context.text(textRenderer, typing, afterHeaderX, py + 8, 0xFF6FBF8B, false);
+            context.text(font, typing, afterHeaderX, py + 8, 0xFF6FBF8B, false);
         }
         // Состав группы с пометкой участников, у кого стоит мод (зелёная точка)
         if (isGroupTab()) {
             com.pmchat.client.PmConfig.PmGroup g = config.findGroup(groupId());
             if (g != null) {
-                int mx = headerX + textRenderer.getWidth(header) + 10;
+                int mx = headerX + font.getWidth(header) + 10;
                 int limit = px + PANEL_W - 34;
                 for (String member : g.members) {
                     boolean hasMod = config.isModUser(member);
-                    int w = textRenderer.getWidth(member) + 14;
+                    int w = font.getWidth(member) + 14;
                     if (mx + w > limit) {
-                        context.text(textRenderer, "…", mx, py + 8, SUBTLE, false);
+                        context.text(font, "…", mx, py + 8, SUBTLE, false);
                         break;
                     }
-                    context.text(textRenderer, "●", mx, py + 8, hasMod ? 0xFF6FBF8B : SUBTLE, false);
-                    context.text(textRenderer, member, mx + 8, py + 8, PREVIEW_TEXT, false);
+                    context.text(font, "●", mx, py + 8, hasMod ? 0xFF6FBF8B : SUBTLE, false);
+                    context.text(font, member, mx + 8, py + 8, PREVIEW_TEXT, false);
                     mx += w;
                 }
             }
@@ -3659,20 +3659,20 @@ public class PmScreen extends Screen {
                 boolean owner = b.owner != null && b.owner.equalsIgnoreCase(PmChatClient.selfNamePublic());
                 int subs = owner ? b.subscribers.size() : b.knownSubscribers;
                 String subLabel = "◈ " + subs;
-                context.text(textRenderer, subLabel,
-                        headerX + textRenderer.getWidth(header) + 10, py + 8, SUBTLE, false);
+                context.text(font, subLabel,
+                        headerX + font.getWidth(header) + 10, py + 8, SUBTLE, false);
             }
         }
         // Статус «был(а) в сети» под ником собеседника (кросс-серверно, см. PmBackend)
         if (isPlayerTab(selected) && !isGlobal && !localChat && com.pmchat.client.PmBackend.isConfigured()) {
             com.pmchat.client.PmBackend.AccountInfo statusAcc = com.pmchat.client.PmBackend.cachedAccountInfo(selected);
             if (statusAcc != null && statusAcc.official) {
-                context.text(textRenderer, Component.translatable("pmchat.official.notice"), headerX, py + 19, SUBTLE, false);
+                context.text(font, Component.translatable("pmchat.official.notice"), headerX, py + 19, SUBTLE, false);
             } else if (statusAcc != null && statusAcc.lastSeenAt > 0) {
                 boolean isOnline = System.currentTimeMillis() - statusAcc.lastSeenAt < 90_000L;
                 boolean precise = config.preciseLastSeen && statusAcc.sharePrecise;
                 net.minecraft.network.chat.Component status = com.pmchat.client.PmBackend.humanizeLastSeen(statusAcc.lastSeenAt, precise);
-                context.text(textRenderer, status, headerX, py + 19, isOnline ? 0xFF6FBF8B : SUBTLE, false);
+                context.text(font, status, headerX, py + 19, isOnline ? 0xFF6FBF8B : SUBTLE, false);
             }
         }
 
@@ -3694,17 +3694,17 @@ public class PmScreen extends Screen {
             context.fill(px + LEFT_W + 1, barTop, px + PANEL_W - 2, barBottom, DIVIDER);
             String ask = "♪ " + trim(Component.translatable("pmchat.vibe.invite.ask").getString() + " " + vibeInvite.fileId,
                     PANEL_W - LEFT_W - 100);
-            context.text(textRenderer, ask, px + LEFT_W + 4, barTop + 2, 0xFF6FBF8B, false);
+            context.text(font, ask, px + LEFT_W + 4, barTop + 2, 0xFF6FBF8B, false);
             Component acceptT = Component.translatable("pmchat.vibe.invite.accept");
             Component declineT = Component.translatable("pmchat.vibe.invite.decline");
-            int declineW = textRenderer.getWidth(declineT) + 6;
-            int acceptW = textRenderer.getWidth(acceptT) + 6;
+            int declineW = font.getWidth(declineT) + 6;
+            int acceptW = font.getWidth(acceptT) + 6;
             int declineX = px + PANEL_W - 3 - declineW;
             int acceptX = declineX - 4 - acceptW;
             boolean accHov = mouseX >= acceptX && mouseX < acceptX + acceptW && mouseY >= barTop && mouseY < barBottom;
             boolean decHov = mouseX >= declineX && mouseX < declineX + declineW && mouseY >= barTop && mouseY < barBottom;
-            context.text(textRenderer, acceptT, acceptX + 3, barTop + 2, accHov ? 0xFFCFEEDA : 0xFF8FD8A8, false);
-            context.text(textRenderer, declineT, declineX + 3, barTop + 2, decHov ? 0xFFF0B0A8 : 0xFFE0574C, false);
+            context.text(font, acceptT, acceptX + 3, barTop + 2, accHov ? 0xFFCFEEDA : 0xFF8FD8A8, false);
+            context.text(font, declineT, declineX + 3, barTop + 2, decHov ? 0xFFF0B0A8 : 0xFFE0574C, false);
             vibeAcceptRect = new int[]{acceptX, barTop, acceptW, barBottom - barTop};
             vibeDeclineRect = new int[]{declineX, barTop, declineW, barBottom - barTop};
             headerDividerY = barBottom;
@@ -3715,11 +3715,11 @@ public class PmScreen extends Screen {
             String vLabel = "♪ " + com.pmchat.client.PmVibe.activeTrackLabel()
                     + "  ·  " + Component.translatable("pmchat.vibe.stophint").getString();
             String vShown = trim(vLabel, PANEL_W - LEFT_W - 20);
-            int vw = textRenderer.getWidth(vShown);
+            int vw = font.getWidth(vShown);
             int vx = px + LEFT_W + (PANEL_W - LEFT_W - vw) / 2;
             boolean vHov = mouseX >= px + LEFT_W + 1 && mouseX < px + PANEL_W - 2
                     && mouseY >= barTop && mouseY < barBottom;
-            context.text(textRenderer, vShown, vx, barTop + 2, vHov ? 0xFF8FD8A8 : 0xFF6FBF8B, false);
+            context.text(font, vShown, vx, barTop + 2, vHov ? 0xFF8FD8A8 : 0xFF6FBF8B, false);
             vibeIndicatorRect = new int[]{px + LEFT_W + 1, barTop, PANEL_W - LEFT_W - 3, barBottom - barTop};
             headerDividerY = barBottom;
         }
@@ -3748,14 +3748,14 @@ public class PmScreen extends Screen {
                 String body = pinned != null ? PmChatClient.previewOf(pinned.text != null ? pinned.text : "") : "…";
                 String label = "⚑ " + counter + body;
                 int rightPad = pins.size() > 1 ? 34 : 24;
-                context.text(textRenderer, trim(label, PANEL_W - LEFT_W - rightPad),
+                context.text(font, trim(label, PANEL_W - LEFT_W - rightPad),
                         px + LEFT_W + 7, by + 2, 0xFFF0C34E, false);
                 // Кнопка списка (☰) при нескольких закрепах + × открепить текущий
                 if (pins.size() > 1) {
-                    context.text(textRenderer, "☰", px + PANEL_W - 22, by + 2, 0xFFF0C34E, false);
+                    context.text(font, "☰", px + PANEL_W - 22, by + 2, 0xFFF0C34E, false);
                     pinListBtnRect = new int[]{px + PANEL_W - 25, by, 14, 12};
                 }
-                context.text(textRenderer, "×", px + PANEL_W - 10, by + 2, 0xFFE07A6A, false);
+                context.text(font, "×", px + PANEL_W - 10, by + 2, 0xFFE07A6A, false);
                 pinUnpinRect = new int[]{px + PANEL_W - 13, by, 12, 12};
                 pinBarRect = new int[]{px + LEFT_W + 2, by, PANEL_W - LEFT_W - 4, 12};
                 areaTop += 14;
@@ -3776,7 +3776,7 @@ public class PmScreen extends Screen {
 
         if (pollMode) {
             context.fill(px + LEFT_W + 1, areaTop, px + PANEL_W - 1, py + PANEL_H - 2, PANEL_BG);
-            context.text(textRenderer, Component.translatable("pmchat.poll.title"),
+            context.text(font, Component.translatable("pmchat.poll.title"),
                     px + LEFT_W + 8, areaTop + 2, 0xFF9CC4DC, false);
             return;
         }
@@ -3787,17 +3787,17 @@ public class PmScreen extends Screen {
         }
 
         if (uploading) {
-            context.text(textRenderer, Component.translatable("pmchat.image.uploading"),
+            context.text(font, Component.translatable("pmchat.image.uploading"),
                     px + LEFT_W + 8, areaBottom - 8, 0xFFF0C34E, false);
         }
 
         // Статус распознавания речи над полем ввода
         switch (com.pmchat.client.PmStt.state) {
-            case DOWNLOADING -> context.text(textRenderer,
+            case DOWNLOADING -> context.text(font,
                     Component.translatable("pmchat.stt.downloading").getString()
                             + " " + com.pmchat.client.PmStt.progressPct + "%",
                     px + LEFT_W + 8, areaBottom - 8, 0xFFF0C34E, false);
-            case UNPACKING, LOADING -> context.text(textRenderer,
+            case UNPACKING, LOADING -> context.text(font,
                     Component.translatable("pmchat.stt.loading"),
                     px + LEFT_W + 8, areaBottom - 8, 0xFFF0C34E, false);
             case LISTENING -> {
@@ -3805,10 +3805,10 @@ public class PmScreen extends Screen {
                 String partial = com.pmchat.client.PmStt.partialText;
                 String live = (blink ? "● " : "  ")
                         + (partial.isBlank() ? Component.translatable("pmchat.stt.listen").getString() : partial);
-                context.text(textRenderer, trim(live, PANEL_W - LEFT_W - 20),
+                context.text(font, trim(live, PANEL_W - LEFT_W - 20),
                         px + LEFT_W + 8, areaBottom - 8, 0xFFE07A6A, false);
             }
-            case ERROR -> context.text(textRenderer,
+            case ERROR -> context.text(font,
                     trim(Component.translatable("pmchat.stt.error").getString()
                             + ": " + com.pmchat.client.PmStt.error, PANEL_W - LEFT_W - 20),
                     px + LEFT_W + 8, areaBottom - 8, 0xFFE07A6A, false);
@@ -3841,8 +3841,8 @@ public class PmScreen extends Screen {
 
         if (shown.isEmpty()) {
             Component empty = Component.translatable(all.isEmpty() ? "pmchat.empty.messages" : "pmchat.notfound");
-            int hx = px + LEFT_W + (PANEL_W - LEFT_W - textRenderer.getWidth(empty)) / 2;
-            context.text(textRenderer, empty, hx, (areaTop + areaBottom) / 2, SUBTLE, false);
+            int hx = px + LEFT_W + (PANEL_W - LEFT_W - font.getWidth(empty)) / 2;
+            context.text(font, empty, hx, (areaTop + areaBottom) / 2, SUBTLE, false);
             return;
         }
 
@@ -3900,14 +3900,14 @@ public class PmScreen extends Screen {
                         + Component.translatable(com.pmchat.client.PmWire.envelopeLabelKey(envSkin)).getString();
                 if (msg.envelopeOpened) {
                     envOpenedLines = wrapText((String) env[5], BUBBLE_MAX_TEXT_W);
-                    textW = Math.max(textRenderer.getWidth(skinLabel),
-                            envOpenedLines.stream().mapToInt(textRenderer::getWidth).max().orElse(10));
+                    textW = Math.max(font.getWidth(skinLabel),
+                            envOpenedLines.stream().mapToInt(font::getWidth).max().orElse(10));
                     bh = 12 + envOpenedLines.size() * lineH() + 5;
                 } else {
                     String line2 = envLocked
                             ? "⌛ " + Component.translatable("pmchat.envelope.opensin", formatCountdown(envUnlockAt - nowSec)).getString()
                             : Component.translatable(envHasQ ? "pmchat.envelope.tapquestion" : "pmchat.envelope.tapopen").getString();
-                    textW = Math.max(textRenderer.getWidth(skinLabel), textRenderer.getWidth(line2));
+                    textW = Math.max(font.getWidth(skinLabel), font.getWidth(line2));
                     bh = 12 + 11 + 6;
                 }
             } else if (msg.isPoll()) {
@@ -3919,7 +3919,7 @@ public class PmScreen extends Screen {
                 int[] size = imageSize(img);
                 if (img.state == PmImages.State.FAILED) {
                     String failLabel = Component.translatable("pmchat.image.openweb").getString();
-                    textW = Math.max(size[0], Math.min(BUBBLE_MAX_TEXT_W, textRenderer.getWidth(failLabel)));
+                    textW = Math.max(size[0], Math.min(BUBBLE_MAX_TEXT_W, font.getWidth(failLabel)));
                 } else {
                     textW = size[0];
                 }
@@ -3939,9 +3939,9 @@ public class PmScreen extends Screen {
                         display = t != null ? t : "…";
                     }
                     voiceTranscriptLines = wrapText(display, BUBBLE_MAX_TEXT_W);
-                    int tw = voiceTranscriptLines.stream().mapToInt(textRenderer::getWidth).max().orElse(10);
+                    int tw = voiceTranscriptLines.stream().mapToInt(font::getWidth).max().orElse(10);
                     textW = Math.max(textW, tw);
-                    bh += voiceTranscriptLines.size() * (textRenderer.fontHeight + 2) + 3;
+                    bh += voiceTranscriptLines.size() * (font.fontHeight + 2) + 3;
                 }
             } else if (vid != null) {
                 lines = List.of();
@@ -3950,18 +3950,18 @@ public class PmScreen extends Screen {
                     textW = size[0];
                     bh = size[1] + 6;
                 } else {
-                    textW = Math.min(BUBBLE_MAX_TEXT_W, textRenderer.getWidth("▶ " + vid[1]) + 8);
+                    textW = Math.min(BUBBLE_MAX_TEXT_W, font.getWidth("▶ " + vid[1]) + 8);
                     bh = 18;
                 }
             } else if (msg.money > 0) {
                 lines = List.of();
-                textW = textRenderer.getWidth("$ " + groupDigits(msg.money));
+                textW = font.getWidth("$ " + groupDigits(msg.money));
                 bh = 16;
             } else {
                 float ts = textScale();
                 lines = wrapText(msg.text != null ? msg.text : "",
                         Math.max(24, (int) (BUBBLE_MAX_TEXT_W / ts)));
-                textW = Math.round(lines.stream().mapToInt(textRenderer::getWidth).max().orElse(10) * ts);
+                textW = Math.round(lines.stream().mapToInt(font::getWidth).max().orElse(10) * ts);
                 bh = lines.size() * lineH() + 7;
             }
             // Резервируем место под превью фото по ссылке (под текстом)
@@ -3984,14 +3984,14 @@ public class PmScreen extends Screen {
             String quoted = isGlobal ? null : quotedTextOf(msg);
             if (quoted != null) {
                 bh += 11;
-                textW = Math.max(textW, Math.min(BUBBLE_MAX_TEXT_W, textRenderer.getWidth(quoted) + 8));
+                textW = Math.max(textW, Math.min(BUBBLE_MAX_TEXT_W, font.getWidth(quoted) + 8));
             }
             // Шапка «переслано от X»
             String fwdLabel = msg.forwardFrom != null
                     ? "⤶ " + Component.translatable("pmchat.fwd.from").getString() + " " + msg.forwardFrom : null;
             if (fwdLabel != null) {
                 bh += 10;
-                textW = Math.max(textW, Math.min(BUBBLE_MAX_TEXT_W, textRenderer.getWidth(fwdLabel) + 4));
+                textW = Math.max(textW, Math.min(BUBBLE_MAX_TEXT_W, font.getWidth(fwdLabel) + 4));
             }
             // Автор в общем чате
             String senderName = isGlobal && !msg.out && msg.sender != null ? msg.sender : null;
@@ -3999,7 +3999,7 @@ public class PmScreen extends Screen {
             if (senderName != null) {
                 bh += 10;
                 textW = Math.max(textW, Math.min(BUBBLE_MAX_TEXT_W,
-                        textRenderer.getWidth(senderName) + 10 + (senderHasMod ? 9 : 0)));
+                        font.getWidth(senderName) + 10 + (senderHasMod ? 9 : 0)));
             }
             // 3.2: счётчик просмотров поста канала (виден владельцу) — ему нужна
             // СВОЯ строка внизу пузыря, иначе цифры наезжают на текст сообщения.
@@ -4008,7 +4008,7 @@ public class PmScreen extends Screen {
                 viewsLabel = String.valueOf(
                         PmChatClient.broadcastViewCount(broadcastId(), PmHistory.msgHash(msg.text)));
                 bh += VIEWS_H;
-                textW = Math.max(textW, textRenderer.getWidth(viewsLabel) + VIEWS_ICON + 6);
+                textW = Math.max(textW, font.getWidth(viewsLabel) + VIEWS_ICON + 6);
             }
 
             int bw = textW + 12;
@@ -4070,7 +4070,7 @@ public class PmScreen extends Screen {
             // Шапка пересылки
             if (fwdLabel != null) {
                 int fc = msg.out ? 0xFFA8D8BC : 0xFF3A7AB0;
-                context.text(textRenderer, trim(fwdLabel, bw - 8), bx + dx + 5, y + dy + 3,
+                context.text(font, trim(fwdLabel, bw - 8), bx + dx + 5, y + dy + 3,
                         applyAlpha(fc, alpha), false);
             }
 
@@ -4083,15 +4083,15 @@ public class PmScreen extends Screen {
                     nx += 10;
                 }
                 if (senderHasMod) {
-                    context.text(textRenderer, "●", nx, y + dy + 3, applyAlpha(0xFF6FBF8B, alpha), false);
+                    context.text(font, "●", nx, y + dy + 3, applyAlpha(0xFF6FBF8B, alpha), false);
                     nx += 9;
                 }
                 String shownSender = trim(senderName, bx + dx + bw - 4 - nx - (msg.fromDiscord ? 11 : 0));
-                context.text(textRenderer, shownSender, nx, y + dy + 3,
+                context.text(font, shownSender, nx, y + dy + 3,
                         applyAlpha(nameColor(senderName), alpha), false);
                 // Значок Discord — сообщение пришло через бридж сервера, а не от игрока напрямую.
                 if (msg.fromDiscord) {
-                    PmIcons.draw(context, PmIcons.DISCORD, nx + textRenderer.getWidth(shownSender) + 3,
+                    PmIcons.draw(context, PmIcons.DISCORD, nx + font.getWidth(shownSender) + 3,
                             y + dy + 2, 9, 9, applyAlpha(0xFF7289DA, alpha));
                 }
                 // 6.8: кнопка ⚠ «предупредить» в общем чате/каналах (staff-функции).
@@ -4103,7 +4103,7 @@ public class PmScreen extends Screen {
                             && mouseY >= y + dy && mouseY <= y + dy + bh;
                     if (rowHover) {
                         String bare = senderName.contains(" [") ? senderName.substring(0, senderName.indexOf(" [")) : senderName;
-                        context.text(textRenderer, "⚠", wx2, y + dy + 3, applyAlpha(0xFFE0B040, alpha), false);
+                        context.text(font, "⚠", wx2, y + dy + 3, applyAlpha(0xFFE0B040, alpha), false);
                         warnBtnRects.add(new Object[]{wx2 - 1, y + dy + 1, 10, 11, bare});
                     }
                 }
@@ -4114,7 +4114,7 @@ public class PmScreen extends Screen {
                 int qy = y + dy + 3 + (fwdLabel != null ? 10 : 0);
                 int qc = msg.out ? 0xFFA8D8BC : 0xFF9A9A9A;
                 context.fill(bx + dx + 4, qy, bx + dx + 5, qy + 8, applyAlpha(qc, alpha));
-                context.text(textRenderer, trim(quoted, bw - 14), bx + dx + 8, qy,
+                context.text(font, trim(quoted, bw - 14), bx + dx + 8, qy,
                         applyAlpha(qc, alpha), false);
             }
 
@@ -4129,18 +4129,18 @@ public class PmScreen extends Screen {
                 String skinLabel = com.pmchat.client.PmWire.envelopeIcon(envSkin) + " "
                         + Component.translatable(com.pmchat.client.PmWire.envelopeLabelKey(envSkin)).getString();
                 int eyy = y + dy + quoteShift + 3;
-                context.text(textRenderer, trim(skinLabel, bw - 12), bx + dx + 6, eyy, applyAlpha(skinColor, alpha), false);
+                context.text(font, trim(skinLabel, bw - 12), bx + dx + 6, eyy, applyAlpha(skinColor, alpha), false);
                 eyy += 11;
                 if (msg.envelopeOpened) {
                     for (String line : envOpenedLines) {
-                        context.text(textRenderer, line, bx + dx + 6, eyy, applyAlpha(fg, alpha), false);
+                        context.text(font, line, bx + dx + 6, eyy, applyAlpha(fg, alpha), false);
                         eyy += lineH();
                     }
                 } else {
                     String line2 = envLocked
                             ? "⌛ " + Component.translatable("pmchat.envelope.opensin", formatCountdown(envUnlockAt - nowSec)).getString()
                             : Component.translatable(envHasQ ? "pmchat.envelope.tapquestion" : "pmchat.envelope.tapopen").getString();
-                    context.text(textRenderer, trim(line2, bw - 12), bx + dx + 6, eyy,
+                    context.text(font, trim(line2, bw - 12), bx + dx + 6, eyy,
                             applyAlpha(envLocked ? SUBTLE : fg, alpha), false);
                     if (!envLocked) {
                         envelopeRects.add(new Object[]{bx + dx, y + dy, bw, bh, msg, env});
@@ -4149,7 +4149,7 @@ public class PmScreen extends Screen {
             } else if (msg.isPoll()) {
                 int fg = msg.out ? OUT_TEXT : IN_TEXT;
                 int pyy = y + dy + quoteShift + 3;
-                context.text(textRenderer, "▤ " + trim(msg.pollQuestion, bw - 16), bx + dx + 6, pyy, applyAlpha(fg, alpha), false);
+                context.text(font, "▤ " + trim(msg.pollQuestion, bw - 16), bx + dx + 6, pyy, applyAlpha(fg, alpha), false);
                 pyy += 12;
                 int total = msg.pollOptions.size();
                 int votesAll = 0;
@@ -4162,10 +4162,10 @@ public class PmScreen extends Screen {
                     int oy = pyy + oi * 13;
                     // Фон-полоса результата
                     context.fill(bx + dx + 6, oy, bx + dx + 6 + bar, oy + 11, applyAlpha(mine ? 0xFF4C8A66 : 0xFF2A4A5C, alpha * 0.5f));
-                    context.text(textRenderer, (mine ? "◉ " : "○ ") + trim(msg.pollOptions.get(oi), bw - 40),
+                    context.text(font, (mine ? "◉ " : "○ ") + trim(msg.pollOptions.get(oi), bw - 40),
                             bx + dx + 8, oy + 2, applyAlpha(fg, alpha), false);
                     String c = String.valueOf(cnt);
-                    context.text(textRenderer, c, bx + dx + bw - 6 - textRenderer.getWidth(c), oy + 2, applyAlpha(fg, alpha), false);
+                    context.text(font, c, bx + dx + bw - 6 - font.getWidth(c), oy + 2, applyAlpha(fg, alpha), false);
                     pollOptRects.add(new Object[]{bx, oy, bw, 11, msg, oi});
                 }
             } else if (img != null) {
@@ -4184,7 +4184,7 @@ public class PmScreen extends Screen {
                     String label = trim(img.state == PmImages.State.FAILED
                             ? Component.translatable("pmchat.image.openweb").getString()
                             : Component.translatable("pmchat.image.uploading").getString(), bw - 12);
-                    context.text(textRenderer, label, bx + dx + 6, y + dy + quoteShift + 4,
+                    context.text(font, label, bx + dx + 6, y + dy + quoteShift + 4,
                             applyAlpha(msg.out ? OUT_TEXT : IN_TEXT, alpha), false);
                 }
             } else if (voice != null) {
@@ -4192,9 +4192,9 @@ public class PmScreen extends Screen {
                 if (!voiceTranscriptLines.isEmpty()) {
                     int tfg = msg.out ? OUT_TEXT : IN_TEXT;
                     int ty = y + dy + quoteShift + 17;
-                    int th = textRenderer.fontHeight + 2;
+                    int th = font.fontHeight + 2;
                     for (String tl : voiceTranscriptLines) {
-                        context.text(textRenderer, tl, bx + dx + 6, ty, applyAlpha(tfg, alpha), false);
+                        context.text(font, tl, bx + dx + 6, ty, applyAlpha(tfg, alpha), false);
                         ty += th;
                     }
                 }
@@ -4210,7 +4210,7 @@ public class PmScreen extends Screen {
                         context.blit(RenderPipelines.GUI_TEXTURED, vent.currentTexture(), ix, iy,
                                 0f, 0f, size[0], size[1], vent.width, vent.height, vent.width, vent.height);
                         // Значок ▶ по центру — намёк, что клик откроет со звуком
-                        context.text(textRenderer, "▶", ix + size[0] / 2 - 3, iy + size[1] / 2 - 4,
+                        context.text(font, "▶", ix + size[0] / 2 - 3, iy + size[1] / 2 - 4,
                                 applyAlpha(0xFFFFFFFF, alpha), true);
                     }
                 } else {
@@ -4218,11 +4218,11 @@ public class PmScreen extends Screen {
                     Component lbl = vent != null && vent.state == PmImages.State.FAILED
                             ? Component.literal("▶ " + trim(vid[1], bw - 16))
                             : Component.translatable("pmchat.video.decoding");
-                    context.text(textRenderer, lbl,
+                    context.text(font, lbl,
                             bx + dx + 6, y + dy + quoteShift + 5, applyAlpha(fg, alpha), false);
                 }
             } else if (msg.money > 0) {
-                context.text(textRenderer, "$ " + groupDigits(msg.money), bx + dx + 6, y + dy + quoteShift + 4,
+                context.text(font, "$ " + groupDigits(msg.money), bx + dx + 6, y + dy + quoteShift + 4,
                         applyAlpha(MONEY_TEXT, alpha), false);
             } else {
                 float ts = textScale();
@@ -4238,7 +4238,7 @@ public class PmScreen extends Screen {
                     m2.pushMatrix();
                     m2.translate(bx + dx + 6, ty);
                     m2.scale(ts, ts);
-                    context.text(textRenderer, line, 0, 0, applyAlpha(fg, alpha), false);
+                    context.text(font, line, 0, 0, applyAlpha(fg, alpha), false);
                     m2.popMatrix();
                     ty += lineH();
                 }
@@ -4277,8 +4277,8 @@ public class PmScreen extends Screen {
             if (msg.out && !isGlobal) {
                 String ticks = msg.read ? "✔✔" : "✔";
                 int tc = msg.read ? 0xFFA8E8C0 : 0xFF7FA890;
-                context.text(textRenderer, ticks,
-                        bx + dx + bw - 6 - textRenderer.getWidth(ticks), y + dy + bh - 10,
+                context.text(font, ticks,
+                        bx + dx + bw - 6 - font.getWidth(ticks), y + dy + bh - 10,
                         applyAlpha(tc, alpha), false);
             }
             // 3.2: счётчик просмотров поста канала — виден только владельцу, под
@@ -4289,17 +4289,17 @@ public class PmScreen extends Screen {
                 int base = msg.out ? OUT_TEXT : IN_TEXT;
                 int vTop = y + dy + bh - VIEWS_H;   // начало зарезервированной строки
                 int vy = vTop + 2;
-                int vx = bx + dx + bw - 6 - textRenderer.getWidth(viewsLabel);
+                int vx = bx + dx + bw - 6 - font.getWidth(viewsLabel);
                 int vfg = applyAlpha(applyAlpha(base, 0.75f), alpha);
                 context.fill(bx + dx + 6, vTop, bx + dx + bw - 6, vTop + 1,
                         applyAlpha(applyAlpha(base, 0.20f), alpha));
                 PmIcons.draw(context, PmIcons.EYE, vx - VIEWS_ICON, vy - 1, 9, 9, vfg);
-                context.text(textRenderer, viewsLabel, vx, vy, vfg, false);
+                context.text(font, viewsLabel, vx, vy, vfg, false);
             }
 
             // Чип реакций — внизу пузыря, как в Telegram (цветные символы)
             if (!reacts.isEmpty()) {
-                int cw = textRenderer.getWidth(reacts) + 8;
+                int cw = font.getWidth(reacts) + 8;
                 int cy = y + dy + bh - 3;
                 int cx = msg.out ? bx + dx + 2 : bx + dx + bw - cw - 2;
                 context.fill(cx + 1, cy, cx + cw - 1, cy + 12, CHIP_BG);
@@ -4308,9 +4308,9 @@ public class PmScreen extends Screen {
                 int rxx = cx + 4;
                 for (int ci = 0; ci < reacts.length(); ci++) {
                     String sym = String.valueOf(reacts.charAt(ci));
-                    context.text(textRenderer, sym, rxx, cy + 2,
+                    context.text(font, sym, rxx, cy + 2,
                             applyAlpha(com.pmchat.client.PmWire.reactionColor(sym), alpha), false);
-                    rxx += textRenderer.getWidth(sym);
+                    rxx += font.getWidth(sym);
                 }
             }
 
@@ -4318,16 +4318,16 @@ public class PmScreen extends Screen {
             if (msg.time > 0) {
                 String time = (msg.edited ? Component.translatable("pmchat.edited.mark").getString() + " " : "")
                         + timeFmt.format(new Date(msg.time));
-                int tw = textRenderer.getWidth(time);
+                int tw = font.getWidth(time);
                 int tx = msg.out ? bx - 4 - tw : bx + bw + 4;
-                context.text(textRenderer, time, tx + dx, y + dy + bh - 10, SUBTLE, false);
+                context.text(font, time, tx + dx, y + dy + bh - 10, SUBTLE, false);
             }
 
             // 5.5: значок закрепа на закреплённом пузыре (как в Telegram)
             if (!isGlobal && selected != null && msg.text != null
                     && config.isPinned(selected, PmHistory.msgHash(msg.text))) {
                 int px2 = msg.out ? bx + dx - 9 : bx + dx + bw + 1;
-                context.text(textRenderer, "⚑", px2, y + dy + 1, applyAlpha(0xFFF0C34E, alpha), false);
+                context.text(font, "⚑", px2, y + dy + 1, applyAlpha(0xFFF0C34E, alpha), false);
             }
 
             bubbleRects.add(new Object[]{bx, y, bw, bh, msg});
@@ -4339,11 +4339,11 @@ public class PmScreen extends Screen {
                 contentH += 14;
                 if (y + 10 >= areaTop && y <= areaBottom) {
                     String date = dateFmt.format(new Date(msg.time));
-                    int dw = textRenderer.getWidth(date);
+                    int dw = font.getWidth(date);
                     int cx = px + LEFT_W + (PANEL_W - LEFT_W) / 2;
                     context.fill(px + LEFT_W + 10, y + 6, cx - dw / 2 - 5, y + 7, SEP_LINE);
                     context.fill(cx + dw / 2 + 5, y + 6, px + PANEL_W - 10, y + 7, SEP_LINE);
-                    context.text(textRenderer, date, cx - dw / 2, y + 2, SUBTLE, false);
+                    context.text(font, date, cx - dw / 2, y + 2, SUBTLE, false);
                 }
             }
         }
@@ -4458,17 +4458,17 @@ public class PmScreen extends Screen {
         context.fill(x0, y0 + 1, x1, y1 - 1, LEFT_BG);
         context.outline(x0, y0, x1 - x0, y1 - y0, DIVIDER);
 
-        context.text(textRenderer, Component.translatable("pmchat.frag.title"), x0 + 6, y0 + 5, 0xFF9CC4DC, false);
-        context.text(textRenderer, Component.translatable("pmchat.frag.hint"), x0 + 6, y0 + 16, SUBTLE, false);
+        context.text(font, Component.translatable("pmchat.frag.title"), x0 + 6, y0 + 5, 0xFF9CC4DC, false);
+        context.text(font, Component.translatable("pmchat.frag.hint"), x0 + 6, y0 + 16, SUBTLE, false);
 
         int lo = fragWordFrom < 0 ? -1 : Math.min(fragWordFrom, fragWordTo);
         int hi = fragWordFrom < 0 ? -1 : Math.max(fragWordFrom, fragWordTo);
         int wx = x0 + 6, wy = y0 + 28;
-        int lineH = textRenderer.fontHeight + 3;
+        int lineH = font.fontHeight + 3;
         int btnTop = y1 - 20;
         for (int i = 0; i < fragWords.size(); i++) {
             String w = fragWords.get(i);
-            int ww = textRenderer.getWidth(w) + 6;
+            int ww = font.getWidth(w) + 6;
             if (wx + ww > x1 - 6) {
                 wx = x0 + 6;
                 wy += lineH;
@@ -4478,7 +4478,7 @@ public class PmScreen extends Screen {
             boolean hov = mouseX >= wx && mouseX < wx + ww && mouseY >= wy && mouseY < wy + lineH;
             if (sel) context.fill(wx, wy, wx + ww, wy + lineH, ROW_SELECTED);
             else if (hov) context.fill(wx, wy, wx + ww, wy + lineH, ROW_HOVER);
-            context.text(textRenderer, w, wx + 3, wy + 2, sel ? 0xFFF0C34E : NAME_TEXT, false);
+            context.text(font, w, wx + 3, wy + 2, sel ? 0xFFF0C34E : NAME_TEXT, false);
             fragWordRects.add(new Object[]{wx, wy, ww, lineH, i});
             wx += ww + 2;
         }
@@ -4490,12 +4490,12 @@ public class PmScreen extends Screen {
         context.fill(okX, by, okX + okW, by + 16, ready ? ACCENT_BG : WBTN_BG);
         context.outline(okX, by, okW, 16, ready ? ACCENT_BORDER : WBTN_BORDER);
         Component okT = Component.translatable("pmchat.frag.ok");
-        context.text(textRenderer, okT, okX + okW / 2 - textRenderer.getWidth(okT) / 2, by + 4,
+        context.text(font, okT, okX + okW / 2 - font.getWidth(okT) / 2, by + 4,
                 ready ? ACCENT_TEXT : SUBTLE, false);
         context.fill(caX, by, caX + caW, by + 16, WBTN_BG);
         context.outline(caX, by, caW, 16, WBTN_BORDER);
         Component caT = Component.translatable("pmchat.frag.cancel");
-        context.text(textRenderer, caT, caX + caW / 2 - textRenderer.getWidth(caT) / 2, by + 4, WBTN_TEXT, false);
+        context.text(font, caT, caX + caW / 2 - font.getWidth(caT) / 2, by + 4, WBTN_TEXT, false);
         fragOkRect = new int[]{okX, by, okW, 16};
         fragCancelRect = new int[]{caX, by, caW, 16};
     }
@@ -4505,7 +4505,7 @@ public class PmScreen extends Screen {
         int fg = msg.out ? OUT_TEXT : IN_TEXT;
         boolean playing = com.pmchat.client.PmVoice.isPlaying(voice[1]);
         boolean vfail = com.pmchat.client.PmVoice.isFailed(voice[1]);
-        context.text(textRenderer, vfail ? "⚠" : (playing ? "⏸" : "▶"), x + 6, y + 5,
+        context.text(font, vfail ? "⚠" : (playing ? "⏸" : "▶"), x + 6, y + 5,
                 applyAlpha(vfail ? 0xFFE07A6A : fg, alpha), false);
 
         float progress = com.pmchat.client.PmVoice.progress(voice[1]);
@@ -4519,7 +4519,7 @@ public class PmScreen extends Screen {
         }
 
         String dur = "0:" + String.format(Locale.ROOT, "%02d", Integer.parseInt(voice[2]));
-        context.text(textRenderer, dur, x + 58, y + 5, applyAlpha(fg, alpha), false);
+        context.text(font, dur, x + 58, y + 5, applyAlpha(fg, alpha), false);
     }
 
     /** Плашка «Ответ: …» над полем ввода. */
@@ -4533,8 +4533,8 @@ public class PmScreen extends Screen {
         context.fill(x, y, x + 1, y + 11, 0xFF6FBF8B);
         String base = replyFragText != null ? replyFragText : (replyTarget.text != null ? replyTarget.text : "");
         String label = "↩ " + PmChatClient.previewOf(base);
-        context.text(textRenderer, trim(label, w - 20), x + 5, y + 2, 0xFF9CC4DC, false);
-        context.text(textRenderer, "×", x + w - 9, y + 2, 0xFFE07A6A, false);
+        context.text(font, trim(label, w - 20), x + 5, y + 2, 0xFF9CC4DC, false);
+        context.text(font, "×", x + w - 9, y + 2, 0xFFE07A6A, false);
         replyCancelX = x + w - 12;
         replyCancelY = y;
     }
@@ -4552,7 +4552,7 @@ public class PmScreen extends Screen {
         // Заголовок над полем
         context.fill(ex - 6, ey - 22, ex + ew + 6, ey - 4, 0xFF16241E);
         context.outline(ex - 6, ey - 22, ew + 12, 18, 0xFF2E5C48);
-        context.text(textRenderer, "✎ " + Component.translatable("pmchat.edit.editor.title").getString(),
+        context.text(font, "✎ " + Component.translatable("pmchat.edit.editor.title").getString(),
                 ex, ey - 17, 0xFFF0C34E, false);
         // Рамка вокруг самого поля
         context.outline(ex - 2, ey - 2, ew + 4, editBox.getHeight() + 4, 0xFF2E5C48);
@@ -4566,8 +4566,8 @@ public class PmScreen extends Screen {
         int by = editBox.getY() + editBox.getHeight() + 6;
         Component saveLbl = Component.translatable("pmchat.edit.editor.save");
         Component cancelLbl = Component.translatable("pmchat.edit.editor.cancel");
-        int sw = textRenderer.getWidth(saveLbl) + 18;
-        int cw = textRenderer.getWidth(cancelLbl) + 18;
+        int sw = font.getWidth(saveLbl) + 18;
+        int cw = font.getWidth(cancelLbl) + 18;
         int cx = ex + ew - cw;
         int sx = cx - sw - 6;
         editSaveRect = new int[]{sx, by, sw, 16};
@@ -4576,12 +4576,12 @@ public class PmScreen extends Screen {
         boolean hovC = inRect(mouseX, mouseY, editCancelRect);
         context.fill(sx, by, sx + sw, by + 16, hovS ? 0xFF2E6E4E : 0xFF23423A);
         context.outline(sx, by, sw, 16, 0xFF3A8A5E);
-        context.text(textRenderer, saveLbl, sx + 9, by + 4, 0xFFEDF3F0, false);
+        context.text(font, saveLbl, sx + 9, by + 4, 0xFFEDF3F0, false);
         context.fill(cx, by, cx + cw, by + 16, hovC ? 0xFF6E2A22 : 0xFF16241E);
         context.outline(cx, by, cw, 16, 0xFF5C2E2E);
-        context.text(textRenderer, cancelLbl, cx + 9, by + 4, hovC ? 0xFFE07A6A : 0xFFCFE0DA, false);
+        context.text(font, cancelLbl, cx + 9, by + 4, hovC ? 0xFFE07A6A : 0xFFCFE0DA, false);
         // Подсказка о горячих клавишах
-        context.text(textRenderer, Component.translatable("pmchat.edit.editor.hint"),
+        context.text(font, Component.translatable("pmchat.edit.editor.hint"),
                 ex, by + 20, 0xFF7FA694, false);
     }
 
@@ -4597,8 +4597,8 @@ public class PmScreen extends Screen {
         context.fill(x, y, x + 1, y + 11, 0xFFF0C34E);
         String label = "✎ " + Component.translatable("pmchat.edit.bar").getString() + ": "
                 + PmChatClient.previewOf(editTarget.text != null ? editTarget.text : "");
-        context.text(textRenderer, trim(label, w - 20), x + 5, y + 2, 0xFFF0C34E, false);
-        context.text(textRenderer, "×", x + w - 9, y + 2, 0xFFE07A6A, false);
+        context.text(font, trim(label, w - 20), x + 5, y + 2, 0xFFF0C34E, false);
+        context.text(font, "×", x + w - 9, y + 2, 0xFFE07A6A, false);
         editCancelX = x + w - 12;
         editCancelY = y;
     }
@@ -4629,7 +4629,7 @@ public class PmScreen extends Screen {
             if (active || hov) {
                 context.fill(cx, gy, cx + catCell, gy + 13, active ? ROW_SELECTED : ROW_HOVER);
             }
-            context.text(textRenderer, EMOJI_CAT_ICONS[c], cx + catCell / 2 - 3, gy + 3,
+            context.text(font, EMOJI_CAT_ICONS[c], cx + catCell / 2 - 3, gy + 3,
                     active ? 0xFFF0C34E : NAME_TEXT, false);
             emojiCatRects.add(new Object[]{cx, gy, catCell, 13, c});
         }
@@ -4643,7 +4643,7 @@ public class PmScreen extends Screen {
             if (hovered) {
                 context.fill(ex, ey, ex + cell, ey + cell, ROW_SELECTED);
             }
-            context.text(textRenderer, group[i], ex + 2, ey + 2,
+            context.text(font, group[i], ex + 2, ey + 2,
                     PmTheme.isLight(config.theme) ? 0xFF19232A : 0xFFDFE6EB, false);
             emojiRects.add(new Object[]{ex, ey, cell, cell, group[i]});
         }
@@ -4656,7 +4656,7 @@ public class PmScreen extends Screen {
         boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
         String label = (blink ? "● " : "  ") + Component.translatable("pmchat.voice.recording").getString()
                 + " 0:" + String.format(Locale.ROOT, "%02d", secs) + " / 0:" + com.pmchat.client.PmVoice.MAX_SECONDS;
-        context.text(textRenderer, label, px + LEFT_W + 8, areaBottom - 8, 0xFFE07A6A, false);
+        context.text(font, label, px + LEFT_W + 8, areaBottom - 8, 0xFFE07A6A, false);
     }
 
     static String[] imageIdOf(PmMessage msg) {
@@ -4730,30 +4730,30 @@ public class PmScreen extends Screen {
                     ? Component.translatable("pmchat.image.loadfail").getString()
                     : Component.translatable("pmchat.image.uploading").getString(), w - 12);
             int fg = msg.out ? OUT_TEXT : IN_TEXT;
-            context.text(textRenderer, label, x + 6, y + h / 2 - 4, applyAlpha(fg, alpha), false);
+            context.text(font, label, x + 6, y + h / 2 - 4, applyAlpha(fg, alpha), false);
         }
     }
 
     private void renderImagePicker(GuiGraphicsExtractor context, int mouseX, int mouseY, int areaTop, int areaBottom) {
         shotRects.clear();
         int x = px + LEFT_W + 8;
-        context.text(textRenderer, Component.translatable("pmchat.image.pick"), x, areaTop + 2, 0xFF6FBF8B, false);
+        context.text(font, Component.translatable("pmchat.image.pick"), x, areaTop + 2, 0xFF6FBF8B, false);
         Component clipHint = Component.translatable("pmchat.image.clip");
-        context.text(textRenderer, clipHint,
-                px + PANEL_W - 10 - textRenderer.getWidth(clipHint), areaTop + 2, SUBTLE, false);
+        context.text(font, clipHint,
+                px + PANEL_W - 10 - font.getWidth(clipHint), areaTop + 2, SUBTLE, false);
 
         // переключатель «Спойлер» — следующее отправленное фото будет размыто до клика
         drawSpoilerToggle(context, mouseX, mouseY, x, areaTop + 13);
 
         if (uploading) {
             Component label = Component.translatable("pmchat.image.uploading");
-            int hx = px + LEFT_W + (PANEL_W - LEFT_W - textRenderer.getWidth(label)) / 2;
-            context.text(textRenderer, label, hx, (areaTop + areaBottom) / 2, 0xFFF0C34E, false);
+            int hx = px + LEFT_W + (PANEL_W - LEFT_W - font.getWidth(label)) / 2;
+            context.text(font, label, hx, (areaTop + areaBottom) / 2, 0xFFF0C34E, false);
             return;
         }
 
         if (screenshots.isEmpty() && stickers.isEmpty()) {
-            context.text(textRenderer, Component.translatable("pmchat.image.empty"), x, areaTop + 34, SUBTLE, false);
+            context.text(font, Component.translatable("pmchat.image.empty"), x, areaTop + 34, SUBTLE, false);
             return;
         }
 
@@ -4771,8 +4771,8 @@ public class PmScreen extends Screen {
             } catch (Exception ignored) {
             }
             String size = kb + " KB";
-            context.text(textRenderer, size, x + w - 5 - textRenderer.getWidth(size), y + 5, PREVIEW_TEXT, false);
-            context.text(textRenderer, trim(name, w - 14 - textRenderer.getWidth(size)), x + 5, y + 5, NAME_TEXT, false);
+            context.text(font, size, x + w - 5 - font.getWidth(size), y + 5, PREVIEW_TEXT, false);
+            context.text(font, trim(name, w - 14 - font.getWidth(size)), x + 5, y + 5, NAME_TEXT, false);
 
             shotRects.add(new Object[]{x, y, w, 18, shot, false});
             y += 20;
@@ -4780,7 +4780,7 @@ public class PmScreen extends Screen {
 
         // Стикеры из config/pmchat-stickers
         if (!stickers.isEmpty() && y + 30 <= areaBottom) {
-            context.text(textRenderer, Component.translatable("pmchat.sticker.title"), x, y + 2, 0xFFF0C34E, false);
+            context.text(font, Component.translatable("pmchat.sticker.title"), x, y + 2, 0xFFF0C34E, false);
             y += 13;
             for (Path sticker : stickers) {
                 if (y + 16 > areaBottom) break;
@@ -4789,7 +4789,7 @@ public class PmScreen extends Screen {
                 context.fill(x, y, x + w, y + 14, hovered ? ROW_SELECTED : ROW_ALT);
                 String name = sticker.getFileName().toString().replace(".png", "").replace(".gif", " (gif)");
                 boolean cached = config.stickerCache.containsKey(sticker.getFileName().toString());
-                context.text(textRenderer, "✿ " + trim(name, w - 30), x + 5, y + 3,
+                context.text(font, "✿ " + trim(name, w - 30), x + 5, y + 3,
                         cached ? 0xFFA8E8C0 : NAME_TEXT, false);
                 shotRects.add(new Object[]{x, y, w, 15, sticker, true});
                 y += 17;
@@ -4797,7 +4797,7 @@ public class PmScreen extends Screen {
         }
 
         if (uploadFailed) {
-            context.text(textRenderer, Component.translatable("pmchat.image.failed"), x, areaBottom - 10, 0xFFE07A6A, false);
+            context.text(font, Component.translatable("pmchat.image.failed"), x, areaBottom - 10, 0xFFE07A6A, false);
         }
     }
 
@@ -4821,7 +4821,7 @@ public class PmScreen extends Screen {
             for (String rawWord : paragraph.split(" ", -1)) {
                 String word = rawWord;
                 // Само слово шире пузыря — рубим посимвольно
-                while (textRenderer.getWidth(word) > maxWidth) {
+                while (font.getWidth(word) > maxWidth) {
                     int fit = fitChars(word, maxWidth);
                     if (line.length() > 0) {
                         result.add(line.toString());
@@ -4831,7 +4831,7 @@ public class PmScreen extends Screen {
                     word = word.substring(fit);
                 }
                 String candidate = line.length() == 0 ? word : line + " " + word;
-                if (textRenderer.getWidth(candidate) > maxWidth && line.length() > 0) {
+                if (font.getWidth(candidate) > maxWidth && line.length() > 0) {
                     result.add(line.toString());
                     line = new StringBuilder(word);
                 } else {
@@ -4853,7 +4853,7 @@ public class PmScreen extends Screen {
         int lo = 1, hi = s.length(), best = 1;
         while (lo <= hi) {
             int mid = (lo + hi) / 2;
-            if (textRenderer.getWidth(s.substring(0, mid)) <= maxWidth) {
+            if (font.getWidth(s.substring(0, mid)) <= maxWidth) {
                 best = mid;
                 lo = mid + 1;
             } else {
@@ -4866,12 +4866,12 @@ public class PmScreen extends Screen {
     private void renderStats(GuiGraphicsExtractor context) {
         int x = px + LEFT_W + 10;
         int y = py + 26;
-        context.text(textRenderer, Component.translatable("pmchat.stats.title"), x, py + 8, TITLE, false);
+        context.text(font, Component.translatable("pmchat.stats.title"), x, py + 8, TITLE, false);
         context.fill(px + LEFT_W + 1, py + 22, px + PANEL_W - 2, py + 23, DIVIDER);
 
         SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy");
         if (selected != null) {
-            context.text(textRenderer, trim(selected, PANEL_W - LEFT_W - 20), x, y, 0xFF6FBF8B, false);
+            context.text(font, trim(selected, PANEL_W - LEFT_W - 20), x, y, 0xFF6FBF8B, false);
             y += 14;
             y = statLine(context, x, y, "pmchat.stats.total", String.valueOf(history.messages(selected).size()));
             y = statLine(context, x, y, "pmchat.stats.sent", String.valueOf(history.countIn(selected, true)));
@@ -4886,25 +4886,25 @@ public class PmScreen extends Screen {
 
         // Топ собеседников с мини-полосками
         y += 6;
-        context.text(textRenderer, Component.translatable("pmchat.stats.top"), x, y, SUBTLE, false);
+        context.text(font, Component.translatable("pmchat.stats.top"), x, y, SUBTLE, false);
         y += 12;
         List<Map.Entry<String, Integer>> top = history.topContacts(5);
         int max = top.isEmpty() ? 1 : Math.max(1, top.get(0).getValue());
         int barMax = PANEL_W - LEFT_W - 110;
         for (Map.Entry<String, Integer> e : top) {
             if (y > py + PANEL_H - 16) break;
-            context.text(textRenderer, trim(e.getKey(), 74), x, y, NAME_TEXT, false);
+            context.text(font, trim(e.getKey(), 74), x, y, NAME_TEXT, false);
             int bar = Math.max(2, e.getValue() * barMax / max);
             context.fill(x + 78, y + 2, x + 78 + bar, y + 7, 0xFF4C8A66);
-            context.text(textRenderer, String.valueOf(e.getValue()), x + 82 + bar, y, PREVIEW_TEXT, false);
+            context.text(font, String.valueOf(e.getValue()), x + 82 + bar, y, PREVIEW_TEXT, false);
             y += 12;
         }
     }
 
     private int statLine(GuiGraphicsExtractor context, int x, int y, String key, String value) {
         Component label = Component.translatable(key);
-        context.text(textRenderer, label, x, y, PREVIEW_TEXT, false);
-        context.text(textRenderer, value, px + PANEL_W - 12 - textRenderer.getWidth(value), y, NAME_TEXT, false);
+        context.text(font, label, x, y, PREVIEW_TEXT, false);
+        context.text(font, value, px + PANEL_W - 12 - font.getWidth(value), y, NAME_TEXT, false);
         return y + 12;
     }
 
@@ -4960,11 +4960,11 @@ public class PmScreen extends Screen {
         Component notice = paymentNeeded > 0
                 ? Component.translatable("pmchat.dm.needcoins", paymentNeeded)
                 : Component.translatable("pmchat.muted.notice");
-        int baseX = px + LEFT_W + (PANEL_W - LEFT_W - (10 + textRenderer.getWidth(notice))) / 2;
+        int baseX = px + LEFT_W + (PANEL_W - LEFT_W - (10 + font.getWidth(notice))) / 2;
         int y = py + PANEL_H - 42;
         int x = baseX + Math.round(shake);
-        context.text(textRenderer, "✋", x, y, applyAlpha(0xFFFF6A6A, alpha), false);
-        context.text(textRenderer, notice, x + 10, y, applyAlpha(0xFFFF6A6A, alpha), false);
+        context.text(font, "✋", x, y, applyAlpha(0xFFFF6A6A, alpha), false);
+        context.text(font, notice, x + 10, y, applyAlpha(0xFFFF6A6A, alpha), false);
     }
 
     /** Бумажный самолётик ➤ летит от кнопки отправки вверх вдоль чата. */
@@ -4984,7 +4984,7 @@ public class PmScreen extends Screen {
         m.pushMatrix();
         m.translate(x, y);
         m.rotate(rot);
-        context.text(textRenderer, "➤", 0, 0, applyAlpha(0xFF9CC4DC, alpha), false);
+        context.text(font, "➤", 0, 0, applyAlpha(0xFF9CC4DC, alpha), false);
         m.popMatrix();
     }
 
@@ -5783,10 +5783,10 @@ public class PmScreen extends Screen {
         int infoH = (infoLine != null ? 11 : 0) + (editedLine != null ? 11 : 0);
         int w = 104;
         for (String[] it : items) {
-            w = Math.max(w, textRenderer.getWidth(it[1]) + 16);
+            w = Math.max(w, font.getWidth(it[1]) + 16);
         }
-        if (infoLine != null) w = Math.max(w, textRenderer.getWidth(infoLine) + 14);
-        if (editedLine != null) w = Math.max(w, textRenderer.getWidth(editedLine) + 14);
+        if (infoLine != null) w = Math.max(w, font.getWidth(infoLine) + 14);
+        if (editedLine != null) w = Math.max(w, font.getWidth(editedLine) + 14);
         int h = infoH + reactH + items.size() * itemH + 6;
         int mx = Math.max(px + 4, Math.min(ctxX, px + PANEL_W - w - 4));
         int my = Math.max(py + 4, Math.min(ctxY, py + PANEL_H - h - 4));
@@ -5804,11 +5804,11 @@ public class PmScreen extends Screen {
 
         int y = my + 3;
         if (infoLine != null) {
-            context.text(textRenderer, infoLine, mx + 7, y, ctxMsg.read ? 0xFFA8E8C0 : SUBTLE, false);
+            context.text(font, infoLine, mx + 7, y, ctxMsg.read ? 0xFFA8E8C0 : SUBTLE, false);
             y += 11;
         }
         if (editedLine != null) {
-            context.text(textRenderer, editedLine, mx + 7, y, SUBTLE, false);
+            context.text(font, editedLine, mx + 7, y, SUBTLE, false);
             y += 11;
         }
         if (infoH > 0) {
@@ -5823,7 +5823,7 @@ public class PmScreen extends Screen {
                 if (hovered) {
                     context.fill(rx, y, rx + cell, y + 14, ROW_SELECTED);
                 }
-                context.text(textRenderer, com.pmchat.client.PmWire.REACTIONS[i], rx + 3, y + 3,
+                context.text(font, com.pmchat.client.PmWire.REACTIONS[i], rx + 3, y + 3,
                         com.pmchat.client.PmWire.REACTION_COLORS[i], false);
                 ctxRects.add(new Object[]{rx, y, cell, 14, "react" + i});
                 rx += cell;
@@ -5839,7 +5839,7 @@ public class PmScreen extends Screen {
             }
             int color = it[0].equals("delete") ? 0xFFE07A6A
                     : (it[0].endsWith("_locked") ? SUBTLE : NAME_TEXT);
-            context.text(textRenderer, it[1], mx + 7, y + 3, color, false);
+            context.text(font, it[1], mx + 7, y + 3, color, false);
             ctxRects.add(new Object[]{mx, y, w, itemH, it[0]});
             y += itemH;
         }
@@ -6164,8 +6164,8 @@ public class PmScreen extends Screen {
 
         List<Object[]> hits = collectSearchHits(q);
         String title = "🔍 " + Component.translatable("pmchat.search.results").getString() + " (" + hits.size() + ")";
-        context.text(textRenderer, title, x0 + 6, y0 + 5, 0xFF6FBF8B, false);
-        context.text(textRenderer, "×", x1 - 12, y0 + 5, 0xFFE07A6A, false);
+        context.text(font, title, x0 + 6, y0 + 5, 0xFF6FBF8B, false);
+        context.text(font, "×", x1 - 12, y0 + 5, 0xFFE07A6A, false);
 
         int rowH = 22;
         int top = y0 + 20;
@@ -6174,7 +6174,7 @@ public class PmScreen extends Screen {
         searchScroll = Math.max(0, Math.min(searchScroll, maxScroll));
 
         if (hits.isEmpty()) {
-            context.text(textRenderer, Component.translatable("pmchat.notfound"), x0 + 6, top + 4, SUBTLE, false);
+            context.text(font, Component.translatable("pmchat.notfound"), x0 + 6, top + 4, SUBTLE, false);
             return;
         }
         int y = top;
@@ -6185,10 +6185,10 @@ public class PmScreen extends Screen {
             boolean hov = mouseX >= x0 + 6 && mouseX < x0 + 6 + rw && mouseY >= y && mouseY < y + rowH - 2;
             context.fill(x0 + 6, y, x0 + 6 + rw, y + rowH - 2, hov ? ROW_SELECTED : ROW_HOVER);
             String who = (m.out ? "→ " : "") + conv;
-            context.text(textRenderer, trim(who, rw - 60), x0 + 10, y + 3, 0xFF9CC4DC, false);
+            context.text(font, trim(who, rw - 60), x0 + 10, y + 3, 0xFF9CC4DC, false);
             String when = new SimpleDateFormat("dd.MM HH:mm").format(new Date(m.time));
-            context.text(textRenderer, when, x0 + 6 + rw - textRenderer.getWidth(when) - 4, y + 3, SUBTLE, false);
-            context.text(textRenderer, trim(PmChatClient.previewOf(m.text), rw - 12), x0 + 10, y + 12, NAME_TEXT, false);
+            context.text(font, when, x0 + 6 + rw - font.getWidth(when) - 4, y + 3, SUBTLE, false);
+            context.text(font, trim(PmChatClient.previewOf(m.text), rw - 12), x0 + 10, y + 12, NAME_TEXT, false);
             searchResultRects.add(new Object[]{x0 + 6, y, rw, rowH - 2, conv, m});
             y += rowH;
         }
@@ -6209,9 +6209,9 @@ public class PmScreen extends Screen {
         context.fill(x0 + 1, y0, x1 - 1, y1, LEFT_BG);
         context.fill(x0, y0 + 1, x1, y1 - 1, LEFT_BG);
         context.outline(x0, y0, x1 - x0, y1 - y0, DIVIDER);
-        context.text(textRenderer, "⚑ " + Component.translatable("pmchat.pin.list").getString()
+        context.text(font, "⚑ " + Component.translatable("pmchat.pin.list").getString()
                 + " (" + pins.size() + ")", x0 + 6, y0 + 5, 0xFFF0C34E, false);
-        context.text(textRenderer, "×", x1 - 12, y0 + 5, 0xFFE07A6A, false);
+        context.text(font, "×", x1 - 12, y0 + 5, 0xFFE07A6A, false);
 
         int rowH = 18;
         int y = y0 + 20;
@@ -6222,8 +6222,8 @@ public class PmScreen extends Screen {
             int rw = x1 - x0 - 12;
             boolean hov = mouseX >= x0 + 6 && mouseX < x0 + 6 + rw - 16 && mouseY >= y && mouseY < y + rowH - 2;
             context.fill(x0 + 6, y, x0 + 6 + rw, y + rowH - 2, hov ? ROW_SELECTED : ROW_HOVER);
-            context.text(textRenderer, trim(body, rw - 22), x0 + 10, y + 4, NAME_TEXT, false);
-            context.text(textRenderer, "×", x0 + 6 + rw - 10, y + 4, 0xFFE07A6A, false);
+            context.text(font, trim(body, rw - 22), x0 + 10, y + 4, NAME_TEXT, false);
+            context.text(font, "×", x0 + 6 + rw - 10, y + 4, 0xFFE07A6A, false);
             pinListRects.add(new Object[]{x0 + 6, y, rw - 16, rowH - 2, h});
             pinListUnpinRects.add(new Object[]{x0 + 6 + rw - 14, y, 14, rowH - 2, h});
             y += rowH;
@@ -6239,8 +6239,8 @@ public class PmScreen extends Screen {
     }
 
     private String trim(String text, int maxWidth) {
-        if (textRenderer.getWidth(text) <= maxWidth) return text;
-        return textRenderer.trimToWidth(text, Math.max(0, maxWidth - textRenderer.getWidth("…"))) + "…";
+        if (font.getWidth(text) <= maxWidth) return text;
+        return font.trimToWidth(text, Math.max(0, maxWidth - font.getWidth("…"))) + "…";
     }
 
     private String groupDigits(long value) {

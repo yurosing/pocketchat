@@ -70,7 +70,7 @@ public class PmEnvelopeComposeScreen extends Screen {
         if (minutesField != null) minutesText = minutesField.getValue();
         if (questionField != null) questionText = questionField.getValue();
         if (answerField != null) answerText = answerField.getValue();
-        clearChildren();
+        clearWidgets();
         fieldLabels.clear();
         PANEL_W = Math.max(200, Math.min(260, width - 24));
         PANEL_H = Math.min(withQuestion ? 250 : 210, height - 16);
@@ -86,17 +86,17 @@ public class PmEnvelopeComposeScreen extends Screen {
         y += 22;
 
         fieldLabels.add(new Object[]{"pmchat.envelope.content", fx, y - 10});
-        contentField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.content"));
+        contentField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.envelope.content"));
         contentField.setMaxLength(300);
         contentField.setValue(contentText);
-        addDrawableChild(contentField);
+        addRenderableWidget(contentField);
         y += 26;
 
         fieldLabels.add(new Object[]{"pmchat.envelope.minutes", fx, y - 10});
-        minutesField = new EditBox(textRenderer, fx, y, 60, 16, Component.translatable("pmchat.envelope.minutes"));
+        minutesField = new EditBox(font, fx, y, 60, 16, Component.translatable("pmchat.envelope.minutes"));
         minutesField.setMaxLength(6);
         minutesField.setValue(minutesText);
-        addDrawableChild(minutesField);
+        addRenderableWidget(minutesField);
 
         // Ширина пресетов — по числу кнопок; FlatButton текст не обрезает сам (см. render()
         // без scissor), поэтому подписи вроде «15м» на совсем узкой кнопке лезли бы за её
@@ -105,14 +105,14 @@ public class PmEnvelopeComposeScreen extends Screen {
         int px2 = fx + 64 + 6;
         for (int m : PRESETS_MIN) {
             String label = trimToButton(presetLabel(m), pw - 4);
-            addDrawableChild(FlatButton.centered(textRenderer, px2, y, pw - 2, 16,
+            addRenderableWidget(FlatButton.centered(font, px2, y, pw - 2, 16,
                     Component.literal(label), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                     btn -> minutesField.setValue(String.valueOf(m))));
             px2 += pw;
         }
         y += 24;
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, y, fw, 16,
                 Component.translatable(withQuestion ? "pmchat.envelope.question.remove" : "pmchat.envelope.question.add"),
                 BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
                     withQuestion = !withQuestion;
@@ -122,33 +122,33 @@ public class PmEnvelopeComposeScreen extends Screen {
 
         if (withQuestion) {
             fieldLabels.add(new Object[]{"pmchat.envelope.question", fx, y - 10});
-            questionField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.question"));
+            questionField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.envelope.question"));
             questionField.setMaxLength(120);
             questionField.setValue(questionText);
-            addDrawableChild(questionField);
+            addRenderableWidget(questionField);
             y += 26;
 
             fieldLabels.add(new Object[]{"pmchat.envelope.answer", fx, y - 10});
-            answerField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.answer"));
+            answerField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.envelope.answer"));
             answerField.setMaxLength(60);
             answerField.setValue(answerText);
-            addDrawableChild(answerField);
+            addRenderableWidget(answerField);
             y += 26;
         } else {
             questionField = null;
             answerField = null;
         }
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y, (fw - 6) / 2, 18,
+        addRenderableWidget(FlatButton.centered(font, fx, y, (fw - 6) / 2, 18,
                 Component.translatable("pmchat.envelope.send"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> send()));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
+        addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
     private String trimToButton(String s, int maxW) {
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 
@@ -198,10 +198,10 @@ public class PmEnvelopeComposeScreen extends Screen {
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.text(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(font, getTitle(), px + (PANEL_W - font.getWidth(getTitle())) / 2, py + 8, TITLE, false);
 
         for (Object[] entry : fieldLabels) {
-            context.text(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
+            context.text(font, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
         }
 
         if (skinRect != null) {
@@ -213,13 +213,13 @@ public class PmEnvelopeComposeScreen extends Screen {
             String label = PmWire.envelopeIcon(skin) + "  " + Component.translatable(PmWire.envelopeLabelKey(skin)).getString()
                     + "  (" + Component.translatable("pmchat.envelope.skin.next").getString() + ")";
             label = trimToButton(label, skinRect[2] - 6);
-            context.text(textRenderer, label,
-                    skinRect[0] + (skinRect[2] - textRenderer.getWidth(label)) / 2, skinRect[1] + 4,
+            context.text(font, label,
+                    skinRect[0] + (skinRect[2] - font.getWidth(label)) / 2, skinRect[1] + 4,
                     PmWire.envelopeColor(skin), false);
         }
 
         if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 12, statusColor, false);
+            context.text(font, status, px + (PANEL_W - font.getWidth(status)) / 2, py + PANEL_H - 12, statusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);

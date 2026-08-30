@@ -85,7 +85,7 @@ public class PmGiftsScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
 
         PANEL_W = Math.max(220, Math.min(460, width - 24));
         PANEL_H = Math.max(160, Math.min(400, height - 24));
@@ -95,7 +95,7 @@ public class PmGiftsScreen extends Screen {
         gridTop = py + (catalogMode ? 46 : 34);
         gridBottom = py + PANEL_H - 34;
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
                 Component.translatable(detailIndex >= 0 ? "pmchat.gifts.back" : "pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                 btn -> {
                     if (detailIndex >= 0) {
@@ -118,15 +118,15 @@ public class PmGiftsScreen extends Screen {
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
         Component title = getTitle();
-        context.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
 
         if (catalogMode) {
             Long bal = PmBackend.cachedSelfBalance();
             String balStr = Component.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
-            context.text(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
+            context.text(font, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
             renderCatalogGrid(context, mouseX, mouseY, dt);
             if (!status.getString().isEmpty()) {
-                context.text(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2,
+                context.text(font, status, px + (PANEL_W - font.getWidth(status)) / 2,
                         py + PANEL_H - 46, statusColor, false);
             }
         } else if (detailIndex >= 0 && detailIndex < gifts().size()) {
@@ -226,7 +226,7 @@ public class PmGiftsScreen extends Screen {
         List<PmBackend.Gift> cat = PmBackend.cachedCatalog();
         if (cat.isEmpty()) {
             Component empty = Component.translatable("pmchat.shop.empty");
-            context.text(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
+            context.text(font, empty, px + (PANEL_W - font.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
             return;
         }
         Long selfBal = PmBackend.cachedSelfBalance();
@@ -246,7 +246,7 @@ public class PmGiftsScreen extends Screen {
             drawCardBase(context, x, y, i, g.icon, rarity, hover, !afford, dt);
 
             String priceStr = PmBackend.formatCoins(g.price);
-            context.text(textRenderer, priceStr, x + (CELL - textRenderer.getWidth(priceStr)) / 2,
+            context.text(font, priceStr, x + (CELL - font.getWidth(priceStr)) / 2,
                     y + CELL - 13, afford ? PmBackend.CURRENCY_COLOR : 0xFF9A6A6A, false);
 
             cardRects.add(new Object[]{x, y, CELL, CELL, i});
@@ -277,7 +277,7 @@ public class PmGiftsScreen extends Screen {
         List<PmBackend.ReceivedGift> got = gifts();
         if (got.isEmpty()) {
             Component empty = Component.translatable("pmchat.profile.gifts.empty");
-            context.text(textRenderer, empty, px + (PANEL_W - textRenderer.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
+            context.text(font, empty, px + (PANEL_W - font.getWidth(empty)) / 2, gridTop + 8, SUBTLE, false);
             return;
         }
 
@@ -301,7 +301,7 @@ public class PmGiftsScreen extends Screen {
             int badgeColor = 0xFF000000 | (from.toLowerCase(Locale.ROOT).hashCode() & 0xFFFFFF);
             fillCircle(context, x + CELL - 13, y + 13, 12, badgeColor);
             String initial = from.substring(0, 1).toUpperCase(Locale.ROOT);
-            context.text(textRenderer, initial, x + CELL - 13 - textRenderer.getWidth(initial) / 2, y + 13 - 4, 0xFFFFFFFF, false);
+            context.text(font, initial, x + CELL - 13 - font.getWidth(initial) / 2, y + 13 - 4, 0xFFFFFFFF, false);
 
             cardRects.add(new Object[]{x, y, CELL, CELL, i});
 
@@ -315,7 +315,7 @@ public class PmGiftsScreen extends Screen {
         }
 
         Component caption = Component.translatable("pmchat.gifts.caption", PmNames.displayString(player));
-        context.text(textRenderer, caption, px + (PANEL_W - textRenderer.getWidth(caption)) / 2, py + PANEL_H - 40, SUBTLE, false);
+        context.text(font, caption, px + (PANEL_W - font.getWidth(caption)) / 2, py + PANEL_H - 40, SUBTLE, false);
     }
 
     private void renderDetail(GuiGraphicsExtractor context, PmBackend.ReceivedGift g) {
@@ -355,7 +355,7 @@ public class PmGiftsScreen extends Screen {
     }
 
     private void drawCentered(GuiGraphicsExtractor ctx, String s, int centerX, int y, int color) {
-        ctx.text(textRenderer, Component.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
+        ctx.text(font, Component.literal(s), centerX - font.getWidth(s) / 2, y, color, false);
     }
 
     /** Текст с масштабом вокруг точки (centerX, y — центр по вертикали). */
@@ -364,7 +364,7 @@ public class PmGiftsScreen extends Screen {
         m.pushMatrix();
         m.translate(centerX, y);
         m.scale(scale, scale);
-        ctx.text(textRenderer, Component.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
+        ctx.text(font, Component.literal(s), -font.getWidth(s) / 2, -font.fontHeight / 2, color, false);
         m.popMatrix();
     }
 

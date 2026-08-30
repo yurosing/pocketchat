@@ -57,7 +57,7 @@ public class PmAdminAccountsScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
         PANEL_W = Math.max(180, Math.min(260, width - 24));
         PANEL_H = Math.min(220, height - 16);
         px = (width - PANEL_W) / 2;
@@ -67,19 +67,19 @@ public class PmAdminAccountsScreen extends Screen {
         int fw = PANEL_W - 32;
         int y = py + 26;
 
-        searchField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.admin.accounts.search"));
+        searchField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.admin.accounts.search"));
         String hint = Component.translatable("pmchat.admin.accounts.search").getString();
         searchField.setSuggestion(hint);
         searchField.setResponder(s -> {
             searchField.setSuggestion(s.isEmpty() ? hint : null);
             load();
         });
-        addDrawableChild(searchField);
+        addRenderableWidget(searchField);
 
         listTop = y + 22;
         listBottom = py + PANEL_H - 44;
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
 
         load();
@@ -108,7 +108,7 @@ public class PmAdminAccountsScreen extends Screen {
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.text(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(font, getTitle(), px + (PANEL_W - font.getWidth(getTitle())) / 2, py + 8, TITLE, false);
 
         int y = listTop;
         int visible = accounts.size();
@@ -118,18 +118,18 @@ public class PmAdminAccountsScreen extends Screen {
             if (hovered) context.fill(px + 6, y, px + PANEL_W - 6, y + ROW_H - 1, 0x22FFFFFF);
 
             String badge = (a.official ? "★ " : a.verified ? "✓ " : "");
-            context.text(textRenderer, badge + a.username, px + 10, y + 2,
+            context.text(font, badge + a.username, px + 10, y + 2,
                     a.official ? 0xFFF0C34E : a.verified ? 0xFF4CC26A : LABEL, false);
             String balanceStr = String.valueOf(a.balance);
-            context.text(textRenderer, balanceStr,
-                    px + PANEL_W - 14 - textRenderer.getWidth(balanceStr), y + 2, VALUE, false);
+            context.text(font, balanceStr,
+                    px + PANEL_W - 14 - font.getWidth(balanceStr), y + 2, VALUE, false);
             net.minecraft.network.chat.Component lastSeen = PmBackend.humanizeLastSeen(a.lastSeenAt, config.preciseLastSeen && a.sharePrecise);
-            context.text(textRenderer, lastSeen, px + 10, y + 13, LABEL, false);
+            context.text(font, lastSeen, px + 10, y + 13, LABEL, false);
             y += ROW_H;
         }
 
         if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, px + 10, listTop + 2, statusColor, false);
+            context.text(font, status, px + 10, listTop + 2, statusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);

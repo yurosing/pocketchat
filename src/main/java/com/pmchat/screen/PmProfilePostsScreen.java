@@ -86,7 +86,7 @@ public class PmProfilePostsScreen extends Screen {
 
     private void layout() {
         if (composeField != null) composeText = composeField.getValue();
-        clearChildren();
+        clearWidgets();
 
         int fx = px + 12;
         int fw = pw - 24;
@@ -94,27 +94,27 @@ public class PmProfilePostsScreen extends Screen {
 
         if (self) {
             int fieldW = fw - 66;
-            composeField = new EditBox(textRenderer, fx, y, fieldW, 15, Component.translatable("pmchat.posts.hint"));
+            composeField = new EditBox(font, fx, y, fieldW, 15, Component.translatable("pmchat.posts.hint"));
             composeField.setMaxLength(2000);
             composeField.setValue(composeText);
-            addDrawableChild(composeField);
+            addRenderableWidget(composeField);
 
             int bw = 20;
-            addDrawableChild(FlatButton.centered(textRenderer, fx + fieldW + 2, y, bw, 15,
+            addRenderableWidget(FlatButton.centered(font, fx + fieldW + 2, y, bw, 15,
                     Component.literal("Ж"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> wrapField("**")));
-            addDrawableChild(FlatButton.centered(textRenderer, fx + fieldW + 2 + bw + 2, y, bw, 15,
+            addRenderableWidget(FlatButton.centered(font, fx + fieldW + 2 + bw + 2, y, bw, 15,
                     Component.literal("К"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> wrapField("_")));
-            addDrawableChild(FlatButton.centered(textRenderer, fx + fieldW + 2 + 2 * (bw + 2), y, bw, 15,
+            addRenderableWidget(FlatButton.centered(font, fx + fieldW + 2 + 2 * (bw + 2), y, bw, 15,
                     Component.literal("П"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> wrapField("__")));
             y += 19;
 
-            addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 15,
+            addRenderableWidget(FlatButton.centered(font, fx, y, fw, 15,
                     Component.translatable("pmchat.posts.publish"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                     btn -> publish()));
             y += 20;
         }
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + pw / 2 - 40, py + ph - 20, 80, 15,
+        addRenderableWidget(FlatButton.centered(font, px + pw / 2 - 40, py + ph - 20, 80, 15,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
 
         closeRect = new int[]{px + pw - 18, py + 5, 14, 14};
@@ -185,11 +185,11 @@ public class PmProfilePostsScreen extends Screen {
         ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = Component.translatable("pmchat.posts.title_of", player);
-        ctx.text(textRenderer, trim(title.getString(), pw - 40), px + 12, py + 8, TITLE, false);
+        ctx.text(font, trim(title.getString(), pw - 40), px + 12, py + 8, TITLE, false);
         String x = "✕";
         boolean hovX = closeRect != null && mouseX >= closeRect[0] && mouseX < closeRect[0] + closeRect[2]
                 && mouseY >= closeRect[1] && mouseY < closeRect[1] + closeRect[3];
-        ctx.text(textRenderer, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
+        ctx.text(font, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
 
         int fx = px + 12;
         int fw = pw - 24;
@@ -199,9 +199,9 @@ public class PmProfilePostsScreen extends Screen {
         deleteRects.clear();
         ctx.enableScissor(px + 1, listTop, px + pw - 1, listBottom);
         if (posts == null) {
-            ctx.text(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
+            ctx.text(font, Component.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
         } else if (posts.isEmpty()) {
-            ctx.text(textRenderer, Component.translatable("pmchat.posts.empty"), fx, listTop + 4, LABEL, false);
+            ctx.text(font, Component.translatable("pmchat.posts.empty"), fx, listTop + 4, LABEL, false);
         } else {
             int y = listTop - scroll;
             for (PmBackend.ProfilePost p : posts) {
@@ -210,16 +210,16 @@ public class PmProfilePostsScreen extends Screen {
                 if (y + rowH >= listTop && y <= listBottom) {
                     ctx.fill(fx, y, fx + fw, y + rowH - 2, BTN_BG);
                     String head = p.author + (p.at > 0 ? "  ·  " + fmt.format(new Date(p.at)) : "");
-                    ctx.text(textRenderer, trim(head, fw - 24), fx + 4, y + 2, ACCENT, false);
+                    ctx.text(font, trim(head, fw - 24), fx + 4, y + 2, ACCENT, false);
                     int ly = y + 12;
                     for (String line : wrapLines(p.content, fw - 8)) {
-                        ctx.text(textRenderer, parseMarkup(line), fx + 4, ly, VALUE, false);
+                        ctx.text(font, parseMarkup(line), fx + 4, ly, VALUE, false);
                         ly += 10;
                     }
                     if (self) {
                         int dx = fx + fw - 12, dy = y + 2;
                         boolean hov = mouseX >= dx - 2 && mouseX < dx + 8 && mouseY >= dy - 1 && mouseY < dy + 9;
-                        ctx.text(textRenderer, "✖", dx, dy, hov ? 0xFFE07A6A : LABEL, false);
+                        ctx.text(font, "✖", dx, dy, hov ? 0xFFE07A6A : LABEL, false);
                         deleteRects.add(new Object[]{dx - 2, dy - 1, 10, 10, p.id});
                     }
                 }
@@ -229,7 +229,7 @@ public class PmProfilePostsScreen extends Screen {
         ctx.disableScissor();
 
         if (!status.getString().isEmpty()) {
-            ctx.text(textRenderer, status, fx, py + ph - 36, statusColor, false);
+            ctx.text(font, status, fx, py + ph - 36, statusColor, false);
         }
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
@@ -242,7 +242,7 @@ public class PmProfilePostsScreen extends Screen {
         StringBuilder cur = new StringBuilder();
         for (String word : text.split(" ")) {
             String candidate = cur.isEmpty() ? word : cur + " " + word;
-            if (textRenderer.getWidth(candidate.replaceAll("\\*\\*|__|_", "")) > maxW && !cur.isEmpty()) {
+            if (font.getWidth(candidate.replaceAll("\\*\\*|__|_", "")) > maxW && !cur.isEmpty()) {
                 lines.add(cur.toString());
                 cur = new StringBuilder(word);
             } else {
@@ -278,8 +278,8 @@ public class PmProfilePostsScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 

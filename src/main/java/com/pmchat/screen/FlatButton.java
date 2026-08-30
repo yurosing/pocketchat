@@ -17,7 +17,7 @@ public class FlatButton extends AbstractWidget {
         void onPress(FlatButton button);
     }
 
-    private final Font textRenderer;
+    private final Font font;
     private final PressAction action;
     private final int bg;
     private final int bgHover;
@@ -37,10 +37,10 @@ public class FlatButton extends AbstractWidget {
     private float pressAnim = 0f;
     private long lastRenderMs = 0L;
 
-    public FlatButton(Font textRenderer, int x, int y, int width, int height, Component message,
+    public FlatButton(Font font, int x, int y, int width, int height, Component message,
                        int bg, int bgHover, int border, int textColor, boolean centered, PressAction action) {
         super(x, y, width, height, message);
-        this.textRenderer = textRenderer;
+        this.font = font;
         this.action = action;
         this.bg = bg;
         this.bgHover = bgHover;
@@ -49,9 +49,9 @@ public class FlatButton extends AbstractWidget {
         this.centered = centered;
     }
 
-    public static FlatButton centered(Font textRenderer, int x, int y, int width, int height, Component message,
+    public static FlatButton centered(Font font, int x, int y, int width, int height, Component message,
                                        int bg, int bgHover, int border, int textColor, PressAction action) {
-        return new FlatButton(textRenderer, x, y, width, height, message, bg, bgHover, border, textColor, true, action);
+        return new FlatButton(font, x, y, width, height, message, bg, bgHover, border, textColor, true, action);
     }
 
     /** Кнопка с собственной пиксельной иконкой вместо символа шрифта. */
@@ -116,12 +116,12 @@ public class FlatButton extends AbstractWidget {
         }
 
         Component message = getMessage();
-        int textY = y0 + (getHeight() - textRenderer.fontHeight) / 2;
+        int textY = y0 + (getHeight() - font.fontHeight) / 2;
         if (centered) {
-            int textX = x0 + getWidth() / 2 - textRenderer.getWidth(message) / 2;
-            context.text(textRenderer, message, textX, textY, textColor, false);
+            int textX = x0 + getWidth() / 2 - font.getWidth(message) / 2;
+            context.text(font, message, textX, textY, textColor, false);
         } else {
-            context.text(textRenderer, message, x0 + 6, textY, textColor, false);
+            context.text(font, message, x0 + 6, textY, textColor, false);
         }
     }
 

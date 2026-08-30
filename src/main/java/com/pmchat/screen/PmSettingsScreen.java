@@ -87,7 +87,7 @@ public class PmSettingsScreen extends Screen {
     protected void init() {
         applyTheme();
         optionLabels.clear();
-        clearChildren();
+        clearWidgets();
         lastTab = tab;
 
         int rows = Math.max(1, rowsForTab(tab));
@@ -101,7 +101,7 @@ public class PmSettingsScreen extends Screen {
         for (int i = 0; i < TAB_KEYS.length; i++) {
             int ti = i;
             boolean active = ti == tab;
-            addDrawableChild(FlatButton.centered(textRenderer, px + i * tabW + 1, py + 22, tabW - 2, TAB_H - 2,
+            addRenderableWidget(FlatButton.centered(font, px + i * tabW + 1, py + 22, tabW - 2, TAB_H - 2,
                     Component.translatable(TAB_KEYS[i]), active ? BTN_HOVER : BTN_BG, BTN_HOVER, BTN_BORDER,
                     active ? VALUE : LABEL, btn -> { tab = ti; init(); }));
         }
@@ -117,16 +117,16 @@ public class PmSettingsScreen extends Screen {
             default -> { }
         }
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Component.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
 
         // кнопка-ссылка на сайт документации (открывает RU/EN по языку клиента)
-        FlatButton docsBtn = FlatButton.centered(textRenderer, px + PANEL_W - 24, py + 3, 18, 14,
+        FlatButton docsBtn = FlatButton.centered(font, px + PANEL_W - 24, py + 3, 18, 14,
                 Component.translatable("pmchat.tip.docs"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
                 btn -> PmChatClient.openDocs()).withIcon(PmIcons.DOCS);
         docsBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable("pmchat.tip.docs")));
-        addDrawableChild(docsBtn);
+        addRenderableWidget(docsBtn);
     }
 
     private int buildAppearanceTab(int y) {
@@ -307,7 +307,7 @@ public class PmSettingsScreen extends Screen {
             y += 12;
 
             String hint = Component.translatable("pmchat.settings.backendurl.hint").getString();
-            backendUrlField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.settings.backendurl.hint"));
+            backendUrlField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.settings.backendurl.hint"));
             backendUrlField.setMaxLength(200);
             if (backendConfigured()) {
                 backendUrlField.setValue(config.backendUrl);
@@ -315,10 +315,10 @@ public class PmSettingsScreen extends Screen {
                 backendUrlField.setSuggestion(hint);
                 backendUrlField.setResponder(s -> backendUrlField.setSuggestion(s.isEmpty() ? hint : null));
             }
-            addDrawableChild(backendUrlField);
+            addRenderableWidget(backendUrlField);
             y += 20;
 
-            addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
+            addRenderableWidget(FlatButton.centered(font, fx, y, fw, 16,
                     Component.translatable("pmchat.settings.backendurl.connect"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                     btn -> {
                         String url = backendUrlField.getValue().trim();
@@ -382,7 +382,7 @@ public class PmSettingsScreen extends Screen {
             y += 12;
             int fx = px + 12, fw = PANEL_W - 24;
             if (com.pmchat.client.PmBackend.hasActiveFeature("paid_dm")) {
-                dmPriceField = new EditBox(textRenderer, fx, y, fw - 62, 16, Component.translatable("pmchat.shop.dmprice.hint"));
+                dmPriceField = new EditBox(font, fx, y, fw - 62, 16, Component.translatable("pmchat.shop.dmprice.hint"));
                 dmPriceField.setMaxLength(8);
                 com.pmchat.client.PmBackend.AccountInfo self =
                         com.pmchat.client.PmBackend.cachedAccountInfo(PmChatClient.selfName());
@@ -390,15 +390,15 @@ public class PmSettingsScreen extends Screen {
                 String hint = Component.translatable("pmchat.shop.dmprice.hint").getString();
                 dmPriceField.setSuggestion(dmPriceField.getValue().isEmpty() ? hint : "");
                 dmPriceField.setResponder(s -> dmPriceField.setSuggestion(s.isEmpty() ? hint : ""));
-                addDrawableChild(dmPriceField);
-                addDrawableChild(FlatButton.centered(textRenderer, fx + fw - 58, y, 58, 16,
+                addRenderableWidget(dmPriceField);
+                addRenderableWidget(FlatButton.centered(font, fx + fw - 58, y, 58, 16,
                         Component.translatable("pmchat.shop.dmprice.save"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                         btn -> saveDmPrice()));
                 y += 20;
             } else {
                 optionLabels.add(new Object[]{"pmchat.privacy.dmprice.needshop", y});
                 y += 12;
-                addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
+                addRenderableWidget(FlatButton.centered(font, fx, y, fw, 16,
                         Component.translatable("pmchat.tip.shop"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
                         btn -> Minecraft.getInstance().setScreen(new PmShopScreen(this))));
                 y += 20;
@@ -437,14 +437,14 @@ public class PmSettingsScreen extends Screen {
 
     /** Строка настройки: подпись + кнопка-значение, клик перебирает варианты. */
     private int addOption(int y, String labelKey, ValueSupplier value, ColorSupplier color, Runnable cycle) {
-        FlatButton button = FlatButton.centered(textRenderer, px + PANEL_W - 92, y, 84, 14,
+        FlatButton button = FlatButton.centered(font, px + PANEL_W - 92, y, 84, 14,
                 value.get(), BTN_BG, BTN_HOVER, BTN_BORDER, color.get(), btn -> {
                     cycle.run();
                     config.save();
                     // Пересоздаём экран, чтобы обновить подписи и цвета кнопок
                     reinit();
                 });
-        addDrawableChild(button);
+        addRenderableWidget(button);
         optionLabels.add(new Object[]{labelKey, y});
         return y + ROW_H;
     }
@@ -458,16 +458,16 @@ public class PmSettingsScreen extends Screen {
         context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable("pmchat.settings.title");
-        context.text(textRenderer, title,
-                px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(font, title,
+                px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
 
         for (Object[] entry : optionLabels) {
-            context.text(textRenderer, Component.translatable((String) entry[0]),
+            context.text(font, Component.translatable((String) entry[0]),
                     px + 10, (int) entry[1] + 3, LABEL, false);
         }
 
         if (tab == 4 && dmPriceField != null && !dmPriceStatus.getString().isEmpty()) {
-            context.text(textRenderer, dmPriceStatus, px + 12, py + panelH - 40, dmPriceStatusColor, false);
+            context.text(font, dmPriceStatus, px + 12, py + panelH - 40, dmPriceStatusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);

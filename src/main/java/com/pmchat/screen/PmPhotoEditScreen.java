@@ -96,7 +96,7 @@ public class PmPhotoEditScreen extends Screen {
     protected void init() {
         applyTheme();
         String captionInput = captionField != null ? captionField.getValue() : "";
-        clearChildren();
+        clearWidgets();
 
         if (current == null && !loadError) {
             try {
@@ -140,7 +140,7 @@ public class PmPhotoEditScreen extends Screen {
         int totalToolsW = toolW * toolKeys.length + gap * (toolKeys.length - 1);
         int tx = (width - totalToolsW) / 2;
         for (int i = 0; i < toolKeys.length; i++) {
-            addDrawableChild(tool(tx + i * (toolW + gap), toolsY, toolW, toolH, toolKeys[i], toolActive[i], toolActions[i]));
+            addRenderableWidget(tool(tx + i * (toolW + gap), toolsY, toolW, toolH, toolKeys[i], toolActive[i], toolActions[i]));
         }
 
         // Палитра цвета — общая для пера и текста на фото
@@ -152,7 +152,7 @@ public class PmPhotoEditScreen extends Screen {
             for (int i = 0; i < PEN_PALETTE.length; i++) {
                 int idx = i;
                 int x = sx + i * (swSize + swGap);
-                addDrawableChild(swatch(x, rowY, swSize, PEN_PALETTE[i], idx == penColorIdx, () -> penColorIdx = idx));
+                addRenderableWidget(swatch(x, rowY, swSize, PEN_PALETTE[i], idx == penColorIdx, () -> penColorIdx = idx));
             }
         }
 
@@ -164,7 +164,7 @@ public class PmPhotoEditScreen extends Screen {
             int wx = (width - wTotalW) / 2;
             for (int i = 0; i < PEN_WIDTHS.length; i++) {
                 int idx = i;
-                addDrawableChild(sizeButton(wx + i * (36 + swGap), wRowY, 36, 16, i, idx == penWidthIdx,
+                addRenderableWidget(sizeButton(wx + i * (36 + swGap), wRowY, 36, 16, i, idx == penWidthIdx,
                         () -> penWidthIdx = idx));
             }
         }
@@ -172,10 +172,10 @@ public class PmPhotoEditScreen extends Screen {
         // Подтверждение обрезки — появляется, когда выделен прямоугольник
         if (cropMode && cropHasSelection) {
             int by = toolsY - 22;
-            addDrawableChild(FlatButton.centered(textRenderer, width / 2 - 90, by, 84, 18,
+            addRenderableWidget(FlatButton.centered(font, width / 2 - 90, by, 84, 18,
                     Component.translatable("pmchat.photoedit.applycrop"),
                     0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> applyCrop()));
-            addDrawableChild(FlatButton.centered(textRenderer, width / 2 + 6, by, 84, 18,
+            addRenderableWidget(FlatButton.centered(font, width / 2 + 6, by, 84, 18,
                     Component.translatable("pmchat.photoedit.cancel"),
                     0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A, btn -> {
                         cropHasSelection = false;
@@ -186,14 +186,14 @@ public class PmPhotoEditScreen extends Screen {
         // Текст прямо на фото: кликните по фото, наберите текст, выберите цвет выше
         if (textMode) {
             int fy = toolsY - 42;
-            captionField = new EditBox(textRenderer, width / 2 - 140, fy, 220, 16,
+            captionField = new EditBox(font, width / 2 - 140, fy, 220, 16,
                     Component.translatable("pmchat.photoedit.captionhint"));
             captionField.setMaxLength(200);
             captionField.setValue(captionInput);
             captionField.setSuggestion(captionInput.isEmpty()
                     ? Component.translatable("pmchat.photoedit.captionhint").getString() : "");
-            addDrawableChild(captionField);
-            addDrawableChild(FlatButton.centered(textRenderer, width / 2 + 86, fy - 1, 60, 18,
+            addRenderableWidget(captionField);
+            addRenderableWidget(FlatButton.centered(font, width / 2 + 86, fy - 1, 60, 18,
                     Component.translatable("pmchat.photoedit.applytext"),
                     0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> applyCaption()));
         }
@@ -201,22 +201,22 @@ public class PmPhotoEditScreen extends Screen {
         int actW = 90, actH = 20, actGap = 12;
         int actY = height - 26;
         int ax = width / 2 - actW - actGap / 2;
-        addDrawableChild(FlatButton.centered(textRenderer, ax, actY, actW, actH,
+        addRenderableWidget(FlatButton.centered(font, ax, actY, actW, actH,
                 Component.translatable("pmchat.photoedit.cancel"),
                 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A, btn -> close()));
-        addDrawableChild(FlatButton.centered(textRenderer, width / 2 + actGap / 2, actY, actW, actH,
+        addRenderableWidget(FlatButton.centered(font, width / 2 + actGap / 2, actY, actW, actH,
                 Component.translatable("pmchat.photoedit.send"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> doSend()));
     }
 
     private FlatButton tool(int x, int y, int w, int h, String key, boolean active, FlatButton.PressAction action) {
-        return FlatButton.centered(textRenderer, x, y, w, h, Component.translatable(key),
+        return FlatButton.centered(font, x, y, w, h, Component.translatable(key),
                 active ? BTN_HOVER : BTN_BG, BTN_HOVER, active ? VALUE : BTN_BORDER,
                 active ? 0xFFFFFFFF : LABEL, action);
     }
 
     private FlatButton swatch(int x, int y, int size, int color, boolean active, Runnable pick) {
-        return FlatButton.centered(textRenderer, x, y, size, size, Component.literal(active ? "●" : ""),
+        return FlatButton.centered(font, x, y, size, size, Component.literal(active ? "●" : ""),
                 color, color, active ? 0xFFFFFFFF : BTN_BORDER, 0xFFFFFFFF, btn -> {
                     pick.run();
                     init();
@@ -225,7 +225,7 @@ public class PmPhotoEditScreen extends Screen {
 
     private FlatButton sizeButton(int x, int y, int w, int h, int i, boolean active, Runnable pick) {
         String dot = "●".repeat(i + 1);
-        return FlatButton.centered(textRenderer, x, y, w, h, Component.literal(dot),
+        return FlatButton.centered(font, x, y, w, h, Component.literal(dot),
                 active ? BTN_HOVER : BTN_BG, BTN_HOVER, active ? VALUE : BTN_BORDER,
                 active ? 0xFFFFFFFF : LABEL, btn -> {
                     pick.run();
@@ -482,12 +482,12 @@ public class PmPhotoEditScreen extends Screen {
         context.fill(0, 0, width, height, 0xE6000000);
 
         String titleStr = Component.translatable("pmchat.photoedit.title").getString();
-        context.text(textRenderer, titleStr, width / 2 - textRenderer.getWidth(titleStr) / 2, 8,
+        context.text(font, titleStr, width / 2 - font.getWidth(titleStr) / 2, 8,
                 TITLE, false);
 
         if (loadError) {
             String err = Component.translatable("pmchat.photoedit.error").getString();
-            context.text(textRenderer, err, width / 2 - textRenderer.getWidth(err) / 2, height / 2,
+            context.text(font, err, width / 2 - font.getWidth(err) / 2, height / 2,
                     0xFFE07A6A, false);
             super.extractRenderState(context, mouseX, mouseY, delta);
             return;
@@ -504,7 +504,7 @@ public class PmPhotoEditScreen extends Screen {
             }
             if (drawMode) {
                 String hint = Component.translatable("pmchat.photoedit.drawhint").getString();
-                context.text(textRenderer, hint, width / 2 - textRenderer.getWidth(hint) / 2,
+                context.text(font, hint, width / 2 - font.getWidth(hint) / 2,
                         height - 92, LABEL, false);
             }
             if (cropMode && (cropDragging || cropHasSelection)) {
@@ -514,21 +514,21 @@ public class PmPhotoEditScreen extends Screen {
                 context.outline(x1, y1, x2 - x1, y2 - y1, 0xFFFFFFFF);
             } else if (cropMode) {
                 String hint = Component.translatable("pmchat.photoedit.crophint").getString();
-                context.text(textRenderer, hint, width / 2 - textRenderer.getWidth(hint) / 2,
+                context.text(font, hint, width / 2 - font.getWidth(hint) / 2,
                         height - 92, LABEL, false);
             }
             if (textMode && r != null) {
                 if (textAnchorX >= 0) {
                     float[] s = toScreenSpace(textAnchorX, textAnchorY, r);
                     int color = PEN_PALETTE[Math.floorMod(penColorIdx, PEN_PALETTE.length)];
-                    context.text(textRenderer, "+", (int) s[0] - 2, (int) s[1] - 4, color, false);
+                    context.text(font, "+", (int) s[0] - 2, (int) s[1] - 4, color, false);
                     String preview = captionField != null ? captionField.getValue() : "";
                     if (!preview.isBlank()) {
-                        context.text(textRenderer, preview, (int) s[0] + 6, (int) s[1] - 4, color, true);
+                        context.text(font, preview, (int) s[0] + 6, (int) s[1] - 4, color, true);
                     }
                 } else {
                     String hint = Component.translatable("pmchat.photoedit.texthint").getString();
-                    context.text(textRenderer, hint, width / 2 - textRenderer.getWidth(hint) / 2,
+                    context.text(font, hint, width / 2 - font.getWidth(hint) / 2,
                             height - 108, LABEL, false);
                 }
             }

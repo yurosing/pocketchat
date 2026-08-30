@@ -146,9 +146,9 @@ public class PmAdminScreen extends Screen {
     /** Текстовое поле с постоянной подписью сверху (не пропадает при вводе, в отличие от {@code placeholder}). */
     private EditBox labeledField(int x, int y, int w, String labelKey, int maxLen) {
         formLabels.add(new Object[]{labelKey, x, y});
-        EditBox f = new EditBox(textRenderer, x, y + 11, w, 16, Component.translatable(labelKey));
+        EditBox f = new EditBox(font, x, y + 11, w, 16, Component.translatable(labelKey));
         f.setMaxLength(maxLen);
-        addDrawableChild(f);
+        addRenderableWidget(f);
         return f;
     }
 
@@ -158,7 +158,7 @@ public class PmAdminScreen extends Screen {
 
     @Override
     protected void init() {
-        clearChildren();
+        clearWidgets();
         formLabels.clear();
         formSections.clear();
         lastTab = tab;
@@ -168,14 +168,14 @@ public class PmAdminScreen extends Screen {
         // вылезали за края экрана (FlatButton текст не обрезает). Переносим лишние вкладки
         // на вторую (и далее) строку вместо этого.
         int minTabW = 0;
-        for (String k : TAB_KEYS) minTabW = Math.max(minTabW, textRenderer.getWidth(Component.translatable(k)) + 16);
+        for (String k : TAB_KEYS) minTabW = Math.max(minTabW, font.getWidth(Component.translatable(k)) + 16);
         int cols = Math.max(1, Math.min(TAB_KEYS.length, width / Math.max(1, minTabW)));
         tabRows = (int) Math.ceil(TAB_KEYS.length / (double) cols);
         int tabW = width / cols;
         for (int i = 0; i < TAB_KEYS.length; i++) {
             int ti = i;
             int row = i / cols, col = i % cols;
-            addDrawableChild(FlatButton.centered(textRenderer, col * tabW, HEADER_H + row * TAB_H, tabW, TAB_H,
+            addRenderableWidget(FlatButton.centered(font, col * tabW, HEADER_H + row * TAB_H, tabW, TAB_H,
                     Component.translatable(TAB_KEYS[i]),
                     ti == tab ? PANEL_LIGHT : PANEL, BTN_HOVER, NEON_DIM, ti == tab ? TITLE : TEXT_MAIN,
                     btn -> {
@@ -198,7 +198,7 @@ public class PmAdminScreen extends Screen {
             default -> { }
         }
 
-        addDrawableChild(FlatButton.centered(textRenderer, width - 90, height - 24, 80, 18,
+        addRenderableWidget(FlatButton.centered(font, width - 90, height - 24, 80, 18,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN, btn -> close()));
     }
 
@@ -215,10 +215,10 @@ public class PmAdminScreen extends Screen {
         int fw = cardW - 24;
         int fy = height - 118;
 
-        featureMinutesField = new EditBox(textRenderer, fx, fy, fw, 16, Component.translatable("pmchat.admin.feature.minutes"));
+        featureMinutesField = new EditBox(font, fx, fy, fw, 16, Component.translatable("pmchat.admin.feature.minutes"));
         featureMinutesField.setMaxLength(6);
         placeholder(featureMinutesField, "pmchat.admin.feature.minutes");
-        addDrawableChild(featureMinutesField);
+        addRenderableWidget(featureMinutesField);
         fy += 20;
 
         int colW = (fw - 8) / 3;
@@ -226,10 +226,10 @@ public class PmAdminScreen extends Screen {
             String name = FEATURES[i];
             String humanName = Component.translatable("pmchat.admin.feature." + name).getString();
             int col = fx + i * (colW + 4);
-            addDrawableChild(FlatButton.centered(textRenderer, col, fy, colW, 16,
+            addRenderableWidget(FlatButton.centered(font, col, fy, colW, 16,
                     Component.translatable("pmchat.admin.feature.on", humanName), BTN_BG, BTN_HOVER, OK, OK,
                     btn -> toggleFeature(name, false)));
-            addDrawableChild(FlatButton.centered(textRenderer, col, fy + 20, colW, 16,
+            addRenderableWidget(FlatButton.centered(font, col, fy + 20, colW, 16,
                     Component.translatable("pmchat.admin.feature.off", humanName), BTN_BG, BTN_HOVER, BAD, BAD,
                     btn -> toggleFeature(name, true)));
         }
@@ -265,8 +265,8 @@ public class PmAdminScreen extends Screen {
         drawPanel(context, cx - pillW / 2, top, pillW, 20);
         String pillText = online ? "● ONLINE" : dashStatus == null ? "…" : "● OFFLINE";
         int pillColor = online ? OK : dashStatus == null ? SUBTLE : BAD;
-        context.text(textRenderer, pillText,
-                cx - textRenderer.getWidth(pillText) / 2, top + 6, pillColor, false);
+        context.text(font, pillText,
+                cx - font.getWidth(pillText) / 2, top + 6, pillColor, false);
 
         int tilesY = top + 32;
         int tileW = Math.min(150, (width - 80) / 4);
@@ -291,33 +291,33 @@ public class PmAdminScreen extends Screen {
             drawPanel(context, x, tilesY, tileW, 56);
             context.fill(x, tilesY, x + tileW, tilesY + 2, accent[i]);
             String num = dashStatus != null ? String.valueOf(values[i]) : "—";
-            context.text(textRenderer, num, x + (tileW - textRenderer.getWidth(num)) / 2, tilesY + 14, TEXT_MAIN, false);
-            context.text(textRenderer, labels[i], x + (tileW - textRenderer.getWidth(labels[i])) / 2, tilesY + 38, SUBTLE, false);
+            context.text(font, num, x + (tileW - font.getWidth(num)) / 2, tilesY + 14, TEXT_MAIN, false);
+            context.text(font, labels[i], x + (tileW - font.getWidth(labels[i])) / 2, tilesY + 38, SUBTLE, false);
         }
 
         if (dashStatus != null) {
             String uptime = Component.translatable("pmchat.admin.dash.uptime", formatUptime(dashStatus.uptimeSec)).getString();
-            context.text(textRenderer, uptime, cx - textRenderer.getWidth(uptime) / 2, tilesY + 70, SUBTLE, false);
+            context.text(font, uptime, cx - font.getWidth(uptime) / 2, tilesY + 70, SUBTLE, false);
         } else if (dashError) {
             Component err = Component.translatable("pmchat.admin.dash.fail");
-            context.text(textRenderer, err, cx - textRenderer.getWidth(err) / 2, tilesY + 70, BAD, false);
+            context.text(font, err, cx - font.getWidth(err) / 2, tilesY + 70, BAD, false);
         }
 
         // Заголовок и состояние блока переключателей фич (кнопки уже добавлены в buildDashboard)
         int cardW = Math.min(420, width - 40);
         int fx = cx - cardW / 2 + 12;
         Component featTitle = Component.translatable("pmchat.admin.feature.title");
-        context.text(textRenderer, featTitle, fx, height - 140, SUBTLE, false);
+        context.text(font, featTitle, fx, height - 140, SUBTLE, false);
         int colW = (cardW - 24 - 8) / 3;
         for (int i = 0; i < FEATURES.length; i++) {
             boolean enabled = PmBackend.isFeatureEnabled(FEATURES[i]);
             int col = fx + i * (colW + 4);
             String state = enabled ? "●" : "○";
-            context.text(textRenderer, state, col, height - 100, enabled ? OK : BAD, false);
+            context.text(font, state, col, height - 100, enabled ? OK : BAD, false);
         }
 
         if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
+            context.text(font, status, width / 2 - font.getWidth(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -336,31 +336,31 @@ public class PmAdminScreen extends Screen {
         int fx = cx - cardW / 2 + 12;
         int fw = cardW - 24;
 
-        broadcastField = new EditBox(textRenderer, fx, y + 24, fw, 16, Component.translatable("pmchat.admin.broadcast.hint"));
+        broadcastField = new EditBox(font, fx, y + 24, fw, 16, Component.translatable("pmchat.admin.broadcast.hint"));
         broadcastField.setMaxLength(500);
         placeholder(broadcastField, "pmchat.admin.broadcast.hint");
-        addDrawableChild(broadcastField);
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y + 46, fw, 16,
+        addRenderableWidget(broadcastField);
+        addRenderableWidget(FlatButton.centered(font, fx, y + 46, fw, 16,
                 Component.translatable("pmchat.admin.broadcast.send"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doBroadcast()));
 
         int dmY = y + 84;
         int dmTargetW = fw - 22;
-        dmTargetField = new EditBox(textRenderer, fx, dmY, dmTargetW, 16, Component.translatable("pmchat.admin.target.hint"));
+        dmTargetField = new EditBox(font, fx, dmY, dmTargetW, 16, Component.translatable("pmchat.admin.target.hint"));
         dmTargetField.setMaxLength(32);
         placeholder(dmTargetField, "pmchat.admin.target.hint");
-        addDrawableChild(dmTargetField);
-        FlatButton browseBtn = FlatButton.centered(textRenderer, fx + dmTargetW + 4, dmY, 18, 16,
+        addRenderableWidget(dmTargetField);
+        FlatButton browseBtn = FlatButton.centered(font, fx + dmTargetW + 4, dmY, 18, 16,
                 Component.literal("☰"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> Minecraft.getInstance().setScreen(
                         new PmAdminAccountsScreen(this, name -> dmTargetField.setValue(name))));
-        addDrawableChild(browseBtn);
+        addRenderableWidget(browseBtn);
 
-        dmMessageField = new EditBox(textRenderer, fx, dmY + 22, fw, 16, Component.translatable("pmchat.admin.dm.hint"));
+        dmMessageField = new EditBox(font, fx, dmY + 22, fw, 16, Component.translatable("pmchat.admin.dm.hint"));
         dmMessageField.setMaxLength(500);
         placeholder(dmMessageField, "pmchat.admin.dm.hint");
-        addDrawableChild(dmMessageField);
-        addDrawableChild(FlatButton.centered(textRenderer, fx, dmY + 44, fw, 16,
+        addRenderableWidget(dmMessageField);
+        addRenderableWidget(FlatButton.centered(font, fx, dmY + 44, fw, 16,
                 Component.translatable("pmchat.admin.dm.send"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doDirectMessage()));
     }
@@ -401,47 +401,47 @@ public class PmAdminScreen extends Screen {
         int fw = cardW - 24;
 
         int targetFieldW = fw - 22;
-        targetField = new EditBox(textRenderer, fx, y + 20, targetFieldW, 16, Component.translatable("pmchat.admin.target.hint"));
+        targetField = new EditBox(font, fx, y + 20, targetFieldW, 16, Component.translatable("pmchat.admin.target.hint"));
         targetField.setMaxLength(32);
         placeholder(targetField, "pmchat.admin.target.hint");
-        addDrawableChild(targetField);
-        addDrawableChild(FlatButton.centered(textRenderer, fx + targetFieldW + 4, y + 20, 18, 16,
+        addRenderableWidget(targetField);
+        addRenderableWidget(FlatButton.centered(font, fx + targetFieldW + 4, y + 20, 18, 16,
                 Component.literal("☰"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> Minecraft.getInstance().setScreen(
                         new PmAdminAccountsScreen(this, name -> targetField.setValue(name)))));
 
         int ay = y + 44;
-        amountField = new EditBox(textRenderer, fx, ay, (fw - 6) / 2, 16, Component.translatable("pmchat.admin.amount.hint"));
+        amountField = new EditBox(font, fx, ay, (fw - 6) / 2, 16, Component.translatable("pmchat.admin.amount.hint"));
         amountField.setMaxLength(10);
         placeholder(amountField, "pmchat.admin.amount.hint");
-        addDrawableChild(amountField);
-        addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, ay, (fw - 6) / 2, 16,
+        addRenderableWidget(amountField);
+        addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, ay, (fw - 6) / 2, 16,
                 Component.translatable("pmchat.admin.grant"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN, btn -> doGrant()));
 
         int vy = ay + 24;
-        addDrawableChild(FlatButton.centered(textRenderer, fx, vy, (fw - 6) / 2, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, vy, (fw - 6) / 2, 16,
                 Component.translatable("pmchat.admin.verify.on"), BTN_BG, BTN_HOVER, OK, OK, btn -> doVerify(true)));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, vy, (fw - 6) / 2, 16,
+        addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, vy, (fw - 6) / 2, 16,
                 Component.translatable("pmchat.admin.verify.off"), BTN_BG, BTN_HOVER, BAD, BAD, btn -> doVerify(false)));
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, vy + 24, fw, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, vy + 24, fw, 16,
                 Component.translatable("pmchat.admin.official"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN, btn -> doOfficial()));
 
         // Модерация: временный мут (в минутах) и постоянный бан — единственный способ
         // заблокировать отправку ЛС/голосовых/фото у игрока (клиент сам проверяет
         // свой статус, бэкенд не видит /m напрямую, см. PmScreen.blockIfMuted).
         int my = vy + 48;
-        muteMinutesField = new EditBox(textRenderer, fx, my, (fw - 6) / 2, 16, Component.translatable("pmchat.admin.mute.minutes"));
+        muteMinutesField = new EditBox(font, fx, my, (fw - 6) / 2, 16, Component.translatable("pmchat.admin.mute.minutes"));
         muteMinutesField.setMaxLength(6);
         placeholder(muteMinutesField, "pmchat.admin.mute.minutes");
-        addDrawableChild(muteMinutesField);
-        addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, my, (fw - 6) / 2, 16,
+        addRenderableWidget(muteMinutesField);
+        addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, my, (fw - 6) / 2, 16,
                 Component.translatable("pmchat.admin.mute.apply"), BTN_BG, BTN_HOVER, WARN, WARN, btn -> doMute()));
 
         int by = my + 24;
-        addDrawableChild(FlatButton.centered(textRenderer, fx, by, (fw - 6) / 2, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, by, (fw - 6) / 2, 16,
                 Component.translatable("pmchat.admin.ban.on"), BTN_BG, BTN_HOVER, BAD, BAD, btn -> doBan(true)));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, by, (fw - 6) / 2, 16,
+        addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, by, (fw - 6) / 2, 16,
                 Component.translatable("pmchat.admin.ban.off"), BTN_BG, BTN_HOVER, OK, OK, btn -> doBan(false)));
     }
 
@@ -512,33 +512,33 @@ public class PmAdminScreen extends Screen {
         int fx = cx - cardW / 2 + 12;
         int fw = cardW - 24;
 
-        ruleEulaField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.admin.rules.eula"));
+        ruleEulaField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.admin.rules.eula"));
         ruleEulaField.setMaxLength(500);
         placeholder(ruleEulaField, "pmchat.admin.rules.eula");
-        addDrawableChild(ruleEulaField);
+        addRenderableWidget(ruleEulaField);
 
-        ruleFreedomField = new EditBox(textRenderer, fx, y + 20, fw, 16, Component.translatable("pmchat.admin.rules.freedom"));
+        ruleFreedomField = new EditBox(font, fx, y + 20, fw, 16, Component.translatable("pmchat.admin.rules.freedom"));
         ruleFreedomField.setMaxLength(500);
         placeholder(ruleFreedomField, "pmchat.admin.rules.freedom");
-        addDrawableChild(ruleFreedomField);
+        addRenderableWidget(ruleFreedomField);
 
         ruleLineFields = new EditBox[RULE_LINES];
         for (int i = 0; i < RULE_LINES; i++) {
-            EditBox f = new EditBox(textRenderer, fx, y + 44 + i * 20, fw, 16,
+            EditBox f = new EditBox(font, fx, y + 44 + i * 20, fw, 16,
                     Component.translatable("pmchat.admin.rules.line", i + 1));
             f.setMaxLength(200);
             placeholder(f, "pmchat.admin.rules.line.hint");
-            addDrawableChild(f);
+            addRenderableWidget(f);
             ruleLineFields[i] = f;
         }
 
         int footerY = y + 44 + RULE_LINES * 20 + 4;
-        ruleFooterField = new EditBox(textRenderer, fx, footerY, fw, 16, Component.translatable("pmchat.admin.rules.footer"));
+        ruleFooterField = new EditBox(font, fx, footerY, fw, 16, Component.translatable("pmchat.admin.rules.footer"));
         ruleFooterField.setMaxLength(500);
         placeholder(ruleFooterField, "pmchat.admin.rules.footer");
-        addDrawableChild(ruleFooterField);
+        addRenderableWidget(ruleFooterField);
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, footerY + 22, fw, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, footerY + 22, fw, 16,
                 Component.translatable("pmchat.admin.rules.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doSaveRules()));
 
@@ -615,10 +615,10 @@ public class PmAdminScreen extends Screen {
         formY += 30;
 
         int btnW = (fw - 8) / 2;
-        addDrawableChild(FlatButton.centered(textRenderer, fx, formY, btnW, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, formY, btnW, 16,
                 Component.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doSaveShopItem()));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, formY, btnW, 16,
+        addRenderableWidget(FlatButton.centered(font, fx + btnW + 8, formY, btnW, 16,
                 Component.translatable("pmchat.admin.shop.new"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> resetShopForm()));
 
@@ -719,14 +719,14 @@ public class PmAdminScreen extends Screen {
 
             String line = item.name + " — " + item.price + "/" + item.durationDays + "d";
             String trimmed = trim(line, right - left - 60);
-            context.text(textRenderer, trimmed, left + 8, y + 6, TEXT_MAIN, false);
+            context.text(font, trimmed, left + 8, y + 6, TEXT_MAIN, false);
 
             int btnX = right - 46, btnY = y + 2, btnW = 40, btnH = ROW_H - 6;
             boolean btnHover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
             context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
             Component del = Component.translatable("pmchat.admin.shop.delete");
-            context.text(textRenderer, del, btnX + (btnW - textRenderer.getWidth(del)) / 2, btnY + 3, BAD, false);
+            context.text(font, del, btnX + (btnW - font.getWidth(del)) / 2, btnY + 3, BAD, false);
             shopDeleteRects.add(new Object[]{btnX, btnY, btnW, btnH, item.id});
             shopRowRects.add(new Object[]{left, y, right - left - 46, ROW_H - 2, item.id});
 
@@ -734,9 +734,9 @@ public class PmAdminScreen extends Screen {
         }
 
         if (shopItems.isEmpty() && !status.getString().isEmpty()) {
-            context.text(textRenderer, status, left + 8, shopListTop + 2, statusColor, false);
+            context.text(font, status, left + 8, shopListTop + 2, statusColor, false);
         } else if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
+            context.text(font, status, width / 2 - font.getWidth(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -767,10 +767,10 @@ public class PmAdminScreen extends Screen {
         formY += 30;
 
         int btnW = (fw - 8) / 2;
-        addDrawableChild(FlatButton.centered(textRenderer, fx, formY, btnW, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, formY, btnW, 16,
                 Component.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doSaveRole()));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, formY, btnW, 16,
+        addRenderableWidget(FlatButton.centered(font, fx + btnW + 8, formY, btnW, 16,
                 Component.translatable("pmchat.admin.shop.new"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> resetRoleForm()));
         formY += 26;
@@ -780,7 +780,7 @@ public class PmAdminScreen extends Screen {
         roleAssignTargetField = labeledField(fx, formY, fw, "pmchat.admin.target.hint", 32);
         formY += 30;
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, formY, btnW, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, formY, btnW, 16,
                 Component.translatable("pmchat.admin.role.assign"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> {
                     if (roleEditingKey == null) {
@@ -789,7 +789,7 @@ public class PmAdminScreen extends Screen {
                     }
                     doAssignRole(roleEditingKey);
                 }));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + btnW + 8, formY, btnW, 16,
+        addRenderableWidget(FlatButton.centered(font, fx + btnW + 8, formY, btnW, 16,
                 Component.translatable("pmchat.admin.role.unassign"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doAssignRole(null)));
 
@@ -929,14 +929,14 @@ public class PmAdminScreen extends Screen {
 
             String line = (r.prefix.isEmpty() ? "" : r.prefix + " ") + r.name + " (" + r.key + ")";
             String trimmed = trim(line, right - left - 60);
-            context.text(textRenderer, trimmed, left + 8, y + 6, r.color, false);
+            context.text(font, trimmed, left + 8, y + 6, r.color, false);
 
             int btnX = right - 46, btnY = y + 2, btnW = 40, btnH = ROW_H - 6;
             boolean btnHover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
             context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
             Component del = Component.translatable("pmchat.admin.shop.delete");
-            context.text(textRenderer, del, btnX + (btnW - textRenderer.getWidth(del)) / 2, btnY + 3, BAD, false);
+            context.text(font, del, btnX + (btnW - font.getWidth(del)) / 2, btnY + 3, BAD, false);
             roleDeleteRects.add(new Object[]{btnX, btnY, btnW, btnH, r.key});
             roleRowRects.add(new Object[]{left, y, right - left - 46, ROW_H - 2, r.key});
 
@@ -944,9 +944,9 @@ public class PmAdminScreen extends Screen {
         }
 
         if (roleDefs.isEmpty() && !status.getString().isEmpty()) {
-            context.text(textRenderer, status, left + 8, roleListTop + 2, statusColor, false);
+            context.text(font, status, left + 8, roleListTop + 2, statusColor, false);
         } else if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2, height - 46, statusColor, false);
+            context.text(font, status, width / 2 - font.getWidth(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -962,7 +962,7 @@ public class PmAdminScreen extends Screen {
         int halfW = (fw - 8) / 2;
         botCreatePriceField = labeledField(fx, y + 12, halfW, "pmchat.admin.bots.createprice", 9);
         botstoreSubmitPriceField = labeledField(fx + halfW + 8, y + 12, halfW, "pmchat.admin.bots.submitprice", 9);
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y + 42, fw, 16,
+        addRenderableWidget(FlatButton.centered(font, fx, y + 42, fw, 16,
                 Component.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> doSavePrices()));
 
@@ -1030,7 +1030,7 @@ public class PmAdminScreen extends Screen {
         int right = cx + cardW / 2;
 
         if (botPending.isEmpty()) {
-            context.text(textRenderer, Component.translatable("pmchat.admin.bots.pending.empty"),
+            context.text(font, Component.translatable("pmchat.admin.bots.pending.empty"),
                     left, botListTop, SUBTLE, false);
             return;
         }
@@ -1043,7 +1043,7 @@ public class PmAdminScreen extends Screen {
             context.fill(left, y, left + 2, y + ROW_H - 2, NEON_DIM);
 
             String line = p.owner + ": " + p.name + " (" + p.price + ")";
-            context.text(textRenderer, trim(line, right - left - 100), left + 8, y + 6, TEXT_MAIN, false);
+            context.text(font, trim(line, right - left - 100), left + 8, y + 6, TEXT_MAIN, false);
 
             int btnW = 44, btnH = ROW_H - 6, btnY = y + 2;
             int rejX = right - btnW - 2, apprX = rejX - btnW - 4;
@@ -1052,11 +1052,11 @@ public class PmAdminScreen extends Screen {
             context.fill(apprX, btnY, apprX + btnW, btnY + btnH, apprHover ? BTN_HOVER : BTN_BG);
             context.outline(apprX, btnY, btnW, btnH, OK);
             Component approve = Component.translatable("pmchat.admin.bots.approve");
-            context.text(textRenderer, approve, apprX + (btnW - textRenderer.getWidth(approve)) / 2, btnY + 3, OK, false);
+            context.text(font, approve, apprX + (btnW - font.getWidth(approve)) / 2, btnY + 3, OK, false);
             context.fill(rejX, btnY, rejX + btnW, btnY + btnH, rejHover ? BTN_HOVER : BTN_BG);
             context.outline(rejX, btnY, btnW, btnH, BAD);
             Component reject = Component.translatable("pmchat.admin.bots.reject");
-            context.text(textRenderer, reject, rejX + (btnW - textRenderer.getWidth(reject)) / 2, btnY + 3, BAD, false);
+            context.text(font, reject, rejX + (btnW - font.getWidth(reject)) / 2, btnY + 3, BAD, false);
 
             botApproveRects.add(new Object[]{apprX, btnY, btnW, btnH, p.id});
             botRejectRects.add(new Object[]{rejX, btnY, btnW, btnH, p.id});
@@ -1130,14 +1130,14 @@ public class PmAdminScreen extends Screen {
                 line = t.username + ": " + t.message;
             }
             String trimmed = trim(line, right - left - 90);
-            context.text(textRenderer, trimmed, left + 8, y + 6, TEXT_MAIN, false);
+            context.text(font, trimmed, left + 8, y + 6, TEXT_MAIN, false);
 
             int btnX = right - 62, btnY = y + 2, btnW = 54, btnH = ROW_H - 6;
             boolean btnHover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
             context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
             Component resolve = Component.translatable("pmchat.admin.resolve");
-            context.text(textRenderer, resolve, btnX + (btnW - textRenderer.getWidth(resolve)) / 2, btnY + 3, OK, false);
+            context.text(font, resolve, btnX + (btnW - font.getWidth(resolve)) / 2, btnY + 3, OK, false);
             resolveBtnRects.add(new Object[]{btnX, btnY, btnW, btnH, reportsTab
                     ? reports.get(i).id : tickets.get(i).id});
 
@@ -1145,14 +1145,14 @@ public class PmAdminScreen extends Screen {
         }
 
         if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, left + 8, listTop + 2, statusColor, false);
+            context.text(font, status, left + 8, listTop + 2, statusColor, false);
         }
     }
 
     private String trim(String text, int maxWidth) {
         if (maxWidth <= 0) return "";
-        if (textRenderer.getWidth(text) <= maxWidth) return text;
-        return textRenderer.trimToWidth(text, Math.max(0, maxWidth - textRenderer.getWidth("…"))) + "…";
+        if (font.getWidth(text) <= maxWidth) return text;
+        return font.trimToWidth(text, Math.max(0, maxWidth - font.getWidth("…"))) + "…";
     }
 
     // ---------- общее ----------
@@ -1181,18 +1181,18 @@ public class PmAdminScreen extends Screen {
         context.fill(0, HEADER_H - 2, width, HEADER_H, NEON);
 
         Component title = Component.translatable("pmchat.admin.title");
-        context.text(textRenderer, title, 12, 10, TITLE, false);
+        context.text(font, title, 12, 10, TITLE, false);
 
         String backend = config.backendUrl == null ? "" : config.backendUrl;
-        context.text(textRenderer, backend, width - 12 - textRenderer.getWidth(backend), 10, SUBTLE, false);
+        context.text(font, backend, width - 12 - font.getWidth(backend), 10, SUBTLE, false);
 
         super.extractRenderState(context, mouseX, mouseY, delta);
 
         for (Object[] entry : formSections) {
-            context.text(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], TITLE, false);
+            context.text(font, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], TITLE, false);
         }
         for (Object[] entry : formLabels) {
-            context.text(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], SUBTLE, false);
+            context.text(font, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], SUBTLE, false);
         }
         if (tab == 7 && roleColorField != null && rolePrefixField != null) {
             int sx = rolePrefixField.getX() + rolePrefixField.getWidth() + 5;
@@ -1210,7 +1210,7 @@ public class PmAdminScreen extends Screen {
             case 8 -> drawBots(context, mouseX, mouseY);
             default -> {
                 if (!status.getString().isEmpty()) {
-                    context.text(textRenderer, status, width / 2 - textRenderer.getWidth(status) / 2,
+                    context.text(font, status, width / 2 - font.getWidth(status) / 2,
                             height - 46, statusColor, false);
                 }
             }

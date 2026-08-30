@@ -113,7 +113,7 @@ public class PmBotStoreScreen extends Screen {
         if (nameField != null) nameText = nameField.getValue();
         if (descField != null) descText = descField.getValue();
         if (priceField != null) priceText = priceField.getValue();
-        clearChildren();
+        clearWidgets();
 
         int fx = px + 12;
         int fw = pw - 24;
@@ -126,7 +126,7 @@ public class PmBotStoreScreen extends Screen {
         };
         int tx = px + 10;
         for (int i = 0; i < labels.length; i++) {
-            int w = textRenderer.getWidth(labels[i]) + 14;
+            int w = font.getWidth(labels[i]) + 14;
             tabW[i] = w;
             tabRects[i] = tx;
             tx += w + 4;
@@ -135,7 +135,7 @@ public class PmBotStoreScreen extends Screen {
         int contentTop = ty + 20;
 
         if (tab == TAB_MARKET) {
-            marketSearchField = new EditBox(textRenderer, fx, contentTop, fw, 15,
+            marketSearchField = new EditBox(font, fx, contentTop, fw, 15,
                     Component.translatable("pmchat.botstore.search"));
             marketSearchField.setMaxLength(64);
             marketSearchField.setValue(marketSearchText);
@@ -143,7 +143,7 @@ public class PmBotStoreScreen extends Screen {
                 marketSearchText = s;
                 loadMarket();
             });
-            addDrawableChild(marketSearchField);
+            addRenderableWidget(marketSearchField);
 
             int listTop = contentTop + 19;
             int listBottom = py + ph - 8;
@@ -158,7 +158,7 @@ public class PmBotStoreScreen extends Screen {
                                 : (l.price > 0 ? Component.translatable("pmchat.botstore.buy", l.price)
                                 : Component.translatable("pmchat.botstore.getfree"));
                         long id = l.id;
-                        addDrawableChild(FlatButton.centered(textRenderer, fx + fw - btnW, y + 16, btnW, 14,
+                        addRenderableWidget(FlatButton.centered(font, fx + fw - btnW, y + 16, btnW, 14,
                                 btnLabel, 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                                 btn -> buyListing(id)));
                     }
@@ -167,23 +167,23 @@ public class PmBotStoreScreen extends Screen {
             }
         } else if (tab == TAB_SUBMIT) {
             int y = contentTop;
-            nameField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.botstore.name"));
+            nameField = new EditBox(font, fx, y, fw, 15, Component.translatable("pmchat.botstore.name"));
             nameField.setMaxLength(64);
             nameField.setValue(nameText);
-            addDrawableChild(nameField);
+            addRenderableWidget(nameField);
             y += 19;
 
-            descField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.botstore.desc"));
+            descField = new EditBox(font, fx, y, fw, 15, Component.translatable("pmchat.botstore.desc"));
             descField.setMaxLength(200);
             descField.setValue(descText);
-            addDrawableChild(descField);
+            addRenderableWidget(descField);
             y += 19;
 
-            priceField = new EditBox(textRenderer, fx, y, 90, 15, Component.translatable("pmchat.botstore.price"));
+            priceField = new EditBox(font, fx, y, 90, 15, Component.translatable("pmchat.botstore.price"));
             priceField.setMaxLength(9);
             priceField.setValue(priceText);
-            addDrawableChild(priceField);
-            addDrawableChild(FlatButton.centered(textRenderer, fx + 94, y, fw - 94, 15,
+            addRenderableWidget(priceField);
+            addRenderableWidget(FlatButton.centered(font, fx + 94, y, fw - 94, 15,
                     Component.translatable("pmchat.botstore.openfolder"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                     btn -> Util.getOperatingSystem().open(submissionsDir())));
             y += 22;
@@ -201,7 +201,7 @@ public class PmBotStoreScreen extends Screen {
                     if (fy + 14 > filesBottom) break;
                     boolean sel = f.equals(selectedFile);
                     int fyFinal = fy;
-                    addDrawableChild(FlatButton.centered(textRenderer, fx, fyFinal, fw, 13,
+                    addRenderableWidget(FlatButton.centered(font, fx, fyFinal, fw, 13,
                             Component.literal((sel ? "✔ " : "") + f.getName()), BTN_BG,
                             sel ? BTN_HOVER : BTN_HOVER, BTN_BORDER, sel ? ACCENT : VALUE,
                             btn -> selectedFile = f));
@@ -209,12 +209,12 @@ public class PmBotStoreScreen extends Screen {
                 }
             }
 
-            addDrawableChild(FlatButton.centered(textRenderer, fx, py + ph - 40, fw, 15,
+            addRenderableWidget(FlatButton.centered(font, fx, py + ph - 40, fw, 15,
                     Component.translatable("pmchat.botstore.submit"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                     btn -> submit()));
         }
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + pw / 2 - 40, py + ph - 20, 80, 15,
+        addRenderableWidget(FlatButton.centered(font, px + pw / 2 - 40, py + ph - 20, 80, 15,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
 
         closeRect = new int[]{px + pw - 18, py + 5, 14, 14};
@@ -294,11 +294,11 @@ public class PmBotStoreScreen extends Screen {
         ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = getTitle();
-        ctx.text(textRenderer, title, px + 12, py + 8, TITLE, false);
+        ctx.text(font, title, px + 12, py + 8, TITLE, false);
         String x = "✕";
         boolean hovX = closeRect != null && mouseX >= closeRect[0] && mouseX < closeRect[0] + closeRect[2]
                 && mouseY >= closeRect[1] && mouseY < closeRect[1] + closeRect[3];
-        ctx.text(textRenderer, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
+        ctx.text(font, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
 
         String[] labels = {
                 Component.translatable("pmchat.botstore.tab.market").getString(),
@@ -311,7 +311,7 @@ public class PmBotStoreScreen extends Screen {
             boolean hov = mouseY >= ty && mouseY < ty + 16 && mouseX >= tabRects[i] && mouseX < tabRects[i] + tabW[i];
             ctx.fill(tabRects[i], ty, tabRects[i] + tabW[i], ty + 16, sel ? BTN_HOVER : (hov ? BTN_BG : BG));
             ctx.outline(tabRects[i], ty, tabW[i], 16, sel ? ACCENT : BORDER);
-            ctx.text(textRenderer, labels[i], tabRects[i] + 7, ty + 4, sel ? TITLE : LABEL, false);
+            ctx.text(font, labels[i], tabRects[i] + 7, ty + 4, sel ? TITLE : LABEL, false);
         }
 
         int fx = px + 12;
@@ -323,9 +323,9 @@ public class PmBotStoreScreen extends Screen {
             int listBottom = py + ph - 8;
             ctx.enableScissor(px + 1, listTop, px + pw - 1, listBottom);
             if (market == null) {
-                ctx.text(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
+                ctx.text(font, Component.translatable("pmchat.bots.loading"), fx, listTop + 4, LABEL, false);
             } else if (market.isEmpty()) {
-                ctx.text(textRenderer, Component.translatable("pmchat.botstore.empty"), fx, listTop + 4, LABEL, false);
+                ctx.text(font, Component.translatable("pmchat.botstore.empty"), fx, listTop + 4, LABEL, false);
             } else {
                 int rowH = 32;
                 int y = listTop - scroll;
@@ -333,13 +333,13 @@ public class PmBotStoreScreen extends Screen {
                     if (y + rowH >= listTop && y <= listBottom) {
                         ctx.fill(fx, y, fx + fw, y + rowH - 2, BTN_BG);
                         String head = l.name + "  ·  @" + l.owner;
-                        ctx.text(textRenderer, trim(head, fw - 60), fx + 4, y + 3, VALUE, false);
+                        ctx.text(font, trim(head, fw - 60), fx + 4, y + 3, VALUE, false);
                         String priceStr = l.price > 0
                                 ? Component.translatable("pmchat.botstore.pricetag", l.price).getString()
                                 : Component.translatable("pmchat.botstore.freetag").getString();
                         String subLine = priceStr + (l.description != null && !l.description.isBlank()
                                 ? "  ·  " + l.description : "");
-                        ctx.text(textRenderer, trim(subLine, fw - 60), fx + 4, y + 16, LABEL, false);
+                        ctx.text(font, trim(subLine, fw - 60), fx + 4, y + 16, LABEL, false);
                     }
                     y += rowH;
                 }
@@ -347,40 +347,40 @@ public class PmBotStoreScreen extends Screen {
             ctx.disableScissor();
         } else if (tab == TAB_SUBMIT) {
             if (submitPrice > 0) {
-                ctx.text(textRenderer, Component.translatable("pmchat.botstore.feeline", submitPrice),
+                ctx.text(font, Component.translatable("pmchat.botstore.feeline", submitPrice),
                         fx, py + ph - 62, LABEL, false);
             }
             if (selectedFile != null) {
-                ctx.text(textRenderer, Component.translatable("pmchat.botstore.selected", selectedFile.getName()),
+                ctx.text(font, Component.translatable("pmchat.botstore.selected", selectedFile.getName()),
                         fx, py + ph - 52, LABEL, false);
             }
         } else {
             int listTop = contentTop;
             int bottom = py + ph - 8;
             if (mine == null) {
-                ctx.text(textRenderer, Component.translatable("pmchat.bots.loading"), fx, listTop, LABEL, false);
+                ctx.text(font, Component.translatable("pmchat.bots.loading"), fx, listTop, LABEL, false);
             } else if (mine.isEmpty()) {
-                ctx.text(textRenderer, Component.translatable("pmchat.botstore.noneofmine"), fx, listTop, LABEL, false);
+                ctx.text(font, Component.translatable("pmchat.botstore.noneofmine"), fx, listTop, LABEL, false);
             } else {
                 int rowH = 26;
                 int y = listTop;
                 for (PmBackend.BotListing l : mine) {
                     if (y + rowH > bottom) break;
-                    ctx.text(textRenderer, trim(l.name, fw - 70), fx, y, VALUE, false);
+                    ctx.text(font, trim(l.name, fw - 70), fx, y, VALUE, false);
                     int statColor = switch (l.status) {
                         case "approved" -> 0xFF8FD8A8;
                         case "rejected" -> 0xFFE07A6A;
                         default -> 0xFFF0C34E;
                     };
                     String statLabel = Component.translatable("pmchat.botstore.status." + l.status).getString();
-                    ctx.text(textRenderer, statLabel, fx + fw - textRenderer.getWidth(statLabel), y, statColor, false);
+                    ctx.text(font, statLabel, fx + fw - font.getWidth(statLabel), y, statColor, false);
                     y += rowH;
                 }
             }
         }
 
         if (!status.getString().isEmpty()) {
-            ctx.text(textRenderer, status, fx, py + ph - 38, statusColor, false);
+            ctx.text(font, status, fx, py + ph - 38, statusColor, false);
         }
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
@@ -419,8 +419,8 @@ public class PmBotStoreScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 

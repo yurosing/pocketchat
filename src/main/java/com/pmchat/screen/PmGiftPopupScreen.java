@@ -37,9 +37,9 @@ public class PmGiftPopupScreen extends Screen {
 
     @Override
     protected void init() {
-        clearChildren();
+        clearWidgets();
         int cw = 90;
-        addDrawableChild(FlatButton.centered(textRenderer, width / 2 - cw / 2, height / 2 + 88, cw, 18,
+        addRenderableWidget(FlatButton.centered(font, width / 2 - cw / 2, height / 2 + 88, cw, 18,
                 Component.translatable("pmchat.gift.popup.thanks"), 0xFF20321F, 0xFF2A422A, rarityColor, 0xFFE8F0E0,
                 btn -> close()));
     }
@@ -101,7 +101,7 @@ public class PmGiftPopupScreen extends Screen {
     }
 
     private void drawCentered(GuiGraphicsExtractor ctx, String s, int centerX, int y, int color) {
-        ctx.text(textRenderer, Component.literal(s), centerX - textRenderer.getWidth(s) / 2, y, color, false);
+        ctx.text(font, Component.literal(s), centerX - font.getWidth(s) / 2, y, color, false);
     }
 
     /** Текст с масштабом вокруг точки (centerX, y — центр по вертикали). */
@@ -110,7 +110,7 @@ public class PmGiftPopupScreen extends Screen {
         m.pushMatrix();
         m.translate(centerX, y);
         m.scale(scale, scale);
-        ctx.text(textRenderer, Component.literal(s), -textRenderer.getWidth(s) / 2, -textRenderer.fontHeight / 2, color, false);
+        ctx.text(font, Component.literal(s), -font.getWidth(s) / 2, -font.fontHeight / 2, color, false);
         m.popMatrix();
     }
 

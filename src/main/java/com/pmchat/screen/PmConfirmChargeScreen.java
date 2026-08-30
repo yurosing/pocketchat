@@ -51,15 +51,15 @@ public class PmConfirmChargeScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
         px = (width - PANEL_W) / 2;
         py = (height - PANEL_H) / 2;
 
         int halfW = (PANEL_W - 24 - 6) / 2;
-        addDrawableChild(FlatButton.centered(textRenderer, px + 12, py + PANEL_H - 22, halfW, 16,
+        addRenderableWidget(FlatButton.centered(font, px + 12, py + PANEL_H - 22, halfW, 16,
                 Component.translatable("pmchat.dm.confirm.cancel"), BTN_BG, BTN_HOVER, BTN_BORDER, LABEL,
                 btn -> close()));
-        addDrawableChild(FlatButton.centered(textRenderer, px + 18 + halfW, py + PANEL_H - 22, halfW, 16,
+        addRenderableWidget(FlatButton.centered(font, px + 18 + halfW, py + PANEL_H - 22, halfW, 16,
                 Component.translatable("pmchat.dm.confirm.send"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> confirm()));
     }
@@ -79,7 +79,7 @@ public class PmConfirmChargeScreen extends Screen {
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
         Component title = getTitle();
-        context.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
 
         Component ask = Component.translatable("pmchat.dm.confirm.ask", target, PmBackend.formatCoins(price));
         drawWrapped(context, ask, px + 12, py + 24, PANEL_W - 24, LABEL);
@@ -88,8 +88,8 @@ public class PmConfirmChargeScreen extends Screen {
     }
 
     private void drawWrapped(GuiGraphicsExtractor context, Component text, int x, int y, int maxW, int color) {
-        for (var line : textRenderer.wrapLines(text, maxW)) {
-            context.text(textRenderer, line, x, y, color, false);
+        for (var line : font.wrapLines(text, maxW)) {
+            context.text(font, line, x, y, color, false);
             y += 10;
         }
     }

@@ -52,7 +52,7 @@ public class PmLoginScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
         fieldLabels.clear();
         PANEL_W = Math.max(180, Math.min(240, width - 24));
         PANEL_H = Math.min(172, height - 16);
@@ -64,35 +64,35 @@ public class PmLoginScreen extends Screen {
         int y = py + 34;
 
         fieldLabels.add(new Object[]{"pmchat.login.username", fx, y - 10});
-        userField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.login.username"));
+        userField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.login.username"));
         userField.setMaxLength(32);
         String prefillUser = config.backendToken.isBlank() ? PmChatClient.selfName() : "";
         userField.setValue(prefillUser);
         userField.setSuggestion(prefillUser.isEmpty() ? Component.translatable("pmchat.login.username").getString() : null);
         userField.setResponder(s -> userField.setSuggestion(
                 s.isEmpty() ? Component.translatable("pmchat.login.username").getString() : null));
-        addDrawableChild(userField);
+        addRenderableWidget(userField);
         y += 30;
 
         fieldLabels.add(new Object[]{"pmchat.login.password", fx, y - 10});
-        passField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.login.password"));
+        passField = new EditBox(font, fx, y, fw, 16, Component.translatable("pmchat.login.password"));
         passField.setMaxLength(64);
         passField.setSuggestion(Component.translatable("pmchat.login.password").getString());
         passField.setResponder(s -> passField.setSuggestion(
                 s.isEmpty() ? Component.translatable("pmchat.login.password").getString() : null));
-        addDrawableChild(passField);
+        addRenderableWidget(passField);
         y += 30;
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y, (fw - 6) / 2, 18,
+        addRenderableWidget(FlatButton.centered(font, fx, y, (fw - 6) / 2, 18,
                 Component.translatable("pmchat.login.login"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                 btn -> doLogin()));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
+        addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, y, (fw - 6) / 2, 18,
                 Component.translatable("pmchat.login.register"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                 btn -> doRegister()));
         y += 26;
 
         if (PmBackend.hasAccount()) {
-            addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
+            addRenderableWidget(FlatButton.centered(font, fx, y, fw, 16,
                     Component.translatable("pmchat.login.logout"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFE07A6A,
                     btn -> {
                         config.backendToken = "";
@@ -101,7 +101,7 @@ public class PmLoginScreen extends Screen {
                     }));
         }
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + PANEL_H - 22, 80, 16,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
@@ -158,14 +158,14 @@ public class PmLoginScreen extends Screen {
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.text(textRenderer, getTitle(), px + (PANEL_W - textRenderer.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(font, getTitle(), px + (PANEL_W - font.getWidth(getTitle())) / 2, py + 8, TITLE, false);
 
         for (Object[] entry : fieldLabels) {
-            context.text(textRenderer, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
+            context.text(font, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
         }
 
         if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + PANEL_H - 40, statusColor, false);
+            context.text(font, status, px + (PANEL_W - font.getWidth(status)) / 2, py + PANEL_H - 40, statusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);

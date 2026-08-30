@@ -57,7 +57,7 @@ public class PmFiltersScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
         labels.clear();
         tiles.clear();
 
@@ -84,7 +84,7 @@ public class PmFiltersScreen extends Screen {
             tx += tw + gap;
         }
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Component.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
     }
@@ -107,7 +107,7 @@ public class PmFiltersScreen extends Screen {
 
     private int addToggle(int y, String labelKey, boolean on, Runnable toggle) {
         labels.add(new Object[]{Component.translatable(labelKey).getString(), px + 10, y + 3, LABEL});
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 92, y, 84, 14,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W - 92, y, 84, 14,
                 Component.translatable(on ? "pmchat.set.on" : "pmchat.set.off"),
                 BTN_BG, BTN_HOVER, BTN_BORDER, on ? 0xFF8FD8A8 : VALUE, btn -> {
                     toggle.run();
@@ -125,11 +125,11 @@ public class PmFiltersScreen extends Screen {
         context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable("pmchat.filters.title");
-        context.text(textRenderer, title,
-                px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
+        context.text(font, title,
+                px + (PANEL_W - font.getWidth(title)) / 2, py + 9, TITLE, false);
 
         for (Object[] l : labels) {
-            context.text(textRenderer, (String) l[0], (int) l[1], (int) l[2], (int) l[3], false);
+            context.text(font, (String) l[0], (int) l[1], (int) l[2], (int) l[3], false);
         }
 
         // Плитки
@@ -140,15 +140,15 @@ public class PmFiltersScreen extends Screen {
             int cat = t[4];
             String count = String.valueOf(categoryCount(config, cat));
             // Крупное число по центру
-            context.text(textRenderer, count,
-                    t[0] + (t[2] - textRenderer.getWidth(count)) / 2, t[1] + 14, VALUE, false);
+            context.text(font, count,
+                    t[0] + (t[2] - font.getWidth(count)) / 2, t[1] + 14, VALUE, false);
             // Подпись снизу (в 1–2 строки)
             String label = Component.translatable(categoryKey(cat)).getString();
             List<String> lines = wrap(label, t[2] - 8);
             int ly = t[1] + t[3] - lines.size() * 10 - 4;
             for (String line : lines) {
-                context.text(textRenderer, line,
-                        t[0] + (t[2] - textRenderer.getWidth(line)) / 2, ly, SECTION, false);
+                context.text(font, line,
+                        t[0] + (t[2] - font.getWidth(line)) / 2, ly, SECTION, false);
                 ly += 10;
             }
         }
@@ -161,7 +161,7 @@ public class PmFiltersScreen extends Screen {
         StringBuilder cur = new StringBuilder();
         for (String w : words) {
             String test = cur.length() == 0 ? w : cur + " " + w;
-            if (textRenderer.getWidth(test) > maxW && cur.length() > 0) {
+            if (font.getWidth(test) > maxW && cur.length() > 0) {
                 out.add(cur.toString());
                 cur = new StringBuilder(w);
             } else {

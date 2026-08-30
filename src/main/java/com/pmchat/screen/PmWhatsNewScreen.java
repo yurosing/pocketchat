@@ -71,7 +71,7 @@ public class PmWhatsNewScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
         lines.clear();
         firstLine.clear();
 
@@ -79,7 +79,7 @@ public class PmWhatsNewScreen extends Screen {
         TEXT_W = PANEL_W - 40;
 
         for (String key : ITEMS) {
-            List<FormattedCharSequence> wrapped = textRenderer.wrapLines(Component.translatable(key), TEXT_W);
+            List<FormattedCharSequence> wrapped = font.wrapLines(Component.translatable(key), TEXT_W);
             if (wrapped.isEmpty()) continue;
             for (int i = 0; i < wrapped.size(); i++) {
                 lines.add(wrapped.get(i));
@@ -94,7 +94,7 @@ public class PmWhatsNewScreen extends Screen {
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Component.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
     }
@@ -106,12 +106,12 @@ public class PmWhatsNewScreen extends Screen {
         context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable("pmchat.whatsnew.title");
-        context.text(textRenderer, title,
-                px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
+        context.text(font, title,
+                px + (PANEL_W - font.getWidth(title)) / 2, py + 9, TITLE, false);
 
         Component ver = Component.translatable("pmchat.whatsnew.version", PmUpdate.currentVersion());
-        context.text(textRenderer, ver,
-                px + (PANEL_W - textRenderer.getWidth(ver)) / 2, py + 22, SUBTLE, false);
+        context.text(font, ver,
+                px + (PANEL_W - font.getWidth(ver)) / 2, py + 22, SUBTLE, false);
 
         // Разделитель под шапкой
         context.fill(px + 12, py + 36, px + PANEL_W - 12, py + 37, BORDER);
@@ -119,9 +119,9 @@ public class PmWhatsNewScreen extends Screen {
         int y = py + 43;
         for (int i = 0; i < lines.size(); i++) {
             if (firstLine.get(i)) {
-                context.text(textRenderer, "✦", px + 14, y, 0xFF6FBF8B, false);
+                context.text(font, "✦", px + 14, y, 0xFF6FBF8B, false);
             }
-            context.text(textRenderer, lines.get(i), px + 28, y, LABEL, false);
+            context.text(font, lines.get(i), px + 28, y, LABEL, false);
             y += LINE_H;
         }
 

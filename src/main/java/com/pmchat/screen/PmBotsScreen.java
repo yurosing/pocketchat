@@ -90,37 +90,37 @@ public class PmBotsScreen extends Screen {
         if (nameField != null) nameText = nameField.getValue();
         if (userField != null) userText = userField.getValue();
         if (searchField != null) searchText = searchField.getValue();
-        clearChildren();
+        clearWidgets();
 
         int fx = px + 12;
         int fw = pw - 24;
         int y = py + 24;
 
         // Создание бота: имя + @username
-        nameField = new EditBox(textRenderer, fx, y, fw / 2 - 3, 15, Component.translatable("pmchat.bots.name"));
+        nameField = new EditBox(font, fx, y, fw / 2 - 3, 15, Component.translatable("pmchat.bots.name"));
         nameField.setMaxLength(64);
         nameField.setValue(nameText);
         String nameHint = Component.translatable("pmchat.bots.name").getString();
         nameField.setSuggestion(nameText.isEmpty() ? nameHint : null);
         nameField.setResponder(s -> nameField.setSuggestion(s.isEmpty() ? nameHint : null));
-        addDrawableChild(nameField);
+        addRenderableWidget(nameField);
 
-        userField = new EditBox(textRenderer, fx + fw / 2 + 3, y, fw / 2 - 3, 15, Component.translatable("pmchat.bots.username"));
+        userField = new EditBox(font, fx + fw / 2 + 3, y, fw / 2 - 3, 15, Component.translatable("pmchat.bots.username"));
         userField.setMaxLength(32);
         userField.setValue(userText);
         String userHint = Component.translatable("pmchat.bots.username").getString();
         userField.setSuggestion(userText.isEmpty() ? userHint : null);
         userField.setResponder(s -> userField.setSuggestion(s.isEmpty() ? userHint : null));
-        addDrawableChild(userField);
+        addRenderableWidget(userField);
         y += 19;
         // Цена создания (если админ её включил) рисуется в render() тут же, без виджета.
         y += (createPrice > 0) ? 10 : 0;
 
         int createW = fw - 96;
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y, createW, 15,
+        addRenderableWidget(FlatButton.centered(font, fx, y, createW, 15,
                 Component.translatable("pmchat.bots.create"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> createBot()));
-        addDrawableChild(FlatButton.centered(textRenderer, fx + createW + 4, y, fw - createW - 4, 15,
+        addRenderableWidget(FlatButton.centered(font, fx + createW + 4, y, fw - createW - 4, 15,
                 Component.translatable("pmchat.bots.store"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
                 btn -> Minecraft.getInstance().setScreen(new PmBotStoreScreen(this))));
         y += 22;
@@ -137,20 +137,20 @@ public class PmBotsScreen extends Screen {
                 int bw = fw;
                 int actY = y + 13;
                 int actW = (bw - 12) / 4;
-                addDrawableChild(FlatButton.centered(textRenderer, fx, actY, actW, 13,
+                addRenderableWidget(FlatButton.centered(font, fx, actY, actW, 13,
                         Component.translatable("pmchat.bots.copytoken"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
                         btn -> {
                             Minecraft.getInstance().keyboard.setClipboard(b.token);
                             status = Component.translatable("pmchat.bots.copied");
                             statusColor = 0xFF8FD8A8;
                         }));
-                addDrawableChild(FlatButton.centered(textRenderer, fx + actW + 4, actY, actW, 13,
+                addRenderableWidget(FlatButton.centered(font, fx + actW + 4, actY, actW, 13,
                         Component.translatable("pmchat.bots.openchat"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF8FD8A8,
                         btn -> Minecraft.getInstance().setScreen(new PmScreen(b.username))));
-                addDrawableChild(FlatButton.centered(textRenderer, fx + 2 * (actW + 4), actY, actW, 13,
+                addRenderableWidget(FlatButton.centered(font, fx + 2 * (actW + 4), actY, actW, 13,
                         Component.literal("✎"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
                         btn -> Minecraft.getInstance().setScreen(new PmBotEditScreen(this, b))));
-                addDrawableChild(FlatButton.centered(textRenderer, fx + 3 * (actW + 4), actY, actW, 13,
+                addRenderableWidget(FlatButton.centered(font, fx + 3 * (actW + 4), actY, actW, 13,
                         Component.literal("✖"), 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A,
                         btn -> deleteBot(b.username)));
                 y += rowH;
@@ -161,7 +161,7 @@ public class PmBotsScreen extends Screen {
 
         // Поиск ботов по @username — вживую, список результатов ниже поля
         int searchY = py + ph - 40;
-        searchField = new EditBox(textRenderer, fx, searchY, fw, 15, Component.translatable("pmchat.bots.searchhint"));
+        searchField = new EditBox(font, fx, searchY, fw, 15, Component.translatable("pmchat.bots.searchhint"));
         searchField.setMaxLength(32);
         searchField.setValue(searchText);
         String searchHint = Component.translatable("pmchat.bots.searchhint").getString();
@@ -170,10 +170,10 @@ public class PmBotsScreen extends Screen {
             searchField.setSuggestion(s.isEmpty() ? searchHint : null);
             runSearch(s.trim().replaceFirst("^@", ""));
         });
-        addDrawableChild(searchField);
+        addRenderableWidget(searchField);
 
         // Закрыть
-        addDrawableChild(FlatButton.centered(textRenderer, px + pw / 2 - 40, py + ph - 20, 80, 15,
+        addRenderableWidget(FlatButton.centered(font, px + pw / 2 - 40, py + ph - 20, 80, 15,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
 
         closeRect = new int[]{px + pw - 18, py + 5, 14, 14};
@@ -238,33 +238,33 @@ public class PmBotsScreen extends Screen {
         ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = getTitle();
-        ctx.text(textRenderer, title, px + 12, py + 8, TITLE, false);
+        ctx.text(font, title, px + 12, py + 8, TITLE, false);
         String x = "✕";
         boolean hovX = closeRect != null && mouseX >= closeRect[0] && mouseX < closeRect[0] + closeRect[2]
                 && mouseY >= closeRect[1] && mouseY < closeRect[1] + closeRect[3];
-        ctx.text(textRenderer, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
+        ctx.text(font, x, px + pw - 15, py + 8, hovX ? TITLE : LABEL, false);
 
         int fx = px + 12;
         int fw = pw - 24;
         int y = py + 24 + 19;
         if (createPrice > 0) {
-            ctx.text(textRenderer, Component.translatable("pmchat.bots.priceline", createPrice), fx, y, LABEL, false);
+            ctx.text(font, Component.translatable("pmchat.bots.priceline", createPrice), fx, y, LABEL, false);
             y += 10;
         }
         y += 22; // строка кнопок «Создать»/«Магазин»
 
         // Список ботов (текстовая часть; кнопки рисует super.render)
         if (bots == null) {
-            ctx.text(textRenderer, Component.translatable("pmchat.bots.loading"), fx, y, LABEL, false);
+            ctx.text(font, Component.translatable("pmchat.bots.loading"), fx, y, LABEL, false);
         } else if (bots.isEmpty()) {
-            ctx.text(textRenderer, Component.translatable("pmchat.bots.none"), fx, y, LABEL, false);
+            ctx.text(font, Component.translatable("pmchat.bots.none"), fx, y, LABEL, false);
         } else {
             int rowH = 30;
             int listBottom = py + ph - 78;
             for (PmBackend.BotInfo b : bots) {
                 if (y + rowH > listBottom) break;
                 String head = "@" + b.username + (b.name.isBlank() ? "" : "  " + b.name);
-                ctx.text(textRenderer, trim(head, fw), fx, y, VALUE, false);
+                ctx.text(font, trim(head, fw), fx, y, VALUE, false);
                 y += rowH;
             }
         }
@@ -281,7 +281,7 @@ public class PmBotsScreen extends Screen {
                 boolean hov = mouseX >= fx && mouseX < fx + fw && mouseY >= ry && mouseY < ry + rowH;
                 ctx.fill(fx, ry, fx + fw, ry + rowH - 1, hov ? BTN_HOVER : BTN_BG);
                 String label = "@" + b.username + (b.name.isBlank() ? "" : "  " + b.name);
-                ctx.text(textRenderer, trim(label, fw - 6), fx + 3, ry + 3, VALUE, false);
+                ctx.text(font, trim(label, fw - 6), fx + 3, ry + 3, VALUE, false);
                 searchRowRects.add(new Object[]{fx, ry, fw, rowH - 1, b.username});
                 ry += rowH;
             }
@@ -289,7 +289,7 @@ public class PmBotsScreen extends Screen {
 
         // Статус
         if (!status.getString().isEmpty()) {
-            ctx.text(textRenderer, status, fx, py + ph - 54, statusColor, false);
+            ctx.text(font, status, fx, py + ph - 54, statusColor, false);
         }
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
@@ -316,8 +316,8 @@ public class PmBotsScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 

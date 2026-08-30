@@ -358,7 +358,7 @@ public final class PmMedia {
      */
     public int[] renderMini(GuiGraphicsExtractor ctx, int mouseX, int mouseY, boolean interactive) {
         Minecraft mc = Minecraft.getInstance();
-        Font tr = mc.textRenderer;
+        Font tr = mc.font;
         int sw = mc.getWindow().getScaledWidth();
         int sh = mc.getWindow().getScaledHeight();
         if (session != null) session.tick();

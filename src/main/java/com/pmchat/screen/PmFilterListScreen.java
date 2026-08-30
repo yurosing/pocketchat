@@ -77,7 +77,7 @@ public class PmFilterListScreen extends Screen {
     protected void init() {
         applyTheme();
         if (field != null) input = field.getValue();
-        clearChildren();
+        clearWidgets();
 
         PANEL_W = Math.max(160, Math.min(320, width - 24));
         panelH = Math.min(300, height - 30);
@@ -91,7 +91,7 @@ public class PmFilterListScreen extends Screen {
         int fieldW = PANEL_W - 20 - rightBtnW - 6 - scopeW - scopeGap;
 
         String hintKey = isText() ? "pmchat.filters.texthint" : "pmchat.filters.nick";
-        field = new EditBox(textRenderer, px + 10, addY, fieldW, 16, Component.translatable(hintKey));
+        field = new EditBox(font, px + 10, addY, fieldW, 16, Component.translatable(hintKey));
         field.setMaxLength(256);
         field.setValue(input);
         String hint = Component.translatable(hintKey).getString();
@@ -100,24 +100,24 @@ public class PmFilterListScreen extends Screen {
             field.setSuggestion(s.isEmpty() ? hint : "");
             tabLastCompleted = null;
         });
-        addDrawableChild(field);
+        addRenderableWidget(field);
 
         int bx = px + PANEL_W - 10 - rightBtnW;
         if (isText()) {
             int sx = bx - scopeGap - scopeW;
-            addDrawableChild(FlatButton.centered(textRenderer, sx, addY, scopeW, 16,
+            addRenderableWidget(FlatButton.centered(font, sx, addY, scopeW, 16,
                     Component.translatable(scopeKey(scope)), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
                         input = field.getValue();
                         scope = (scope + 1) % 3;
                         reinit();
                     }));
         }
-        addDrawableChild(FlatButton.centered(textRenderer, bx, addY, rightBtnW, 16,
+        addRenderableWidget(FlatButton.centered(font, bx, addY, rightBtnW, 16,
                 Component.translatable(editIndex >= 0 ? "pmchat.filters.save" : "pmchat.filters.add"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> commit()));
 
         // Назад
-        addDrawableChild(FlatButton.centered(textRenderer, px + 10, py + panelH - 24, 70, 18,
+        addRenderableWidget(FlatButton.centered(font, px + 10, py + panelH - 24, 70, 18,
                 Component.translatable("pmchat.filters.back"),
                 BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
@@ -175,14 +175,14 @@ public class PmFilterListScreen extends Screen {
         ctx.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable(PmFiltersScreen.categoryKey(category));
-        ctx.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
+        ctx.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 9, TITLE, false);
 
         int listTop = py + 48;
         int listBottom = py + panelH - 30;
         rowButtons.clear();
 
         if (size() == 0) {
-            ctx.text(textRenderer, Component.translatable("pmchat.filters.empty"),
+            ctx.text(font, Component.translatable("pmchat.filters.empty"),
                     px + 12, listTop + 4, SECTION, false);
         }
 
@@ -202,7 +202,7 @@ public class PmFilterListScreen extends Screen {
                 int ly = y + 4;
                 for (int li = 0; li < lines.size(); li++) {
                     String line = lines.get(li) + (li == lines.size() - 1 ? tag : "");
-                    ctx.text(textRenderer, line, px + 12, ly, VALUE, false);
+                    ctx.text(font, line, px + 12, ly, VALUE, false);
                     ly += 10;
                 }
                 // Кнопки ✎ и ✕
@@ -224,7 +224,7 @@ public class PmFilterListScreen extends Screen {
         // Подсказка про Tab для ников — справа от кнопки «Назад», чтобы не
         // перекрывалась ею (кнопка занимает px+10..px+80 внизу).
         if (!isText()) {
-            ctx.text(textRenderer, Component.translatable("pmchat.filters.tabhint"),
+            ctx.text(font, Component.translatable("pmchat.filters.tabhint"),
                     px + 90, py + panelH - 20, SECTION, false);
         }
 
@@ -234,7 +234,7 @@ public class PmFilterListScreen extends Screen {
     private void drawMini(GuiGraphicsExtractor ctx, int x, int y, String glyph, int color, int mx, int my) {
         boolean hov = mx >= x && mx < x + 16 && my >= y && my < y + 14;
         ctx.fill(x, y, x + 16, y + 14, hov ? 0xFF2A4A5C : 0xFF101A16);
-        ctx.text(textRenderer, glyph, x + 8 - textRenderer.getWidth(glyph) / 2, y + 3, color, false);
+        ctx.text(font, glyph, x + 8 - font.getWidth(glyph) / 2, y + 3, color, false);
     }
 
     private List<String> wrap(String text, int maxW) {
@@ -242,7 +242,7 @@ public class PmFilterListScreen extends Screen {
         StringBuilder cur = new StringBuilder();
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
-            if (textRenderer.getWidth(cur.toString() + c) > maxW && cur.length() > 0) {
+            if (font.getWidth(cur.toString() + c) > maxW && cur.length() > 0) {
                 out.add(cur.toString());
                 cur = new StringBuilder();
             }

@@ -112,13 +112,13 @@ public class PmContactMediaScreen extends Screen {
         ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = Component.translatable("pmchat.sharedmedia.title_of", peer);
-        ctx.text(textRenderer, trim(title.getString(), pw - 40), px + 12, py + 9, TEXT, false);
+        ctx.text(font, trim(title.getString(), pw - 40), px + 12, py + 9, TEXT, false);
 
         String x = "✕";
-        int xw = textRenderer.getWidth(x) + 8;
+        int xw = font.getWidth(x) + 8;
         closeRect = new int[]{px + pw - xw - 6, py + 5, xw, 14};
         boolean hovX = in(mouseX, mouseY, closeRect);
-        ctx.text(textRenderer, x, closeRect[0] + 4, closeRect[1] + 3, hovX ? TEXT : SUBTLE, false);
+        ctx.text(font, x, closeRect[0] + 4, closeRect[1] + 3, hovX ? TEXT : SUBTLE, false);
 
         // Вкладки
         String[] labels = {
@@ -129,14 +129,14 @@ public class PmContactMediaScreen extends Screen {
         int ty = py + 24;
         int tx = px + 10;
         for (int i = 0; i < labels.length; i++) {
-            int w = textRenderer.getWidth(labels[i]) + 14;
+            int w = font.getWidth(labels[i]) + 14;
             tabW[i] = w;
             tabRects[i] = tx;
             boolean sel = tab == i;
             boolean hov = mouseY >= ty && mouseY < ty + 16 && mouseX >= tx && mouseX < tx + w;
             ctx.fill(tx, ty, tx + w, ty + 16, sel ? ROW_HOVER : (hov ? ROW : PANEL));
             ctx.outline(tx, ty, w, 16, sel ? ACCENT : BORDER);
-            ctx.text(textRenderer, labels[i], tx + 7, ty + 4, sel ? TEXT : SUBTLE, false);
+            ctx.text(font, labels[i], tx + 7, ty + 4, sel ? TEXT : SUBTLE, false);
             tx += w + 4;
         }
 
@@ -145,7 +145,7 @@ public class PmContactMediaScreen extends Screen {
         List<PmMessage> items = filtered();
         rowRects.clear();
         if (items.isEmpty()) {
-            ctx.text(textRenderer, Component.translatable("pmchat.sharedmedia.empty"),
+            ctx.text(font, Component.translatable("pmchat.sharedmedia.empty"),
                     px + 12, listTop + 6, SUBTLE, false);
         }
         int rowH = 24;
@@ -175,7 +175,7 @@ public class PmContactMediaScreen extends Screen {
             PmIcons.draw(ctx, PmIcons.VOICE, x, y + (h - iconSz) / 2, iconSz, iconSz, 0xFF9CC4DC);
             boolean playing = PmVoice.isPlaying(voice[1]);
             String label = Component.translatable("pmchat.sharedmedia.voice_dur", fmtDuration(voice[2])).getString();
-            ctx.text(textRenderer, label, x + iconSz + 6, y + 2, playing ? ACCENT : TEXT, false);
+            ctx.text(font, label, x + iconSz + 6, y + 2, playing ? ACCENT : TEXT, false);
         } else if (img != null) {
             PmImages.Entry e = PmImages.get(img[0], img[1]);
             if (e.state == PmImages.State.READY && e.currentTexture() != null) {
@@ -184,14 +184,14 @@ public class PmContactMediaScreen extends Screen {
             } else {
                 PmIcons.draw(ctx, PmIcons.PHOTO, x, y + (h - iconSz) / 2, iconSz, iconSz, 0xFF9CC4DC);
             }
-            ctx.text(textRenderer, Component.translatable("pmchat.sharedmedia.photo"),
+            ctx.text(font, Component.translatable("pmchat.sharedmedia.photo"),
                     x + iconSz + 6, y + 2, TEXT, false);
         } else if (vid != null) {
             PmIcons.draw(ctx, PmIcons.PLAY, x, y + (h - iconSz) / 2, iconSz, iconSz, 0xFF9CC4DC);
-            ctx.text(textRenderer, Component.translatable("pmchat.sharedmedia.video"),
+            ctx.text(font, Component.translatable("pmchat.sharedmedia.video"),
                     x + iconSz + 6, y + 2, TEXT, false);
         }
-        ctx.text(textRenderer, when, x + w - textRenderer.getWidth(when), y + 2, SUBTLE, false);
+        ctx.text(font, when, x + w - font.getWidth(when), y + 2, SUBTLE, false);
     }
 
     /** Затемнённый оверлей с картинкой, вписанной в окно (как в PmScreen). */
@@ -209,7 +209,7 @@ public class PmContactMediaScreen extends Screen {
                     w, h, e.width, e.height, e.width, e.height);
         }
         Component hint = Component.translatable("pmchat.image.close");
-        ctx.text(textRenderer, hint, (width - textRenderer.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
+        ctx.text(font, hint, (width - font.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
     }
 
     @Override
@@ -311,8 +311,8 @@ public class PmContactMediaScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 }

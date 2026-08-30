@@ -62,35 +62,35 @@ public class PmBotEditScreen extends Screen {
     private void layout() {
         if (nameField != null) nameText = nameField.getValue();
         if (userField != null) userText = userField.getValue();
-        clearChildren();
+        clearWidgets();
 
         int fx = px + 12;
         int fw = pw - 24;
         int y = py + 26;
 
-        nameField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.bots.name"));
+        nameField = new EditBox(font, fx, y, fw, 15, Component.translatable("pmchat.bots.name"));
         nameField.setMaxLength(64);
         nameField.setValue(nameText);
-        addDrawableChild(nameField);
+        addRenderableWidget(nameField);
         y += 19;
 
-        userField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.bots.username"));
+        userField = new EditBox(font, fx, y, fw, 15, Component.translatable("pmchat.bots.username"));
         userField.setMaxLength(32);
         userField.setValue(userText);
-        addDrawableChild(userField);
+        addRenderableWidget(userField);
         y += 22;
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 15,
+        addRenderableWidget(FlatButton.centered(font, fx, y, fw, 15,
                 Component.translatable("pmchat.bots.save"), 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
                 btn -> save(false)));
         y += 19;
 
-        addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 15,
+        addRenderableWidget(FlatButton.centered(font, fx, y, fw, 15,
                 Component.translatable("pmchat.bots.regen"), 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A,
                 btn -> save(true)));
         y += 22;
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + pw / 2 - 40, y, 80, 15,
+        addRenderableWidget(FlatButton.centered(font, px + pw / 2 - 40, y, 80, 15,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                 btn -> back()));
     }
@@ -133,18 +133,18 @@ public class PmBotEditScreen extends Screen {
         ctx.outline(px, py, pw, ph, BORDER);
 
         Component title = getTitle();
-        ctx.text(textRenderer, trim(title.getString(), pw - 16), px + 8, py + 8, TITLE, false);
+        ctx.text(font, trim(title.getString(), pw - 16), px + 8, py + 8, TITLE, false);
 
         if (!status.getString().isEmpty()) {
-            ctx.text(textRenderer, status, px + 12, py + ph - 16, statusColor, false);
+            ctx.text(font, status, px + 12, py + ph - 16, statusColor, false);
         }
 
         super.extractRenderState(ctx, mouseX, mouseY, delta);
     }
 
     private String trim(String s, int maxW) {
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 

@@ -76,7 +76,7 @@ public class PmStreamsScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
         donateRects.clear();
         lastSeenVersion = sm.streamVersion();
 
@@ -94,7 +94,7 @@ public class PmStreamsScreen extends Screen {
         py = (height - panelH) / 2;
 
         if (!startMode && donateTarget == null) {
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 70, py + headerH, 140, 16,
+            addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 70, py + headerH, 140, 16,
                     Component.translatable(sm.isSelfStreaming() ? "pmchat.streams.stop" : "pmchat.streams.start"),
                     sm.isSelfStreaming() ? 0xFF5A2A22 : 0xFF2E5F46,
                     sm.isSelfStreaming() ? 0xFF6E332A : 0xFF376F52,
@@ -116,25 +116,25 @@ public class PmStreamsScreen extends Screen {
 
         if (startMode) {
             int fy = py + headerH + 22;
-            titleField = new EditBox(textRenderer, px + 16, fy, PANEL_W - 32, 16,
+            titleField = new EditBox(font, px + 16, fy, PANEL_W - 32, 16,
                     Component.translatable("pmchat.streams.titlehint"));
             titleField.setMaxLength(64);
             titleField.setSuggestion(Component.translatable("pmchat.streams.titlehint").getString());
-            addDrawableChild(titleField);
+            addRenderableWidget(titleField);
 
-            urlField = new EditBox(textRenderer, px + 16, fy + 22, PANEL_W - 32, 16,
+            urlField = new EditBox(font, px + 16, fy + 22, PANEL_W - 32, 16,
                     Component.translatable("pmchat.streams.urlhint"));
             urlField.setMaxLength(96);
             urlField.setSuggestion(Component.translatable("pmchat.streams.urlhint").getString());
-            addDrawableChild(urlField);
+            addRenderableWidget(urlField);
 
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 90, fy + 44, 84, 18,
+            addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 90, fy + 44, 84, 18,
                     Component.translatable("pmchat.streams.cancel"),
                     BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
                         startMode = false;
                         reinit();
                     }));
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 + 6, fy + 44, 84, 18,
+            addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 + 6, fy + 44, 84, 18,
                     Component.translatable("pmchat.streams.go"),
                     0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> {
                         if (!pluginPresent()) {
@@ -149,18 +149,18 @@ public class PmStreamsScreen extends Screen {
                     }));
         } else if (donateTarget != null) {
             int fy = py + headerH + 22;
-            amountField = new EditBox(textRenderer, px + 16, fy, PANEL_W - 32, 16,
+            amountField = new EditBox(font, px + 16, fy, PANEL_W - 32, 16,
                     Component.translatable("pmchat.streams.amounthint"));
             amountField.setMaxLength(12);
-            addDrawableChild(amountField);
+            addRenderableWidget(amountField);
 
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 90, fy + 24, 84, 18,
+            addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 90, fy + 24, 84, 18,
                     Component.translatable("pmchat.streams.cancel"),
                     BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
                         donateTarget = null;
                         reinit();
                     }));
-            addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 + 6, fy + 24, 84, 18,
+            addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 + 6, fy + 24, 84, 18,
                     Component.translatable("pmchat.streams.donate"),
                     0xFF6B4A1E, 0xFF7E5824, 0xFFB98A3A, 0xFFF0D8A0, btn -> {
                         double amount = parseAmount(amountField.getValue());
@@ -170,7 +170,7 @@ public class PmStreamsScreen extends Screen {
                     }).withIcon(PmIcons.MONEY));
         }
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
                 Component.translatable("pmchat.settings.done"),
                 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA, btn -> close()));
     }
@@ -200,13 +200,13 @@ public class PmStreamsScreen extends Screen {
         context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable("pmchat.streams.title");
-        context.text(textRenderer, title,
-                px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 9, TITLE, false);
+        context.text(font, title,
+                px + (PANEL_W - font.getWidth(title)) / 2, py + 9, TITLE, false);
 
         if (!pluginPresent() && !startMode && donateTarget == null) {
             String note = Component.translatable("pmchat.streams.noplugin_note").getString();
-            context.text(textRenderer, trimTo(note, PANEL_W - 24),
-                    px + (PANEL_W - textRenderer.getWidth(trimTo(note, PANEL_W - 24))) / 2, py + 19, SUBTLE, false);
+            context.text(font, trimTo(note, PANEL_W - 24),
+                    px + (PANEL_W - font.getWidth(trimTo(note, PANEL_W - 24))) / 2, py + 19, SUBTLE, false);
         }
 
         if (!startMode && donateTarget == null) {
@@ -215,10 +215,10 @@ public class PmStreamsScreen extends Screen {
 
         String rmsg = sm.lastDonateMsg();
         if (rmsg != null && System.currentTimeMillis() - sm.lastDonateAt() < 4000) {
-            context.text(textRenderer, trimTo(rmsg, PANEL_W - 24),
+            context.text(font, trimTo(rmsg, PANEL_W - 24),
                     px + 12, py + panelH - 34, sm.lastDonateOk() ? 0xFF6FBF8B : 0xFFE0574C, false);
         } else if (localMsg != null && System.currentTimeMillis() - localMsgAt < 4000) {
-            context.text(textRenderer, trimTo(localMsg, PANEL_W - 24),
+            context.text(font, trimTo(localMsg, PANEL_W - 24),
                     px + 12, py + panelH - 34, 0xFFE0574C, false);
         }
 
@@ -230,7 +230,7 @@ public class PmStreamsScreen extends Screen {
         List<PmServerMedia.LiveStream> streams = sm.liveStreams();
         int listTop = py + headerH + 22;
         if (streams.isEmpty()) {
-            context.text(textRenderer, Component.translatable("pmchat.streams.empty"),
+            context.text(font, Component.translatable("pmchat.streams.empty"),
                     px + 14, listTop + 4, SUBTLE, false);
             return;
         }
@@ -238,10 +238,10 @@ public class PmStreamsScreen extends Screen {
         for (PmServerMedia.LiveStream s : streams) {
             context.fill(px + 8, y, px + PANEL_W - 8, y + ROW_H - 4, BTN_BG);
             context.outline(px + 8, y, PANEL_W - 16, ROW_H - 4, BORDER);
-            context.text(textRenderer, "● " + config.aliasOf(s.player()), px + 14, y + 4, 0xFFE07A6A, false);
+            context.text(font, "● " + config.aliasOf(s.player()), px + 14, y + 4, 0xFFE07A6A, false);
             String t = s.title() == null || s.title().isBlank()
                     ? Component.translatable("pmchat.streams.notitle").getString() : s.title();
-            context.text(textRenderer, trimTo(t, PANEL_W - 100), px + 14, y + 16, LABEL, false);
+            context.text(font, trimTo(t, PANEL_W - 100), px + 14, y + 16, LABEL, false);
 
             boolean self = s.player().equalsIgnoreCase(PmChatClient.selfName());
             if (!self) {
@@ -250,7 +250,7 @@ public class PmStreamsScreen extends Screen {
                 context.fill(bx, by, bx + bw, by + bh, hov ? BTN_HOVER : BTN_BG);
                 context.outline(bx, by, bw, bh, BTN_BORDER);
                 String lbl = Component.translatable("pmchat.streams.donate").getString();
-                context.text(textRenderer, lbl, bx + (bw - textRenderer.getWidth(lbl)) / 2, by + 5,
+                context.text(font, lbl, bx + (bw - font.getWidth(lbl)) / 2, by + 5,
                         0xFFF0C34E, false);
                 donateRects.add(new Object[]{bx, by, bw, bh, s.player()});
             }
@@ -259,8 +259,8 @@ public class PmStreamsScreen extends Screen {
     }
 
     private String trimTo(String s, int maxW) {
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 

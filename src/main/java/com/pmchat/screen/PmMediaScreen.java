@@ -69,16 +69,16 @@ public class PmMediaScreen extends Screen {
 
         // Заголовок
         Component title = Component.translatable("pmchat.media.title");
-        ctx.text(textRenderer, title, px + 12, py + 10, TEXT, false);
+        ctx.text(font, title, px + 12, py + 10, TEXT, false);
         // Кнопка «открыть папку музыки»
         Component openLbl = Component.translatable("pmchat.media.openfolder");
-        int owL = textRenderer.getWidth(openLbl) + 16;
+        int owL = font.getWidth(openLbl) + 16;
         int oX = px + pw - owL - 10, oY = py + 7;
         openFolderRect = new int[]{oX, oY, owL, 16};
         boolean hovOpen = in(mouseX, mouseY, openFolderRect);
         ctx.fill(oX, oY, oX + owL, oY + 16, hovOpen ? ROW_HOVER : ROW);
         ctx.outline(oX, oY, owL, 16, BORDER);
-        ctx.text(textRenderer, openLbl, oX + 8, oY + 4, hovOpen ? TEXT : SUBTLE, false);
+        ctx.text(font, openLbl, oX + 8, oY + 4, hovOpen ? TEXT : SUBTLE, false);
 
         int listTop = py + 30;
         int listBottom = py + ph - 8;
@@ -89,9 +89,9 @@ public class PmMediaScreen extends Screen {
         int y = listTop - scroll;
         int rowH = 18;
         if (entries.isEmpty()) {
-            ctx.text(textRenderer, Component.translatable("pmchat.media.empty"),
+            ctx.text(font, Component.translatable("pmchat.media.empty"),
                     px + 12, listTop + 6, SUBTLE, false);
-            ctx.text(textRenderer, Component.translatable("pmchat.media.hint"),
+            ctx.text(font, Component.translatable("pmchat.media.hint"),
                     px + 12, listTop + 20, SUBTLE, false);
         }
         ctx.enableScissor(px + 1, listTop, px + pw - 1, listBottom);
@@ -105,9 +105,9 @@ public class PmMediaScreen extends Screen {
                 String label = dir ? f.getName() + "  ♫" : PmMedia.get().hasActive() ? f.getName() : f.getName();
                 int count = dir ? countAudio(f) : 0;
                 String right = dir ? count + " " + Component.translatable("pmchat.media.tracks").getString() : "";
-                ctx.text(textRenderer, trim(label, pw - 60), px + 26, y + 5, TEXT, false);
+                ctx.text(font, trim(label, pw - 60), px + 26, y + 5, TEXT, false);
                 if (!right.isEmpty()) {
-                    ctx.text(textRenderer, right, px + pw - 12 - textRenderer.getWidth(right), y + 5, SUBTLE, false);
+                    ctx.text(font, right, px + pw - 12 - font.getWidth(right), y + 5, SUBTLE, false);
                 }
                 rowRects.add(new Object[]{px + 6, y, pw - 12, rowH, f});
             }
@@ -210,8 +210,8 @@ public class PmMediaScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (textRenderer.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && textRenderer.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.getWidth(s) <= maxW) return s;
+        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 }

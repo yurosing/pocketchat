@@ -53,7 +53,7 @@ public class PmShopScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
 
         PANEL_W = Math.max(220, Math.min(320, width - 24));
         int listRows = Math.max(1, PmBackend.cachedShopItems().size());
@@ -64,7 +64,7 @@ public class PmShopScreen extends Screen {
         listTop = py + 40;
         listBottom = py + panelH - 30;
 
-        addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 - 40, py + panelH - 22, 80, 16,
+        addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + panelH - 22, 80, 16,
                 Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> close()));
     }
 
@@ -91,11 +91,11 @@ public class PmShopScreen extends Screen {
         context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = getTitle();
-        context.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
 
         Long bal = PmBackend.cachedSelfBalance();
         String balStr = Component.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
-        context.text(textRenderer, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
+        context.text(font, balStr, px + 12, py + 22, PmBackend.CURRENCY_COLOR, false);
 
         buyRects.clear();
         List<PmBackend.ShopItem> items = PmBackend.cachedShopItems();
@@ -103,9 +103,9 @@ public class PmShopScreen extends Screen {
         for (int i = scroll; i < items.size() && y + ROW_H <= listBottom; i++) {
             PmBackend.ShopItem item = items.get(i);
             context.fill(px + 8, y, px + PANEL_W - 8, y + ROW_H - 2, 0x22FFFFFF);
-            context.text(textRenderer, item.name, px + 12, y + 3, LABEL, false);
+            context.text(font, item.name, px + 12, y + 3, LABEL, false);
             String desc = trim(item.description, PANEL_W - 24 - 70);
-            context.text(textRenderer, desc, px + 12, y + 15, SUBTLE, false);
+            context.text(font, desc, px + 12, y + 15, SUBTLE, false);
 
             int btnW = 62, btnH = ROW_H - 8;
             int btnX = px + PANEL_W - 12 - btnW, btnY = y + 4;
@@ -113,17 +113,17 @@ public class PmShopScreen extends Screen {
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, hover ? BTN_HOVER : BTN_BG);
             context.outline(btnX, btnY, btnW, btnH, BORDER);
             String priceStr = PmBackend.formatCoins(item.price) + "/" + item.durationDays + "d";
-            context.text(textRenderer, priceStr, btnX + (btnW - textRenderer.getWidth(priceStr)) / 2, btnY + 4, PmBackend.CURRENCY_COLOR, false);
+            context.text(font, priceStr, btnX + (btnW - font.getWidth(priceStr)) / 2, btnY + 4, PmBackend.CURRENCY_COLOR, false);
             buyRects.add(new Object[]{btnX, btnY, btnW, btnH, item.id});
 
             y += ROW_H;
         }
         if (items.isEmpty()) {
-            context.text(textRenderer, Component.translatable("pmchat.shop.empty"), px + 12, listTop + 2, SUBTLE, false);
+            context.text(font, Component.translatable("pmchat.shop.empty"), px + 12, listTop + 2, SUBTLE, false);
         }
 
         if (!status.getString().isEmpty()) {
-            context.text(textRenderer, status, px + (PANEL_W - textRenderer.getWidth(status)) / 2, py + panelH - 40, statusColor, false);
+            context.text(font, status, px + (PANEL_W - font.getWidth(status)) / 2, py + panelH - 40, statusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);
@@ -131,8 +131,8 @@ public class PmShopScreen extends Screen {
 
     private String trim(String text, int maxWidth) {
         if (maxWidth <= 0) return "";
-        if (textRenderer.getWidth(text) <= maxWidth) return text;
-        return textRenderer.trimToWidth(text, Math.max(0, maxWidth - textRenderer.getWidth("…"))) + "…";
+        if (font.getWidth(text) <= maxWidth) return text;
+        return font.trimToWidth(text, Math.max(0, maxWidth - font.getWidth("…"))) + "…";
     }
 
     @Override

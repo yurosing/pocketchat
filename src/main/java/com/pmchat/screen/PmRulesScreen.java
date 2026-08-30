@@ -101,7 +101,7 @@ public class PmRulesScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        clearChildren();
+        clearWidgets();
 
         PANEL_W = Math.max(180, Math.min(260, width - 24));
         int textW = PANEL_W - 32;
@@ -135,21 +135,21 @@ public class PmRulesScreen extends Screen {
         py = Math.max(4, (height - panelH) / 2);
 
         if (viewOnly) {
-            addDrawableChild(FlatButton.centered(textRenderer, px + (PANEL_W - 80) / 2, py + panelH - 22, 80, 16,
+            addRenderableWidget(FlatButton.centered(font, px + (PANEL_W - 80) / 2, py + panelH - 22, 80, 16,
                     Component.translatable("pmchat.settings.done"), BTN_BG, BTN_HOVER, BTN_BORDER, LABEL,
                     btn -> close()));
         } else {
-            addDrawableChild(FlatButton.centered(textRenderer, px + 12, py + panelH - 22, (PANEL_W - 32) / 2, 16,
+            addRenderableWidget(FlatButton.centered(font, px + 12, py + panelH - 22, (PANEL_W - 32) / 2, 16,
                     Component.translatable("pmchat.rules.decline"), BTN_BG, BTN_HOVER, BTN_BORDER, SUBTLE,
                     btn -> close()));
-            addDrawableChild(FlatButton.centered(textRenderer, px + 20 + (PANEL_W - 32) / 2, py + panelH - 22, (PANEL_W - 32) / 2, 16,
+            addRenderableWidget(FlatButton.centered(font, px + 20 + (PANEL_W - 32) / 2, py + panelH - 22, (PANEL_W - 32) / 2, 16,
                     Component.translatable("pmchat.rules.accept"), 0xFF2E5F46, 0xFF376F52, 0xFF4C8A66, 0xFFCFEEDA,
                     btn -> accept()));
         }
     }
 
     private int lineCount(String text, int maxW) {
-        return Math.max(1, textRenderer.wrapLines(Component.literal(text), maxW).size());
+        return Math.max(1, font.wrapLines(Component.literal(text), maxW).size());
     }
 
     private void accept() {
@@ -166,7 +166,7 @@ public class PmRulesScreen extends Screen {
         context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = getTitle();
-        context.text(textRenderer, title, px + (PANEL_W - textRenderer.getWidth(title)) / 2, py + 10, TITLE, false);
+        context.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 10, TITLE, false);
         context.fill(px + 12, py + 24, px + PANEL_W - 12, py + 25, BORDER);
 
         int textW = PANEL_W - 32;
@@ -180,7 +180,7 @@ public class PmRulesScreen extends Screen {
 
         drawBox(context, rulesBoxY, rulesBoxH);
         int ry = py + rulesBoxY + 5;
-        context.text(textRenderer, header, tx + 4, ry, SUBTLE, false);
+        context.text(font, header, tx + 4, ry, SUBTLE, false);
         ry += 12;
         for (String rule : rules) {
             ry = drawBullet(context, rule, tx + 4, ry, textW - 18);
@@ -197,16 +197,16 @@ public class PmRulesScreen extends Screen {
     }
 
     private void drawWrapped(GuiGraphicsExtractor context, String text, int x, int y, int maxW, int color) {
-        for (var line : textRenderer.wrapLines(Component.literal(text), maxW)) {
-            context.text(textRenderer, line, x, y, color, false);
+        for (var line : font.wrapLines(Component.literal(text), maxW)) {
+            context.text(font, line, x, y, color, false);
             y += 10;
         }
     }
 
     private int drawBullet(GuiGraphicsExtractor context, String text, int x, int y, int maxW) {
-        context.text(textRenderer, "•", x, y, 0xFFE07A6A, false);
-        for (var line : textRenderer.wrapLines(Component.literal(text), maxW)) {
-            context.text(textRenderer, line, x + 10, y, LABEL, false);
+        context.text(font, "•", x, y, 0xFFE07A6A, false);
+        for (var line : font.wrapLines(Component.literal(text), maxW)) {
+            context.text(font, line, x + 10, y, LABEL, false);
             y += 10;
         }
         return y;
