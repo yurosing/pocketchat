@@ -60,7 +60,7 @@ public class PmSupportScreen extends Screen {
         messageField.setMaxLength(500);
         String hint = Component.translatable("pmchat.support.hint").getString();
         messageField.setSuggestion(hint);
-        messageField.setChangedListener(s -> messageField.setSuggestion(s.isEmpty() ? hint : null));
+        messageField.setResponder(s -> messageField.setSuggestion(s.isEmpty() ? hint : null));
         addDrawableChild(messageField);
         y += 24;
 
@@ -73,13 +73,13 @@ public class PmSupportScreen extends Screen {
     }
 
     private void send() {
-        String message = messageField.getText().trim();
+        String message = messageField.getValue().trim();
         if (message.isEmpty()) return;
         PmBackend.support(message, (ok, v, err) -> {
             if (ok) {
                 status = Component.translatable("pmchat.support.ok");
                 statusColor = 0xFF8FD8A8;
-                messageField.setText("");
+                messageField.setValue("");
             } else {
                 status = Component.translatable("pmchat.admin.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;

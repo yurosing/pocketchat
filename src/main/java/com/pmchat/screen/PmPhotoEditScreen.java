@@ -12,9 +12,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.platform.NativeImageBackedTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
@@ -71,8 +71,8 @@ public class PmPhotoEditScreen extends Screen {
     private EditBox captionField;
     private float textAnchorX = -1f, textAnchorY = -1f;
 
-    private ResourceLocation textureId;
-    private NativeImageBackedTexture texture;
+    private Identifier textureId;
+    private DynamicTexture texture;
     private NativeImage nativeImage;   // переиспользуемый буфер — пересоздаём только при смене размера
     private int texW, texH;
     private boolean textureDirty = true;
@@ -95,14 +95,14 @@ public class PmPhotoEditScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        String captionInput = captionField != null ? captionField.getText() : "";
+        String captionInput = captionField != null ? captionField.getValue() : "";
         clearChildren();
 
         if (current == null && !loadError) {
             try {
                 current = PmPhotoEdit.load(sourceFile);
                 original = PmPhotoEdit.copy(current);
-                textureId = ResourceLocation.of("pmchat", "photoedit/" + System.nanoTime());
+                textureId = Identifier.of("pmchat", "photoedit/" + System.nanoTime());
             } catch (Exception e) {
                 loadError = true;
             }
@@ -189,7 +189,7 @@ public class PmPhotoEditScreen extends Screen {
             captionField = new EditBox(textRenderer, width / 2 - 140, fy, 220, 16,
                     Component.translatable("pmchat.photoedit.captionhint"));
             captionField.setMaxLength(200);
-            captionField.setText(captionInput);
+            captionField.setValue(captionInput);
             captionField.setSuggestion(captionInput.isEmpty()
                     ? Component.translatable("pmchat.photoedit.captionhint").getString() : "");
             addDrawableChild(captionField);
@@ -295,7 +295,7 @@ public class PmPhotoEditScreen extends Screen {
 
     private void applyCaption() {
         if (current == null || captionField == null) return;
-        String text = captionField.getText().trim();
+        String text = captionField.getValue().trim();
         if (text.isEmpty()) return;
         // Без клика по фото — по умолчанию ставим текст в верхний левый угол.
         float ax = textAnchorX >= 0 ? textAnchorX : current.getWidth() * 0.05f;
@@ -374,9 +374,9 @@ public class PmPhotoEditScreen extends Screen {
             int w = current.getWidth(), h = current.getHeight();
             if (nativeImage == null || texW != w || texH != h) {
                 NativeImage img = new NativeImage(NativeImage.Format.RGBA, w, h, false);
-                NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "pmchat-photoedit", img);
+                DynamicTexture tex = new DynamicTexture(() -> "pmchat-photoedit", img);
                 Minecraft.getInstance().getTextureManager().registerTexture(textureId, tex);
-                NativeImageBackedTexture old = texture;
+                DynamicTexture old = texture;
                 texture = tex;
                 nativeImage = img;
                 texW = w;
@@ -522,7 +522,7 @@ public class PmPhotoEditScreen extends Screen {
                     float[] s = toScreenSpace(textAnchorX, textAnchorY, r);
                     int color = PEN_PALETTE[Math.floorMod(penColorIdx, PEN_PALETTE.length)];
                     context.text(textRenderer, "+", (int) s[0] - 2, (int) s[1] - 4, color, false);
-                    String preview = captionField != null ? captionField.getText() : "";
+                    String preview = captionField != null ? captionField.getValue() : "";
                     if (!preview.isBlank()) {
                         context.text(textRenderer, preview, (int) s[0] + 6, (int) s[1] - 4, color, true);
                     }

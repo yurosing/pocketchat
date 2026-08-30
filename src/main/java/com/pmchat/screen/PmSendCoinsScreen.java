@@ -61,7 +61,7 @@ public class PmSendCoinsScreen extends Screen {
         amountField.setMaxLength(10);
         String hint = Component.translatable("pmchat.coins.hint").getString();
         amountField.setSuggestion(hint);
-        amountField.setChangedListener(s -> amountField.setSuggestion(s.isEmpty() ? hint : null));
+        amountField.setResponder(s -> amountField.setSuggestion(s.isEmpty() ? hint : null));
         addDrawableChild(amountField);
         y += 24;
 
@@ -76,7 +76,7 @@ public class PmSendCoinsScreen extends Screen {
     private void send() {
         long amount;
         try {
-            amount = Long.parseLong(amountField.getText().trim());
+            amount = Long.parseLong(amountField.getValue().trim());
         } catch (NumberFormatException e) {
             status = Component.translatable("pmchat.admin.badamount");
             statusColor = 0xFFE07A6A;
@@ -87,7 +87,7 @@ public class PmSendCoinsScreen extends Screen {
             if (ok) {
                 status = Component.translatable("pmchat.coins.ok");
                 statusColor = 0xFF8FD8A8;
-                amountField.setText("");
+                amountField.setValue("");
             } else {
                 status = Component.translatable("pmchat.admin.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;

@@ -238,7 +238,7 @@ public class PmAdminScreen extends Screen {
     private void toggleFeature(String name, boolean disable) {
         int minutes = 0;
         try {
-            minutes = Integer.parseInt(featureMinutesField.getText().trim());
+            minutes = Integer.parseInt(featureMinutesField.getValue().trim());
         } catch (NumberFormatException ignored) {
         }
         PmBackend.adminSetFeature(name, !disable, minutes, (ok, v, err) ->
@@ -353,7 +353,7 @@ public class PmAdminScreen extends Screen {
         FlatButton browseBtn = FlatButton.centered(textRenderer, fx + dmTargetW + 4, dmY, 18, 16,
                 Component.literal("☰"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> Minecraft.getInstance().setScreen(
-                        new PmAdminAccountsScreen(this, name -> dmTargetField.setText(name))));
+                        new PmAdminAccountsScreen(this, name -> dmTargetField.setValue(name))));
         addDrawableChild(browseBtn);
 
         dmMessageField = new EditBox(textRenderer, fx, dmY + 22, fw, 16, Component.translatable("pmchat.admin.dm.hint"));
@@ -366,11 +366,11 @@ public class PmAdminScreen extends Screen {
     }
 
     private void doBroadcast() {
-        String msg = broadcastField.getText().trim();
+        String msg = broadcastField.getValue().trim();
         if (msg.isEmpty()) return;
         PmBackend.adminBroadcast(msg, (ok, v, err) -> {
             if (ok) {
-                broadcastField.setText("");
+                broadcastField.setValue("");
                 setStatus(Component.translatable("pmchat.admin.ok"), OK);
             } else {
                 setStatus(Component.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
@@ -379,12 +379,12 @@ public class PmAdminScreen extends Screen {
     }
 
     private void doDirectMessage() {
-        String target = dmTargetField.getText().trim();
-        String msg = dmMessageField.getText().trim();
+        String target = dmTargetField.getValue().trim();
+        String msg = dmMessageField.getValue().trim();
         if (target.isEmpty() || msg.isEmpty()) return;
         PmBackend.adminMessage(target, msg, (ok, v, err) -> {
             if (ok) {
-                dmMessageField.setText("");
+                dmMessageField.setValue("");
                 setStatus(Component.translatable("pmchat.admin.ok"), OK);
             } else {
                 setStatus(Component.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
@@ -408,7 +408,7 @@ public class PmAdminScreen extends Screen {
         addDrawableChild(FlatButton.centered(textRenderer, fx + targetFieldW + 4, y + 20, 18, 16,
                 Component.literal("☰"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
                 btn -> Minecraft.getInstance().setScreen(
-                        new PmAdminAccountsScreen(this, name -> targetField.setText(name)))));
+                        new PmAdminAccountsScreen(this, name -> targetField.setValue(name)))));
 
         int ay = y + 44;
         amountField = new EditBox(textRenderer, fx, ay, (fw - 6) / 2, 16, Component.translatable("pmchat.admin.amount.hint"));
@@ -446,11 +446,11 @@ public class PmAdminScreen extends Screen {
     }
 
     private void doMute() {
-        String target = targetField.getText().trim();
+        String target = targetField.getValue().trim();
         if (target.isEmpty()) return;
         int minutes;
         try {
-            minutes = Integer.parseInt(muteMinutesField.getText().trim());
+            minutes = Integer.parseInt(muteMinutesField.getValue().trim());
         } catch (NumberFormatException e) {
             setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
             return;
@@ -461,7 +461,7 @@ public class PmAdminScreen extends Screen {
     }
 
     private void doBan(boolean banned) {
-        String target = targetField.getText().trim();
+        String target = targetField.getValue().trim();
         if (target.isEmpty()) return;
         PmBackend.adminBan(target, banned, (ok, v, err) ->
                 setStatus(ok ? Component.translatable("pmchat.admin.ok") : Component.translatable("pmchat.admin.fail", String.valueOf(err)),
@@ -469,10 +469,10 @@ public class PmAdminScreen extends Screen {
     }
 
     private void doGrant() {
-        String target = targetField.getText().trim();
+        String target = targetField.getValue().trim();
         long amount;
         try {
-            amount = Long.parseLong(amountField.getText().trim());
+            amount = Long.parseLong(amountField.getValue().trim());
         } catch (NumberFormatException e) {
             setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
             return;
@@ -484,7 +484,7 @@ public class PmAdminScreen extends Screen {
     }
 
     private void doVerify(boolean verified) {
-        String target = targetField.getText().trim();
+        String target = targetField.getValue().trim();
         if (target.isEmpty()) return;
         PmBackend.adminVerify(target, verified, (ok, v, err) ->
                 setStatus(ok ? Component.translatable("pmchat.admin.ok") : Component.translatable("pmchat.admin.fail", String.valueOf(err)),
@@ -492,7 +492,7 @@ public class PmAdminScreen extends Screen {
     }
 
     private void doOfficial() {
-        String target = targetField.getText().trim();
+        String target = targetField.getValue().trim();
         if (target.isEmpty()) return;
         PmBackend.adminSetOfficial(target, true, null, (ok, v, err) ->
                 setStatus(ok ? Component.translatable("pmchat.admin.ok") : Component.translatable("pmchat.admin.fail", String.valueOf(err)),
@@ -558,11 +558,11 @@ public class PmAdminScreen extends Screen {
             PmBackend.RuleLocale ru = content.ru;
             rulesEnCurrent = content.en;
             rulesHeaderCurrent = ru.header;
-            ruleEulaField.setText(ru.eula);
-            ruleFreedomField.setText(ru.freedom);
-            ruleFooterField.setText(ru.footer);
+            ruleEulaField.setValue(ru.eula);
+            ruleFreedomField.setValue(ru.freedom);
+            ruleFooterField.setValue(ru.footer);
             for (int i = 0; i < RULE_LINES; i++) {
-                ruleLineFields[i].setText(i < ru.rules.size() ? ru.rules.get(i) : "");
+                ruleLineFields[i].setValue(i < ru.rules.size() ? ru.rules.get(i) : "");
             }
         });
     }
@@ -571,7 +571,7 @@ public class PmAdminScreen extends Screen {
         if (rulesEnCurrent == null) return; // текущие правила ещё не подгрузились
         java.util.List<String> lines = new java.util.ArrayList<>();
         for (EditBox f : ruleLineFields) {
-            String t = f.getText().trim();
+            String t = f.getValue().trim();
             if (!t.isEmpty()) lines.add(t);
         }
         if (lines.isEmpty()) {
@@ -579,8 +579,8 @@ public class PmAdminScreen extends Screen {
             return;
         }
         PmBackend.RuleLocale ru = new PmBackend.RuleLocale(
-                ruleEulaField.getText().trim(), ruleFreedomField.getText().trim(),
-                rulesHeaderCurrent, lines, ruleFooterField.getText().trim());
+                ruleEulaField.getValue().trim(), ruleFreedomField.getValue().trim(),
+                rulesHeaderCurrent, lines, ruleFooterField.getValue().trim());
         PmBackend.adminSetRules(ru, rulesEnCurrent, (ok, v, err) ->
                 setStatus(ok ? Component.translatable("pmchat.admin.ok") : Component.translatable("pmchat.admin.fail", String.valueOf(err)),
                         ok ? OK : BAD));
@@ -643,24 +643,24 @@ public class PmAdminScreen extends Screen {
 
     private void resetShopForm() {
         shopEditingId = 0;
-        shopNameField.setText("");
-        shopDescField.setText("");
-        shopFeatureKeyField.setText("");
-        shopPriceField.setText("");
-        shopDurationField.setText("");
+        shopNameField.setValue("");
+        shopDescField.setValue("");
+        shopFeatureKeyField.setValue("");
+        shopPriceField.setValue("");
+        shopDurationField.setValue("");
     }
 
     private void editShopItem(PmBackend.ShopItem item) {
         shopEditingId = item.id;
-        shopNameField.setText(item.name);
-        shopDescField.setText(item.description);
-        shopFeatureKeyField.setText(item.featureKey != null ? item.featureKey : "");
-        shopPriceField.setText(String.valueOf(item.price));
-        shopDurationField.setText(String.valueOf(item.durationDays));
+        shopNameField.setValue(item.name);
+        shopDescField.setValue(item.description);
+        shopFeatureKeyField.setValue(item.featureKey != null ? item.featureKey : "");
+        shopPriceField.setValue(String.valueOf(item.price));
+        shopDurationField.setValue(String.valueOf(item.durationDays));
     }
 
     private void doSaveShopItem() {
-        String name = shopNameField.getText().trim();
+        String name = shopNameField.getValue().trim();
         if (name.isEmpty()) {
             setStatus(Component.translatable("pmchat.admin.shop.needname"), BAD);
             return;
@@ -668,8 +668,8 @@ public class PmAdminScreen extends Screen {
         long price;
         int duration;
         try {
-            price = Long.parseLong(shopPriceField.getText().trim());
-            duration = Integer.parseInt(shopDurationField.getText().trim());
+            price = Long.parseLong(shopPriceField.getValue().trim());
+            duration = Integer.parseInt(shopDurationField.getValue().trim());
         } catch (NumberFormatException e) {
             setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
             return;
@@ -678,8 +678,8 @@ public class PmAdminScreen extends Screen {
             setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
             return;
         }
-        PmBackend.adminUpsertShopItem(shopEditingId, name, shopDescField.getText().trim(),
-                shopFeatureKeyField.getText().trim(), price, duration, (ok, v, err) -> {
+        PmBackend.adminUpsertShopItem(shopEditingId, name, shopDescField.getValue().trim(),
+                shopFeatureKeyField.getValue().trim(), price, duration, (ok, v, err) -> {
                     if (ok) {
                         setStatus(Component.translatable("pmchat.admin.ok"), OK);
                         resetShopForm();
@@ -831,25 +831,25 @@ public class PmAdminScreen extends Screen {
 
     private void resetRoleForm() {
         roleEditingKey = null;
-        roleKeyField.setText("");
-        roleNameField.setText("");
-        rolePrefixField.setText("");
-        roleColorField.setText("");
+        roleKeyField.setValue("");
+        roleNameField.setValue("");
+        rolePrefixField.setValue("");
+        roleColorField.setValue("");
     }
 
     private void editRoleDef(PmBackend.RoleDef r) {
         roleEditingKey = r.key;
-        roleKeyField.setText(r.key);
-        roleNameField.setText(r.name);
-        rolePrefixField.setText(r.prefix);
-        roleColorField.setText(String.format("#%06X", r.color & 0xFFFFFF));
+        roleKeyField.setValue(r.key);
+        roleNameField.setValue(r.name);
+        rolePrefixField.setValue(r.prefix);
+        roleColorField.setValue(String.format("#%06X", r.color & 0xFFFFFF));
     }
 
     private void doSaveRole() {
-        String key = roleKeyField.getText().trim().toLowerCase(java.util.Locale.ROOT);
-        String name = roleNameField.getText().trim();
-        String prefix = rolePrefixField.getText().trim();
-        String color = roleColorField.getText().trim();
+        String key = roleKeyField.getValue().trim().toLowerCase(java.util.Locale.ROOT);
+        String name = roleNameField.getValue().trim();
+        String prefix = rolePrefixField.getValue().trim();
+        String color = roleColorField.getValue().trim();
         if (key.isEmpty() || !key.matches("[a-z0-9_-]+")) {
             setStatus(Component.translatable("pmchat.admin.role.needkey"), BAD);
             return;
@@ -901,7 +901,7 @@ public class PmAdminScreen extends Screen {
     }
 
     private void doAssignRole(String roleKey) {
-        String target = roleAssignTargetField.getText().trim();
+        String target = roleAssignTargetField.getValue().trim();
         if (target.isEmpty()) {
             setStatus(Component.translatable("pmchat.admin.target.needed"), BAD);
             return;
@@ -978,8 +978,8 @@ public class PmAdminScreen extends Screen {
     private void loadPrices() {
         PmBackend.adminGetPrices((ok, prices, err) -> {
             if (ok && prices != null) {
-                botCreatePriceField.setText(String.valueOf(prices.botCreatePrice));
-                botstoreSubmitPriceField.setText(String.valueOf(prices.botstoreSubmitPrice));
+                botCreatePriceField.setValue(String.valueOf(prices.botCreatePrice));
+                botstoreSubmitPriceField.setValue(String.valueOf(prices.botstoreSubmitPrice));
             }
         });
     }
@@ -987,8 +987,8 @@ public class PmAdminScreen extends Screen {
     private void doSavePrices() {
         long createPrice, submitPrice;
         try {
-            createPrice = Long.parseLong(botCreatePriceField.getText().trim());
-            submitPrice = Long.parseLong(botstoreSubmitPriceField.getText().trim());
+            createPrice = Long.parseLong(botCreatePriceField.getValue().trim());
+            submitPrice = Long.parseLong(botstoreSubmitPriceField.getValue().trim());
         } catch (NumberFormatException e) {
             setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
             return;
@@ -1160,7 +1160,7 @@ public class PmAdminScreen extends Screen {
     private static void placeholder(EditBox field, String labelKey) {
         String hint = Component.translatable(labelKey).getString();
         field.setSuggestion(hint);
-        field.setChangedListener(s -> field.setSuggestion(s.isEmpty() ? hint : null));
+        field.setResponder(s -> field.setSuggestion(s.isEmpty() ? hint : null));
     }
 
     private void setStatus(Component text, int color) {
@@ -1197,7 +1197,7 @@ public class PmAdminScreen extends Screen {
         if (tab == 7 && roleColorField != null && rolePrefixField != null) {
             int sx = rolePrefixField.getX() + rolePrefixField.getWidth() + 5;
             int sy = roleColorField.getY();
-            context.fill(sx, sy, sx + 16, sy + 16, previewColor(roleColorField.getText()));
+            context.fill(sx, sy, sx + 16, sy + 16, previewColor(roleColorField.getValue()));
             context.outline(sx, sy, 16, 16, NEON_DIM);
         }
 

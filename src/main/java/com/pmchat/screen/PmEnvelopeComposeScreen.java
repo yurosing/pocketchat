@@ -66,10 +66,10 @@ public class PmEnvelopeComposeScreen extends Screen {
     protected void init() {
         applyTheme();
         // Снимок значений полей ДО их пересборки (toggle «вопрос» вызывает init() заново).
-        if (contentField != null) contentText = contentField.getText();
-        if (minutesField != null) minutesText = minutesField.getText();
-        if (questionField != null) questionText = questionField.getText();
-        if (answerField != null) answerText = answerField.getText();
+        if (contentField != null) contentText = contentField.getValue();
+        if (minutesField != null) minutesText = minutesField.getValue();
+        if (questionField != null) questionText = questionField.getValue();
+        if (answerField != null) answerText = answerField.getValue();
         clearChildren();
         fieldLabels.clear();
         PANEL_W = Math.max(200, Math.min(260, width - 24));
@@ -88,14 +88,14 @@ public class PmEnvelopeComposeScreen extends Screen {
         fieldLabels.add(new Object[]{"pmchat.envelope.content", fx, y - 10});
         contentField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.content"));
         contentField.setMaxLength(300);
-        contentField.setText(contentText);
+        contentField.setValue(contentText);
         addDrawableChild(contentField);
         y += 26;
 
         fieldLabels.add(new Object[]{"pmchat.envelope.minutes", fx, y - 10});
         minutesField = new EditBox(textRenderer, fx, y, 60, 16, Component.translatable("pmchat.envelope.minutes"));
         minutesField.setMaxLength(6);
-        minutesField.setText(minutesText);
+        minutesField.setValue(minutesText);
         addDrawableChild(minutesField);
 
         // Ширина пресетов — по числу кнопок; FlatButton текст не обрезает сам (см. render()
@@ -107,7 +107,7 @@ public class PmEnvelopeComposeScreen extends Screen {
             String label = trimToButton(presetLabel(m), pw - 4);
             addDrawableChild(FlatButton.centered(textRenderer, px2, y, pw - 2, 16,
                     Component.literal(label), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
-                    btn -> minutesField.setText(String.valueOf(m))));
+                    btn -> minutesField.setValue(String.valueOf(m))));
             px2 += pw;
         }
         y += 24;
@@ -124,14 +124,14 @@ public class PmEnvelopeComposeScreen extends Screen {
             fieldLabels.add(new Object[]{"pmchat.envelope.question", fx, y - 10});
             questionField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.question"));
             questionField.setMaxLength(120);
-            questionField.setText(questionText);
+            questionField.setValue(questionText);
             addDrawableChild(questionField);
             y += 26;
 
             fieldLabels.add(new Object[]{"pmchat.envelope.answer", fx, y - 10});
             answerField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.envelope.answer"));
             answerField.setMaxLength(60);
-            answerField.setText(answerText);
+            answerField.setValue(answerText);
             addDrawableChild(answerField);
             y += 26;
         } else {
@@ -160,14 +160,14 @@ public class PmEnvelopeComposeScreen extends Screen {
 
     private void send() {
         String skin = PmWire.ENVELOPE_SKINS[skinIndex];
-        String content = contentField.getText().trim();
+        String content = contentField.getValue().trim();
         if (content.isEmpty()) {
             setStatus(Component.translatable("pmchat.envelope.needcontent"), 0xFFE07A6A);
             return;
         }
         int minutes;
         try {
-            minutes = Integer.parseInt(minutesField.getText().trim());
+            minutes = Integer.parseInt(minutesField.getValue().trim());
         } catch (NumberFormatException e) {
             minutes = -1;
         }
@@ -175,8 +175,8 @@ public class PmEnvelopeComposeScreen extends Screen {
             setStatus(Component.translatable("pmchat.envelope.needtimer"), 0xFFE07A6A);
             return;
         }
-        String question = withQuestion && questionField != null ? questionField.getText().trim() : "";
-        String answer = withQuestion && answerField != null ? answerField.getText().trim() : "";
+        String question = withQuestion && questionField != null ? questionField.getValue().trim() : "";
+        String answer = withQuestion && answerField != null ? answerField.getValue().trim() : "";
         if (withQuestion && (question.isEmpty() || answer.isEmpty())) {
             setStatus(Component.translatable("pmchat.envelope.needqa"), 0xFFE07A6A);
             return;

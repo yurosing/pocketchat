@@ -109,10 +109,10 @@ public class PmBotStoreScreen extends Screen {
     }
 
     private void layout() {
-        if (marketSearchField != null) marketSearchText = marketSearchField.getText();
-        if (nameField != null) nameText = nameField.getText();
-        if (descField != null) descText = descField.getText();
-        if (priceField != null) priceText = priceField.getText();
+        if (marketSearchField != null) marketSearchText = marketSearchField.getValue();
+        if (nameField != null) nameText = nameField.getValue();
+        if (descField != null) descText = descField.getValue();
+        if (priceField != null) priceText = priceField.getValue();
         clearChildren();
 
         int fx = px + 12;
@@ -138,8 +138,8 @@ public class PmBotStoreScreen extends Screen {
             marketSearchField = new EditBox(textRenderer, fx, contentTop, fw, 15,
                     Component.translatable("pmchat.botstore.search"));
             marketSearchField.setMaxLength(64);
-            marketSearchField.setText(marketSearchText);
-            marketSearchField.setChangedListener(s -> {
+            marketSearchField.setValue(marketSearchText);
+            marketSearchField.setResponder(s -> {
                 marketSearchText = s;
                 loadMarket();
             });
@@ -169,19 +169,19 @@ public class PmBotStoreScreen extends Screen {
             int y = contentTop;
             nameField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.botstore.name"));
             nameField.setMaxLength(64);
-            nameField.setText(nameText);
+            nameField.setValue(nameText);
             addDrawableChild(nameField);
             y += 19;
 
             descField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.botstore.desc"));
             descField.setMaxLength(200);
-            descField.setText(descText);
+            descField.setValue(descText);
             addDrawableChild(descField);
             y += 19;
 
             priceField = new EditBox(textRenderer, fx, y, 90, 15, Component.translatable("pmchat.botstore.price"));
             priceField.setMaxLength(9);
-            priceField.setText(priceText);
+            priceField.setValue(priceText);
             addDrawableChild(priceField);
             addDrawableChild(FlatButton.centered(textRenderer, fx + 94, y, fw - 94, 15,
                     Component.translatable("pmchat.botstore.openfolder"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
@@ -240,11 +240,11 @@ public class PmBotStoreScreen extends Screen {
     }
 
     private void submit() {
-        String name = nameField.getText().trim();
-        String desc = descField.getText().trim();
+        String name = nameField.getValue().trim();
+        String desc = descField.getValue().trim();
         long price;
         try {
-            price = Math.max(0, Long.parseLong(priceField.getText().trim()));
+            price = Math.max(0, Long.parseLong(priceField.getValue().trim()));
         } catch (NumberFormatException e) {
             price = 0;
         }
@@ -272,7 +272,7 @@ public class PmBotStoreScreen extends Screen {
                 if (ok2) {
                     status = Component.translatable("pmchat.botstore.submitted");
                     statusColor = 0xFF8FD8A8;
-                    nameField.setText(""); descField.setText(""); priceField.setText("0");
+                    nameField.setValue(""); descField.setValue(""); priceField.setValue("0");
                     nameText = ""; descText = ""; priceText = "0";
                     selectedFile = null;
                     loadMine();

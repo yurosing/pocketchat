@@ -62,7 +62,7 @@ public class PmReportScreen extends Screen {
         reasonField.setMaxLength(300);
         String hint = Component.translatable("pmchat.report.hint").getString();
         reasonField.setSuggestion(hint);
-        reasonField.setChangedListener(s -> reasonField.setSuggestion(s.isEmpty() ? hint : null));
+        reasonField.setResponder(s -> reasonField.setSuggestion(s.isEmpty() ? hint : null));
         addDrawableChild(reasonField);
         y += 24;
 
@@ -75,13 +75,13 @@ public class PmReportScreen extends Screen {
     }
 
     private void send() {
-        String reason = reasonField.getText().trim();
+        String reason = reasonField.getValue().trim();
         if (reason.isEmpty()) return;
         PmBackend.report(target, reason, (ok, v, err) -> {
             if (ok) {
                 status = Component.translatable("pmchat.report.ok");
                 statusColor = 0xFF8FD8A8;
-                reasonField.setText("");
+                reasonField.setValue("");
             } else {
                 status = Component.translatable("pmchat.admin.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;

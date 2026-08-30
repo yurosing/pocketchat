@@ -67,9 +67,9 @@ public class PmLoginScreen extends Screen {
         userField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.login.username"));
         userField.setMaxLength(32);
         String prefillUser = config.backendToken.isBlank() ? PmChatClient.selfName() : "";
-        userField.setText(prefillUser);
+        userField.setValue(prefillUser);
         userField.setSuggestion(prefillUser.isEmpty() ? Component.translatable("pmchat.login.username").getString() : null);
-        userField.setChangedListener(s -> userField.setSuggestion(
+        userField.setResponder(s -> userField.setSuggestion(
                 s.isEmpty() ? Component.translatable("pmchat.login.username").getString() : null));
         addDrawableChild(userField);
         y += 30;
@@ -78,7 +78,7 @@ public class PmLoginScreen extends Screen {
         passField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.login.password"));
         passField.setMaxLength(64);
         passField.setSuggestion(Component.translatable("pmchat.login.password").getString());
-        passField.setChangedListener(s -> passField.setSuggestion(
+        passField.setResponder(s -> passField.setSuggestion(
                 s.isEmpty() ? Component.translatable("pmchat.login.password").getString() : null));
         addDrawableChild(passField);
         y += 30;
@@ -106,8 +106,8 @@ public class PmLoginScreen extends Screen {
     }
 
     private void doLogin() {
-        String u = userField.getText().trim();
-        String p = passField.getText();
+        String u = userField.getValue().trim();
+        String p = passField.getValue();
         if (u.isEmpty() || p.length() < 6) {
             setStatus(Component.translatable("pmchat.login.short"), 0xFFE07A6A);
             return;
@@ -124,8 +124,8 @@ public class PmLoginScreen extends Screen {
     }
 
     private void doRegister() {
-        String u = userField.getText().trim();
-        String p = passField.getText();
+        String u = userField.getValue().trim();
+        String p = passField.getValue();
         if (u.isEmpty() || p.length() < 6) {
             setStatus(Component.translatable("pmchat.login.short"), 0xFFE07A6A);
             return;

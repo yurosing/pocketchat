@@ -143,7 +143,7 @@ public class PmStreamsScreen extends Screen {
                             reinit();
                             return;
                         }
-                        sm.startStream(titleField.getText().trim(), urlField.getText().trim());
+                        sm.startStream(titleField.getValue().trim(), urlField.getValue().trim());
                         startMode = false;
                         reinit();
                     }));
@@ -163,7 +163,7 @@ public class PmStreamsScreen extends Screen {
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W / 2 + 6, fy + 24, 84, 18,
                     Component.translatable("pmchat.streams.donate"),
                     0xFF6B4A1E, 0xFF7E5824, 0xFFB98A3A, 0xFFF0D8A0, btn -> {
-                        double amount = parseAmount(amountField.getText());
+                        double amount = parseAmount(amountField.getValue());
                         if (amount > 0) sm.donate(donateTarget, amount);
                         donateTarget = null;
                         reinit();

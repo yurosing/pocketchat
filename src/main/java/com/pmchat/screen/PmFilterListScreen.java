@@ -76,7 +76,7 @@ public class PmFilterListScreen extends Screen {
     @Override
     protected void init() {
         applyTheme();
-        if (field != null) input = field.getText();
+        if (field != null) input = field.getValue();
         clearChildren();
 
         PANEL_W = Math.max(160, Math.min(320, width - 24));
@@ -93,10 +93,10 @@ public class PmFilterListScreen extends Screen {
         String hintKey = isText() ? "pmchat.filters.texthint" : "pmchat.filters.nick";
         field = new EditBox(textRenderer, px + 10, addY, fieldW, 16, Component.translatable(hintKey));
         field.setMaxLength(256);
-        field.setText(input);
+        field.setValue(input);
         String hint = Component.translatable(hintKey).getString();
         field.setSuggestion(input.isEmpty() ? hint : "");
-        field.setChangedListener(s -> {
+        field.setResponder(s -> {
             field.setSuggestion(s.isEmpty() ? hint : "");
             tabLastCompleted = null;
         });
@@ -107,7 +107,7 @@ public class PmFilterListScreen extends Screen {
             int sx = bx - scopeGap - scopeW;
             addDrawableChild(FlatButton.centered(textRenderer, sx, addY, scopeW, 16,
                     Component.translatable(scopeKey(scope)), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
-                        input = field.getText();
+                        input = field.getValue();
                         scope = (scope + 1) % 3;
                         reinit();
                     }));
@@ -132,7 +132,7 @@ public class PmFilterListScreen extends Screen {
 
     /** Добавить новую запись или сохранить редактируемую. */
     private void commit() {
-        String t = field.getText().trim();
+        String t = field.getValue().trim();
         if (!t.isEmpty()) {
             if (isText()) {
                 if (editIndex >= 0 && editIndex < config.filterRules.size()) {
@@ -299,7 +299,7 @@ public class PmFilterListScreen extends Screen {
 
     /** Автодополнение ника по списку игроков; повторный Tab циклит совпадения. */
     private void completeNick() {
-        String text = field.getText();
+        String text = field.getValue();
         boolean cycling = tabLastCompleted != null && tabLastCompleted.equals(text) && !tabMatches.isEmpty();
         if (!cycling) {
             if (text.isEmpty()) return;
@@ -321,7 +321,7 @@ public class PmFilterListScreen extends Screen {
         }
         tabIndex = (tabIndex + 1) % tabMatches.size();
         String completed = tabBase + tabMatches.get(tabIndex);
-        field.setText(completed);
+        field.setValue(completed);
         field.setCursorToEnd(false);
         tabLastCompleted = completed;
     }

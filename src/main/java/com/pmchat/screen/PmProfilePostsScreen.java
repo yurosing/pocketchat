@@ -85,7 +85,7 @@ public class PmProfilePostsScreen extends Screen {
     }
 
     private void layout() {
-        if (composeField != null) composeText = composeField.getText();
+        if (composeField != null) composeText = composeField.getValue();
         clearChildren();
 
         int fx = px + 12;
@@ -96,7 +96,7 @@ public class PmProfilePostsScreen extends Screen {
             int fieldW = fw - 66;
             composeField = new EditBox(textRenderer, fx, y, fieldW, 15, Component.translatable("pmchat.posts.hint"));
             composeField.setMaxLength(2000);
-            composeField.setText(composeText);
+            composeField.setValue(composeText);
             addDrawableChild(composeField);
 
             int bw = 20;
@@ -122,20 +122,20 @@ public class PmProfilePostsScreen extends Screen {
 
     /** Ж/К/П — оборачивает (или, если уже обёрнут этим маркером, разворачивает) весь текст поля. */
     private void wrapField(String marker) {
-        String s = composeField.getText();
+        String s = composeField.getValue();
         if (s.startsWith(marker) && s.endsWith(marker) && s.length() >= marker.length() * 2) {
-            composeField.setText(s.substring(marker.length(), s.length() - marker.length()));
+            composeField.setValue(s.substring(marker.length(), s.length() - marker.length()));
         } else {
-            composeField.setText(marker + s + marker);
+            composeField.setValue(marker + s + marker);
         }
     }
 
     private void publish() {
-        String content = composeField.getText().trim();
+        String content = composeField.getValue().trim();
         if (content.isEmpty()) return;
         PmBackend.createProfilePost(content, (ok, v, err) -> {
             if (ok) {
-                composeField.setText("");
+                composeField.setValue("");
                 composeText = "";
                 status = Component.translatable("pmchat.posts.published");
                 statusColor = 0xFF8FD8A8;

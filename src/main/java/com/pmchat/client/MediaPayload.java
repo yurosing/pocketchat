@@ -3,7 +3,7 @@ package com.pmchat.client;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * Custom payload for the {@code pmchat:media} plugin-messaging channel — the
@@ -14,7 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 public record MediaPayload(byte[] data) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Id<MediaPayload> ID =
-            new CustomPacketPayload.Id<>(ResourceLocation.of("pmchat", "media"));
+            new CustomPacketPayload.Id<>(Identifier.of("pmchat", "media"));
 
     public static final StreamCodec<FriendlyByteBuf, MediaPayload> CODEC = new StreamCodec<>() {
         @Override

@@ -87,9 +87,9 @@ public class PmBotsScreen extends Screen {
 
     /** Пересобирает виджеты (поля + кнопки) — вызывается заново после загрузки/изменения списка. */
     private void layout() {
-        if (nameField != null) nameText = nameField.getText();
-        if (userField != null) userText = userField.getText();
-        if (searchField != null) searchText = searchField.getText();
+        if (nameField != null) nameText = nameField.getValue();
+        if (userField != null) userText = userField.getValue();
+        if (searchField != null) searchText = searchField.getValue();
         clearChildren();
 
         int fx = px + 12;
@@ -99,18 +99,18 @@ public class PmBotsScreen extends Screen {
         // Создание бота: имя + @username
         nameField = new EditBox(textRenderer, fx, y, fw / 2 - 3, 15, Component.translatable("pmchat.bots.name"));
         nameField.setMaxLength(64);
-        nameField.setText(nameText);
+        nameField.setValue(nameText);
         String nameHint = Component.translatable("pmchat.bots.name").getString();
         nameField.setSuggestion(nameText.isEmpty() ? nameHint : null);
-        nameField.setChangedListener(s -> nameField.setSuggestion(s.isEmpty() ? nameHint : null));
+        nameField.setResponder(s -> nameField.setSuggestion(s.isEmpty() ? nameHint : null));
         addDrawableChild(nameField);
 
         userField = new EditBox(textRenderer, fx + fw / 2 + 3, y, fw / 2 - 3, 15, Component.translatable("pmchat.bots.username"));
         userField.setMaxLength(32);
-        userField.setText(userText);
+        userField.setValue(userText);
         String userHint = Component.translatable("pmchat.bots.username").getString();
         userField.setSuggestion(userText.isEmpty() ? userHint : null);
-        userField.setChangedListener(s -> userField.setSuggestion(s.isEmpty() ? userHint : null));
+        userField.setResponder(s -> userField.setSuggestion(s.isEmpty() ? userHint : null));
         addDrawableChild(userField);
         y += 19;
         // Цена создания (если админ её включил) рисуется в render() тут же, без виджета.
@@ -163,10 +163,10 @@ public class PmBotsScreen extends Screen {
         int searchY = py + ph - 40;
         searchField = new EditBox(textRenderer, fx, searchY, fw, 15, Component.translatable("pmchat.bots.searchhint"));
         searchField.setMaxLength(32);
-        searchField.setText(searchText);
+        searchField.setValue(searchText);
         String searchHint = Component.translatable("pmchat.bots.searchhint").getString();
         searchField.setSuggestion(searchText.isEmpty() ? searchHint : null);
-        searchField.setChangedListener(s -> {
+        searchField.setResponder(s -> {
             searchField.setSuggestion(s.isEmpty() ? searchHint : null);
             runSearch(s.trim().replaceFirst("^@", ""));
         });
@@ -192,8 +192,8 @@ public class PmBotsScreen extends Screen {
     }
 
     private void createBot() {
-        String name = nameField.getText().trim();
-        String user = userField.getText().trim().replaceFirst("^@", "");
+        String name = nameField.getValue().trim();
+        String user = userField.getValue().trim().replaceFirst("^@", "");
         if (user.isEmpty()) {
             status = Component.translatable("pmchat.bots.needusername");
             statusColor = 0xFFE07A6A;
@@ -203,8 +203,8 @@ public class PmBotsScreen extends Screen {
             if (ok && bot != null) {
                 status = Component.translatable("pmchat.bots.created", bot.username);
                 statusColor = 0xFF8FD8A8;
-                nameField.setText("");
-                userField.setText("");
+                nameField.setValue("");
+                userField.setValue("");
                 nameText = ""; userText = "";
                 Minecraft.getInstance().keyboard.setClipboard(bot.token);
                 loadBots();

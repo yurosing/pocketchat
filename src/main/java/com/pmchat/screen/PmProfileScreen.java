@@ -107,10 +107,10 @@ public class PmProfileScreen extends Screen {
             birthdayField = new EditBox(textRenderer, px + PANEL_W - 108, contentY, 100, 15,
                     Component.translatable("pmchat.profile.birthday"));
             birthdayField.setMaxLength(24);
-            birthdayField.setText(config.profileBirthday == null ? "" : config.profileBirthday);
+            birthdayField.setValue(config.profileBirthday == null ? "" : config.profileBirthday);
             String bh = Component.translatable("pmchat.profile.birthday.hint").getString();
-            birthdayField.setSuggestion(birthdayField.getText().isEmpty() ? bh : "");
-            birthdayField.setChangedListener(s -> birthdayField.setSuggestion(s.isEmpty() ? bh : ""));
+            birthdayField.setSuggestion(birthdayField.getValue().isEmpty() ? bh : "");
+            birthdayField.setResponder(s -> birthdayField.setSuggestion(s.isEmpty() ? bh : ""));
             addDrawableChild(birthdayField);
             contentY += 21;
 
@@ -118,10 +118,10 @@ public class PmProfileScreen extends Screen {
             descField = new EditBox(textRenderer, px + 12, contentY + 12, PANEL_W - 24, 15,
                     Component.translatable("pmchat.profile.desc"));
             descField.setMaxLength(120);
-            descField.setText(config.profileDescription == null ? "" : config.profileDescription);
+            descField.setValue(config.profileDescription == null ? "" : config.profileDescription);
             String dh = Component.translatable("pmchat.profile.desc.hint").getString();
-            descField.setSuggestion(descField.getText().isEmpty() ? dh : "");
-            descField.setChangedListener(s -> descField.setSuggestion(s.isEmpty() ? dh : ""));
+            descField.setSuggestion(descField.getValue().isEmpty() ? dh : "");
+            descField.setResponder(s -> descField.setSuggestion(s.isEmpty() ? dh : ""));
             addDrawableChild(descField);
             contentY += 33;
         } else {
@@ -129,10 +129,10 @@ public class PmProfileScreen extends Screen {
             aliasField = new EditBox(textRenderer, px + PANEL_W - 108, contentY, 100, 15,
                     Component.translatable("pmchat.profile.rename"));
             aliasField.setMaxLength(24);
-            aliasField.setText(config.hasAlias(player) ? config.aliasOf(player) : "");
+            aliasField.setValue(config.hasAlias(player) ? config.aliasOf(player) : "");
             String rh = Component.translatable("pmchat.profile.rename.hint").getString();
-            aliasField.setSuggestion(aliasField.getText().isEmpty() ? rh : "");
-            aliasField.setChangedListener(s -> aliasField.setSuggestion(s.isEmpty() ? rh : ""));
+            aliasField.setSuggestion(aliasField.getValue().isEmpty() ? rh : "");
+            aliasField.setResponder(s -> aliasField.setSuggestion(s.isEmpty() ? rh : ""));
             addDrawableChild(aliasField);
             contentY += 21;
 
@@ -171,10 +171,10 @@ public class PmProfileScreen extends Screen {
             noteField = new EditBox(textRenderer, px + 12, contentY + 12, PANEL_W - 24, 15,
                     Component.translatable("pmchat.profile.note"));
             noteField.setMaxLength(200);
-            noteField.setText(config.noteOf(player));
+            noteField.setValue(config.noteOf(player));
             String nh = Component.translatable("pmchat.profile.note.hint").getString();
-            noteField.setSuggestion(noteField.getText().isEmpty() ? nh : "");
-            noteField.setChangedListener(s -> noteField.setSuggestion(s.isEmpty() ? nh : ""));
+            noteField.setSuggestion(noteField.getValue().isEmpty() ? nh : "");
+            noteField.setResponder(s -> noteField.setSuggestion(s.isEmpty() ? nh : ""));
             addDrawableChild(noteField);
             contentY += 33;
         }
@@ -192,10 +192,10 @@ public class PmProfileScreen extends Screen {
     }
 
     private void persistFields() {
-        if (birthdayField != null) config.profileBirthday = birthdayField.getText().trim();
-        if (descField != null) config.profileDescription = descField.getText().trim();
-        if (aliasField != null) config.setAlias(player, aliasField.getText());
-        if (noteField != null) config.setNote(player, noteField.getText());
+        if (birthdayField != null) config.profileBirthday = birthdayField.getValue().trim();
+        if (descField != null) config.profileDescription = descField.getValue().trim();
+        if (aliasField != null) config.setAlias(player, aliasField.getValue());
+        if (noteField != null) config.setNote(player, noteField.getValue());
         config.save();
     }
 

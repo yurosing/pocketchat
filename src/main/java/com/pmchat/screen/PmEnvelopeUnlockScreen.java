@@ -74,7 +74,7 @@ public class PmEnvelopeUnlockScreen extends Screen {
     }
 
     private void tryOpen() {
-        String answer = answerField.getText();
+        String answer = answerField.getValue();
         if (PmWire.checkEnvelopeAnswer(answer, answerHash)) {
             msg.envelopeOpened = true;
             PmChatClient.getHistory().save();

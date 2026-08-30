@@ -310,10 +310,10 @@ public class PmSettingsScreen extends Screen {
             backendUrlField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.settings.backendurl.hint"));
             backendUrlField.setMaxLength(200);
             if (backendConfigured()) {
-                backendUrlField.setText(config.backendUrl);
+                backendUrlField.setValue(config.backendUrl);
             } else {
                 backendUrlField.setSuggestion(hint);
-                backendUrlField.setChangedListener(s -> backendUrlField.setSuggestion(s.isEmpty() ? hint : null));
+                backendUrlField.setResponder(s -> backendUrlField.setSuggestion(s.isEmpty() ? hint : null));
             }
             addDrawableChild(backendUrlField);
             y += 20;
@@ -321,7 +321,7 @@ public class PmSettingsScreen extends Screen {
             addDrawableChild(FlatButton.centered(textRenderer, fx, y, fw, 16,
                     Component.translatable("pmchat.settings.backendurl.connect"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                     btn -> {
-                        String url = backendUrlField.getText().trim();
+                        String url = backendUrlField.getValue().trim();
                         if (!url.isEmpty()) {
                             if (!url.matches("(?i)^[a-z][a-z0-9+.-]*://.*")) {
                                 url = "http://" + url;
@@ -386,10 +386,10 @@ public class PmSettingsScreen extends Screen {
                 dmPriceField.setMaxLength(8);
                 com.pmchat.client.PmBackend.AccountInfo self =
                         com.pmchat.client.PmBackend.cachedAccountInfo(PmChatClient.selfName());
-                dmPriceField.setText(self != null ? String.valueOf(self.dmPrice) : "");
+                dmPriceField.setValue(self != null ? String.valueOf(self.dmPrice) : "");
                 String hint = Component.translatable("pmchat.shop.dmprice.hint").getString();
-                dmPriceField.setSuggestion(dmPriceField.getText().isEmpty() ? hint : "");
-                dmPriceField.setChangedListener(s -> dmPriceField.setSuggestion(s.isEmpty() ? hint : ""));
+                dmPriceField.setSuggestion(dmPriceField.getValue().isEmpty() ? hint : "");
+                dmPriceField.setResponder(s -> dmPriceField.setSuggestion(s.isEmpty() ? hint : ""));
                 addDrawableChild(dmPriceField);
                 addDrawableChild(FlatButton.centered(textRenderer, fx + fw - 58, y, 58, 16,
                         Component.translatable("pmchat.shop.dmprice.save"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
@@ -410,7 +410,7 @@ public class PmSettingsScreen extends Screen {
     private void saveDmPrice() {
         long price;
         try {
-            price = Long.parseLong(dmPriceField.getText().trim());
+            price = Long.parseLong(dmPriceField.getValue().trim());
         } catch (NumberFormatException e) {
             dmPriceStatus = Component.translatable("pmchat.admin.badamount");
             dmPriceStatusColor = 0xFFE07A6A;

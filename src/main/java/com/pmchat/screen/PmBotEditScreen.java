@@ -60,8 +60,8 @@ public class PmBotEditScreen extends Screen {
     }
 
     private void layout() {
-        if (nameField != null) nameText = nameField.getText();
-        if (userField != null) userText = userField.getText();
+        if (nameField != null) nameText = nameField.getValue();
+        if (userField != null) userText = userField.getValue();
         clearChildren();
 
         int fx = px + 12;
@@ -70,13 +70,13 @@ public class PmBotEditScreen extends Screen {
 
         nameField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.bots.name"));
         nameField.setMaxLength(64);
-        nameField.setText(nameText);
+        nameField.setValue(nameText);
         addDrawableChild(nameField);
         y += 19;
 
         userField = new EditBox(textRenderer, fx, y, fw, 15, Component.translatable("pmchat.bots.username"));
         userField.setMaxLength(32);
-        userField.setText(userText);
+        userField.setValue(userText);
         addDrawableChild(userField);
         y += 22;
 
@@ -96,8 +96,8 @@ public class PmBotEditScreen extends Screen {
     }
 
     private void save(boolean regenerateToken) {
-        String name = nameField.getText().trim();
-        String newUser = userField.getText().trim().replaceFirst("^@", "");
+        String name = nameField.getValue().trim();
+        String newUser = userField.getValue().trim().replaceFirst("^@", "");
         if (newUser.isEmpty()) {
             status = Component.translatable("pmchat.bots.needusername");
             statusColor = 0xFFE07A6A;

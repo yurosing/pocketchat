@@ -4,17 +4,17 @@ import com.pmchat.screen.PmScreen;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,15 +134,15 @@ public class PmChatClient implements ClientModInitializer {
 
         // Категорию создаём ОДИН раз и переиспользуем для всех клавиш —
         // повторный create() с тем же id падает «already registered».
-        KeyMapping.Category category = KeyMapping.Category.create(ResourceLocation.of(MOD_ID, "category"));
-        openKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        KeyMapping.Category category = KeyMapping.Category.register(Identifier.of(MOD_ID, "category"));
+        openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.pmchat.open", GLFW.GLFW_KEY_J, category));
         // медиа/плейлисты
-        mediaKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        mediaKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.pmchat.media", GLFW.GLFW_KEY_K, category));
-        mediaPlayKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        mediaPlayKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.pmchat.media.play", GLFW.GLFW_KEY_UNKNOWN, category));
-        mediaNextKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        mediaNextKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.pmchat.media.next", GLFW.GLFW_KEY_UNKNOWN, category));
 
         // Рисуем окошко медиаплеера поверх HUD, когда никакой наш экран не открыт —
@@ -290,13 +290,13 @@ public class PmChatClient implements ClientModInitializer {
         });
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
-                ClientCommandManager.literal("pm")
+                ClientCommands.literal("pm")
                         .executes(ctx -> {
                             Minecraft client = ctx.getSource().getClient();
                             client.execute(() -> openMessenger(client));
                             return 1;
                         })
-                        .then(ClientCommandManager.literal("hosts")
+                        .then(ClientCommands.literal("hosts")
                                 .executes(ctx -> {
                                     testHosts(ctx.getSource().getClient());
                                     return 1;

@@ -4,9 +4,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.platform.NativeImageBackedTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.server.packs.resources.Resource;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,8 +20,8 @@ import java.util.Optional;
  */
 public final class PmOfficialIcon {
 
-    private static final ResourceLocation RESOURCE = ResourceLocation.of("pmchat", "textures/gui/pocketchat_logo.png");
-    private static final ResourceLocation TEXTURE_ID = ResourceLocation.of("pmchat", "pocketchat_logo");
+    private static final Identifier RESOURCE = Identifier.of("pmchat", "textures/gui/pocketchat_logo.png");
+    private static final Identifier TEXTURE_ID = Identifier.of("pmchat", "pocketchat_logo");
 
     private static boolean attempted;
     private static boolean ready;
@@ -46,7 +46,7 @@ public final class PmOfficialIcon {
             width = image.getWidth();
             height = image.getHeight();
             client.getTextureManager().registerTexture(TEXTURE_ID,
-                    new NativeImageBackedTexture(() -> "pmchat-official-icon", image));
+                    new DynamicTexture(() -> "pmchat-official-icon", image));
             ready = true;
         } catch (IOException e) {
             PmChatClient.LOGGER.debug("PocketChat official icon load failed: {}", e.toString());

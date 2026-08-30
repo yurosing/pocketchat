@@ -1001,8 +1001,8 @@ public class PmScreen extends Screen {
         int y = py + 40;
         pollQ = new EditBox(textRenderer, cx, y, cw, 16, Component.translatable("pmchat.poll.q"));
         pollQ.setMaxLength(80);
-        pollQ.setSuggestion(pollQ.getText().isEmpty() ? Component.translatable("pmchat.poll.q").getString() : "");
-        pollQ.setChangedListener(s -> pollQ.setSuggestion(s.isEmpty() ? Component.translatable("pmchat.poll.q").getString() : ""));
+        pollQ.setSuggestion(pollQ.getValue().isEmpty() ? Component.translatable("pmchat.poll.q").getString() : "");
+        pollQ.setResponder(s -> pollQ.setSuggestion(s.isEmpty() ? Component.translatable("pmchat.poll.q").getString() : ""));
         addDrawableChild(pollQ);
         y += 20;
         for (int i = 0; i < pollOpts.length; i++) {
@@ -1012,7 +1012,7 @@ public class PmScreen extends Screen {
             pollOpts[i].setMaxLength(48);
             String hint = Component.translatable("pmchat.poll.opt").getString() + " " + (i + 1);
             pollOpts[i].setSuggestion(hint);
-            pollOpts[i].setChangedListener(s -> pollOpts[fi].setSuggestion(s.isEmpty() ? hint : ""));
+            pollOpts[i].setResponder(s -> pollOpts[fi].setSuggestion(s.isEmpty() ? hint : ""));
             addDrawableChild(pollOpts[i]);
             y += 17;
         }
@@ -1033,10 +1033,10 @@ public class PmScreen extends Screen {
 
     private void createPoll() {
         if (pollQ == null || selected == null) return;
-        String q = pollQ.getText().trim();
+        String q = pollQ.getValue().trim();
         List<String> opts = new ArrayList<>();
         for (EditBox f : pollOpts) {
-            if (f != null && !f.getText().trim().isEmpty()) opts.add(f.getText().trim());
+            if (f != null && !f.getValue().trim().isEmpty()) opts.add(f.getValue().trim());
         }
         if (q.isEmpty() || opts.size() < 2) return;
         PmChatClient.sendPoll(selected, pollMulti, q, opts);
@@ -1055,14 +1055,14 @@ public class PmScreen extends Screen {
         groupNameField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(nameHint));
         groupNameField.setMaxLength(24);
         groupNameField.setSuggestion(nameHint);
-        groupNameField.setChangedListener(s -> groupNameField.setSuggestion(s.isEmpty() ? nameHint : ""));
+        groupNameField.setResponder(s -> groupNameField.setSuggestion(s.isEmpty() ? nameHint : ""));
         addDrawableChild(groupNameField);
         y += 42;
         String memHint = Component.translatable("pmchat.group.members.hint").getString();
         groupMembersField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(memHint));
         groupMembersField.setMaxLength(160);
         groupMembersField.setSuggestion(memHint);
-        groupMembersField.setChangedListener(s -> groupMembersField.setSuggestion(s.isEmpty() ? memHint : ""));
+        groupMembersField.setResponder(s -> groupMembersField.setSuggestion(s.isEmpty() ? memHint : ""));
         addDrawableChild(groupMembersField);
         y += 30;
         addDrawableChild(FlatButton.centered(textRenderer, cx, y, 100, 16,
@@ -1075,8 +1075,8 @@ public class PmScreen extends Screen {
 
     private void createGroupFromComposer() {
         if (groupNameField == null || groupMembersField == null) return;
-        String name = groupNameField.getText().trim();
-        String raw = groupMembersField.getText().trim();
+        String name = groupNameField.getValue().trim();
+        String raw = groupMembersField.getValue().trim();
         List<String> members = new ArrayList<>();
         for (String part : raw.split("[,\\s]+")) {
             if (!part.isBlank()) members.add(part.trim());
@@ -1111,14 +1111,14 @@ public class PmScreen extends Screen {
         broadcastNameField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(nameHint));
         broadcastNameField.setMaxLength(32);
         broadcastNameField.setSuggestion(nameHint);
-        broadcastNameField.setChangedListener(s -> broadcastNameField.setSuggestion(s.isEmpty() ? nameHint : ""));
+        broadcastNameField.setResponder(s -> broadcastNameField.setSuggestion(s.isEmpty() ? nameHint : ""));
         addDrawableChild(broadcastNameField);
         y += 42;
         String descHint = Component.translatable("pmchat.broadcast.desc.hint").getString();
         broadcastDescField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(descHint));
         broadcastDescField.setMaxLength(160);
         broadcastDescField.setSuggestion(descHint);
-        broadcastDescField.setChangedListener(s -> broadcastDescField.setSuggestion(s.isEmpty() ? descHint : ""));
+        broadcastDescField.setResponder(s -> broadcastDescField.setSuggestion(s.isEmpty() ? descHint : ""));
         addDrawableChild(broadcastDescField);
         y += 30;
         addDrawableChild(FlatButton.centered(textRenderer, cx, y, 100, 16,
@@ -1131,8 +1131,8 @@ public class PmScreen extends Screen {
 
     private void createBroadcastFromComposer() {
         if (broadcastNameField == null) return;
-        String name = broadcastNameField.getText().trim();
-        String desc = broadcastDescField != null ? broadcastDescField.getText().trim() : "";
+        String name = broadcastNameField.getValue().trim();
+        String desc = broadcastDescField != null ? broadcastDescField.getValue().trim() : "";
         String id = PmChatClient.createBroadcast(name, desc);
         broadcastCreateMode = false;
         if (id != null) {
@@ -1162,7 +1162,7 @@ public class PmScreen extends Screen {
         broadcastCodeField = new EditBox(textRenderer, cx, y, cw, 16, Component.literal(codeHint));
         broadcastCodeField.setMaxLength(48);
         broadcastCodeField.setSuggestion(codeHint);
-        broadcastCodeField.setChangedListener(s -> broadcastCodeField.setSuggestion(s.isEmpty() ? codeHint : ""));
+        broadcastCodeField.setResponder(s -> broadcastCodeField.setSuggestion(s.isEmpty() ? codeHint : ""));
         addDrawableChild(broadcastCodeField);
         y += 30;
         addDrawableChild(FlatButton.centered(textRenderer, cx, y, 100, 16,
@@ -1175,7 +1175,7 @@ public class PmScreen extends Screen {
 
     private void joinBroadcastFromComposer() {
         if (broadcastCodeField == null) return;
-        boolean sent = PmChatClient.requestJoinBroadcast(broadcastCodeField.getText());
+        boolean sent = PmChatClient.requestJoinBroadcast(broadcastCodeField.getValue());
         broadcastJoinMode = false;
         if (sent) {
             Minecraft.getInstance().getToastManager().add(new com.pmchat.client.PmToast(
@@ -1225,9 +1225,9 @@ public class PmScreen extends Screen {
     }
 
     private void rebuild() {
-        if (searchField != null) searchText = searchField.getText();
-        if (inputField != null) inputText = inputField.getText();
-        if (amountField != null) amountText = amountField.getText();
+        if (searchField != null) searchText = searchField.getValue();
+        if (inputField != null) inputText = inputField.getValue();
+        if (amountField != null) amountText = amountField.getValue();
 
         clearChildren();
         searchField = null;
@@ -1374,10 +1374,10 @@ public class PmScreen extends Screen {
         searchField = new EditBox(textRenderer, px + 6, py + 22, LEFT_W - 12, 14,
                 Component.translatable("pmchat.search"));
         searchField.setMaxLength(48);
-        searchField.setText(searchText);
+        searchField.setValue(searchText);
         String hint = Component.translatable("pmchat.search").getString();
         searchField.setSuggestion(searchText.isEmpty() ? hint : "");
-        searchField.setChangedListener(s -> {
+        searchField.setResponder(s -> {
             listScroll = 0;
             searchField.setSuggestion(s.isEmpty() ? hint : "");
         });
@@ -1455,10 +1455,10 @@ public class PmScreen extends Screen {
                 amountField = new EditBox(textRenderer, px + LEFT_W + 8, inputY, PANEL_W - LEFT_W - 78, 16,
                         Component.translatable("pmchat.money.hint"));
                 amountField.setMaxLength(12);
-                amountField.setText(amountText);
+                amountField.setValue(amountText);
                 String moneyHint = Component.translatable("pmchat.money.hint").getString();
                 amountField.setSuggestion(amountText.isEmpty() ? moneyHint : "");
-                amountField.setChangedListener(s -> amountField.setSuggestion(s.isEmpty() ? moneyHint : ""));
+                amountField.setResponder(s -> amountField.setSuggestion(s.isEmpty() ? moneyHint : ""));
                 addDrawableChild(amountField);
                 addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 66, inputY, 58, 16,
                         Component.literal("$ ➤"), 0xFF8A6A20, 0xFF9A7826, 0xFFB9862E, MONEY_TEXT, btn -> doPay()));
@@ -1471,11 +1471,11 @@ public class PmScreen extends Screen {
                 // обычный чат допускает небольшой перебор, чтобы счётчик 5.2 показывал
                 // «на сколько превышает», а отправку блокируем
                 inputField.setMaxLength(MSG_LIMIT + COMPOSER_SLACK);
-                inputField.setText(inputText);
+                inputField.setValue(inputText);
                 String inputHint = Component.translatable("pmchat.input.hint").getString();
                 inputField.setSuggestion(inputText.isEmpty() ? inputHint : "");
                 String typingTarget = selected;
-                inputField.setChangedListener(s -> {
+                inputField.setResponder(s -> {
                     inputField.setSuggestion(s.isEmpty() ? inputHint : "");
                     if (!s.isEmpty()) {
                         PmChatClient.sendTyping(typingTarget);
@@ -1520,10 +1520,10 @@ public class PmScreen extends Screen {
             inputField = new EditBox(textRenderer, px + LEFT_W + 54, inputY, PANEL_W - LEFT_W - 90, 16,
                     Component.translatable("pmchat.input.hint"));
             inputField.setMaxLength(MSG_LIMIT + COMPOSER_SLACK);
-            inputField.setText(inputText);
+            inputField.setValue(inputText);
             String inputHint = Component.translatable("pmchat.input.hint").getString();
             inputField.setSuggestion(inputText.isEmpty() ? inputHint : "");
-            inputField.setChangedListener(s -> inputField.setSuggestion(s.isEmpty() ? inputHint : ""));
+            inputField.setResponder(s -> inputField.setSuggestion(s.isEmpty() ? inputHint : ""));
             addDrawableChild(inputField);
             addDrawableChild(FlatButton.centered(textRenderer, px + PANEL_W - 28, inputY - 1, 18, 18,
                     Component.literal("➤"), ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> doSend()).circular());
@@ -1733,8 +1733,8 @@ public class PmScreen extends Screen {
                     switch (com.pmchat.client.PmStt.state) {
                         case READY -> com.pmchat.client.PmStt.startListening(text -> {
                             if (inputField != null) {
-                                String current = inputField.getText();
-                                inputField.setText((current.isBlank() ? text : current + " " + text).trim());
+                                String current = inputField.getValue();
+                                inputField.setValue((current.isBlank() ? text : current + " " + text).trim());
                                 inputField.setFocused(true);
                             }
                         });
@@ -1753,7 +1753,7 @@ public class PmScreen extends Screen {
      */
     private void renderCharCounter(GuiGraphicsExtractor context) {
         if (inputField == null) return;
-        int len = inputField.getText().length();
+        int len = inputField.getValue().length();
         int limit = composerLimit();
         int remaining = limit - len;
         boolean show = remaining <= 25; // как в Telegram — ближе к концу
@@ -1773,7 +1773,7 @@ public class PmScreen extends Screen {
 
     private void doSend() {
         if (inputField == null || selected == null) return;
-        String text = inputField.getText().trim();
+        String text = inputField.getValue().trim();
         if (text.isEmpty()) return;
         if (blockIfMuted()) return;
         // Перебор лимита — не отправляем (счётчик 5.2 подсвечен красным)
@@ -1788,7 +1788,7 @@ public class PmScreen extends Screen {
             } else {
                 PmChatClient.sendChannel(channelId(), text);
             }
-            inputField.setText("");
+            inputField.setValue("");
             inputText = "";
             msgScroll = 0;
             planeAt = System.currentTimeMillis();
@@ -1799,7 +1799,7 @@ public class PmScreen extends Screen {
             PmChatClient.editMessage(selected, editTarget, text);
             editTarget = null;
             emojiMode = false;
-            inputField.setText("");
+            inputField.setValue("");
             inputText = "";
             rebuild();
             return;
@@ -1814,7 +1814,7 @@ public class PmScreen extends Screen {
             PmChatClient.sendMessage(target, text, replyHash, replyFragStart, replyFragLen, replyFragText);
             clearReply();
             emojiMode = false;
-            inputField.setText("");
+            inputField.setValue("");
             inputText = "";
             msgScroll = 0;
             planeAt = System.currentTimeMillis();
@@ -2267,10 +2267,10 @@ public class PmScreen extends Screen {
     private void doPay() {
         if (amountField == null || selected == null) return;
         try {
-            long amount = Long.parseLong(amountField.getText().trim().replace(" ", ""));
+            long amount = Long.parseLong(amountField.getValue().trim().replace(" ", ""));
             if (amount <= 0) return;
             PmChatClient.sendMoney(selected, amount);
-            amountField.setText("");
+            amountField.setValue("");
             amountText = "";
             moneyMode = false;
             msgScroll = 0;
@@ -3233,7 +3233,7 @@ public class PmScreen extends Screen {
 
 
     private String query() {
-        return (searchField != null ? searchField.getText() : searchText).trim().toLowerCase(Locale.ROOT);
+        return (searchField != null ? searchField.getValue() : searchText).trim().toLowerCase(Locale.ROOT);
     }
 
     /** Подсветка выбранной строки + запоминание её позиции для плавного индикатора. */
@@ -5189,7 +5189,7 @@ public class PmScreen extends Screen {
                     statsMode = false;
                     closeModes();
                     history.clearUnread(conv);
-                    if (searchField != null) searchField.setText("");
+                    if (searchField != null) searchField.setValue("");
                     searchText = "";
                     msgScroll = 0;
                     rebuild();
@@ -5440,7 +5440,7 @@ public class PmScreen extends Screen {
             int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
             if (click.x() >= rx && click.x() < rx + rw && click.y() >= ry && click.y() < ry + rh) {
                 if (inputField != null) {
-                    inputField.setText(inputField.getText() + r[4]);
+                    inputField.setValue(inputField.getValue() + r[4]);
                     inputField.setFocused(true);
                 }
                 return true;
@@ -5456,7 +5456,7 @@ public class PmScreen extends Screen {
         if (editCancelX >= 0 && click.x() >= editCancelX && click.x() < editCancelX + 12
                 && click.y() >= editCancelY && click.y() < editCancelY + 12) {
             editTarget = null;
-            if (inputField != null) inputField.setText("");
+            if (inputField != null) inputField.setValue("");
             inputText = "";
             return true;
         }
@@ -6050,7 +6050,7 @@ public class PmScreen extends Screen {
      */
     private void completeNick() {
         if (inputField == null) return;
-        String text = inputField.getText();
+        String text = inputField.getValue();
         // Продолжаем цикл, если поле не менялось руками после прошлого Tab
         boolean cycling = tabLastCompleted != null && tabLastCompleted.equals(text) && !tabMatches.isEmpty();
         if (!cycling) {
@@ -6078,7 +6078,7 @@ public class PmScreen extends Screen {
         String base = cycling ? tabBase : text.substring(0, sp + 1);
         if (!cycling) tabBase = base;
         String completed = base + tabMatches.get(tabIndex);
-        inputField.setText(completed);
+        inputField.setValue(completed);
         inputField.setCursorToEnd(false);
         tabLastCompleted = completed;
     }

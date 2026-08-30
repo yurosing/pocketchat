@@ -70,7 +70,7 @@ public class PmAdminAccountsScreen extends Screen {
         searchField = new EditBox(textRenderer, fx, y, fw, 16, Component.translatable("pmchat.admin.accounts.search"));
         String hint = Component.translatable("pmchat.admin.accounts.search").getString();
         searchField.setSuggestion(hint);
-        searchField.setChangedListener(s -> {
+        searchField.setResponder(s -> {
             searchField.setSuggestion(s.isEmpty() ? hint : null);
             load();
         });
@@ -88,7 +88,7 @@ public class PmAdminAccountsScreen extends Screen {
     private void load() {
         status = Component.translatable("pmchat.admin.accounts.loading");
         statusColor = 0xFFAAAAAA;
-        String q = searchField != null ? searchField.getText() : "";
+        String q = searchField != null ? searchField.getValue() : "";
         PmBackend.adminListAccounts(q, (ok, list, err) -> {
             if (ok) {
                 accounts = list;
