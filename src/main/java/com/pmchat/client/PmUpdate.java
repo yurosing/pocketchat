@@ -84,10 +84,10 @@ public final class PmUpdate {
         MutableComponent msg = Component.literal("[pmchat] ").withStyle(ChatFormatting.AQUA)
                 .append(Component.literal("Доступна новая версия " + tag + ". ").withStyle(ChatFormatting.WHITE))
                 .append(Component.literal("Открыть страницу релиза →")
-                        .styled(s -> s.withFormatting(ChatFormatting.GREEN, ChatFormatting.UNDERLINE)
+                        .withStyle(s -> s.applyFormats(ChatFormatting.GREEN, ChatFormatting.UNDERLINE)
                                 .withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
                                 .withHoverEvent(new HoverEvent.ShowText(Component.literal(url)))));
-        client.gui.getChatHud().addMessage(msg);
+        client.gui.hud.getChat().addMessage(msg);
 
         // Заодно приглашение в Discord — если задано (pmchat.json: discordUrl).
         String discord = PmChatClient.getConfig().discordUrl;
@@ -97,10 +97,10 @@ public final class PmUpdate {
                 MutableComponent dmsg = Component.literal("[pmchat] ").withStyle(ChatFormatting.AQUA)
                         .append(Component.literal("Наш Discord: ").withStyle(ChatFormatting.WHITE))
                         .append(Component.literal(discord)
-                                .styled(s -> s.withFormatting(ChatFormatting.BLUE, ChatFormatting.UNDERLINE)
+                                .withStyle(s -> s.applyFormats(ChatFormatting.BLUE, ChatFormatting.UNDERLINE)
                                         .withClickEvent(new ClickEvent.OpenUrl(discordUri))
                                         .withHoverEvent(new HoverEvent.ShowText(Component.literal(discord)))));
-                client.gui.getChatHud().addMessage(dmsg);
+                client.gui.hud.getChat().addMessage(dmsg);
             } catch (IllegalArgumentException ignored) {
                 // некорректная ссылка в конфиге — молча пропускаем
             }

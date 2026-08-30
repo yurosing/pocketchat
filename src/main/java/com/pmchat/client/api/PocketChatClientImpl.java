@@ -202,7 +202,7 @@ public final class PocketChatClientImpl implements PocketChatClientApi {
     @Override
     public void toast(String title, String body) {
         Minecraft client = Minecraft.getInstance();
-        client.execute(() -> client.gui.toastManager().add(
+        client.execute(() -> client.gui.toastManager().addToast(
                 new PmToast(title == null ? "" : title, body == null ? "" : body)));
     }
 

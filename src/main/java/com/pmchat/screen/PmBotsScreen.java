@@ -71,7 +71,7 @@ public class PmBotsScreen extends Screen {
         if (createPrice < 0) {
             PmBackend.getBotCreatePrice((ok, price, err) -> {
                 createPrice = ok && price != null ? price : 0;
-                if (client != null) layout();
+                if (minecraft != null) layout();
             });
         }
         layout();
@@ -81,7 +81,7 @@ public class PmBotsScreen extends Screen {
     void loadBots() {
         PmBackend.listBots((ok, list, err) -> {
             bots = ok && list != null ? list : new ArrayList<>();
-            if (client != null) layout();
+            if (minecraft != null) layout();
         });
     }
 
@@ -327,7 +327,7 @@ public class PmBotsScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

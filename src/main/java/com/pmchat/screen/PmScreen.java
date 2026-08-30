@@ -1178,7 +1178,7 @@ public class PmScreen extends Screen {
         boolean sent = PmChatClient.requestJoinBroadcast(broadcastCodeField.getValue());
         broadcastJoinMode = false;
         if (sent) {
-            Minecraft.getInstance().gui.toastManager().add(new com.pmchat.client.PmToast(
+            Minecraft.getInstance().gui.toastManager().addToast(new com.pmchat.client.PmToast(
                     "◈", Component.translatable("pmchat.broadcast.request_sent").getString()));
         }
         rebuild();
@@ -6255,7 +6255,7 @@ public class PmScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 

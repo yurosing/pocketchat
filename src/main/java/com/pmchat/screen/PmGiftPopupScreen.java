@@ -139,7 +139,7 @@ public class PmGiftPopupScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 

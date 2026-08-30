@@ -80,7 +80,7 @@ public class PmProfilePostsScreen extends Screen {
     private void loadPosts() {
         PmBackend.profilePosts(player, (ok, list, err) -> {
             posts = ok && list != null ? list : new ArrayList<>();
-            if (client != null) layout();
+            if (minecraft != null) layout();
         });
     }
 
@@ -168,7 +168,7 @@ public class PmProfilePostsScreen extends Screen {
             if (bold != null) {
                 out.append(Component.literal(bold).setStyle(Style.EMPTY.withBold(true)));
             } else if (underline != null) {
-                out.append(Component.literal(underline).setStyle(Style.EMPTY.withUnderline(true)));
+                out.append(Component.literal(underline).setStyle(Style.EMPTY.withUnderlined(true)));
             } else if (italic != null) {
                 out.append(Component.literal(italic).setStyle(Style.EMPTY.withItalic(true)));
             }
@@ -289,7 +289,7 @@ public class PmProfilePostsScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

@@ -81,7 +81,7 @@ public class PmBotStoreScreen extends Screen {
         if (submitPrice < 0) {
             PmBackend.getBotstoreSubmitPrice((ok, price, err) -> {
                 submitPrice = ok && price != null ? price : 0;
-                if (client != null) layout();
+                if (minecraft != null) layout();
             });
         }
         layout();
@@ -90,14 +90,14 @@ public class PmBotStoreScreen extends Screen {
     private void loadMarket() {
         PmBackend.botstoreMarket(marketSearchText, (ok, list, err) -> {
             market = ok && list != null ? list : new ArrayList<>();
-            if (client != null) layout();
+            if (minecraft != null) layout();
         });
     }
 
     private void loadMine() {
         PmBackend.myBotListings((ok, list, err) -> {
             mine = ok && list != null ? list : new ArrayList<>();
-            if (client != null) layout();
+            if (minecraft != null) layout();
         });
     }
 
@@ -430,7 +430,7 @@ public class PmBotStoreScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }
