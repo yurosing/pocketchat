@@ -34,14 +34,15 @@ dependencies {
     implementation project(':api-mod')
 
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    // 26.1+ ships unobfuscated with official Mojang mappings; Fabric no longer
-    // maintains Yarn from this version on.
-    mappings loom.officialMojangMappings()
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    // 26.1+ ships fully unobfuscated (real names baked into the jar) — Mojang doesn't
+    // even publish a mappings file for these versions, so there's no `mappings` line
+    // and no remapping step; mod dependencies use plain implementation/compileOnly
+    // instead of the old modImplementation/modCompileOnly.
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     // Mod Menu — только API на компиляции, для экрана настроек (с Modrinth-мавена)
-    modCompileOnly "maven.modrinth:modmenu:17.0.0-beta.2"
+    compileOnly "maven.modrinth:modmenu:17.0.0-beta.2"
 
     // Vosk — оффлайн-распознавание речи (нативная библиотека внутри jar;
     // JNA не включаем — Minecraft уже поставляет её для Narrator)
