@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.17'
+    id 'fabric-loom' version '1.17.20'
     id 'maven-publish'
     // Version declared once here; :api-mod applies it and does the actual publishing.
     id 'com.vanniktech.maven.publish' version '0.30.0' apply false
