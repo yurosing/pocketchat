@@ -102,14 +102,14 @@ public class PmSendCoinsScreen extends Screen {
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
         Component title = getTitle();
-        context.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(font, title, px + (PANEL_W - font.width(title)) / 2, py + 8, TITLE, false);
 
         Long bal = PmBackend.cachedSelfBalance();
         String balStr = Component.translatable("pmchat.shop.balance", PmBackend.formatCoins(bal != null ? bal : 0L)).getString();
         context.text(font, balStr, px + 16, py + 20, PmBackend.CURRENCY_COLOR, false);
 
         if (!status.getString().isEmpty()) {
-            context.text(font, status, px + (PANEL_W - font.getWidth(status)) / 2, py + PANEL_H - 34, statusColor, false);
+            context.text(font, status, px + (PANEL_W - font.width(status)) / 2, py + PANEL_H - 34, statusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);
@@ -117,7 +117,7 @@ public class PmSendCoinsScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

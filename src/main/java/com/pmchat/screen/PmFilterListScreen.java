@@ -175,7 +175,7 @@ public class PmFilterListScreen extends Screen {
         ctx.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = Component.translatable(PmFiltersScreen.categoryKey(category));
-        ctx.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 9, TITLE, false);
+        ctx.text(font, title, px + (PANEL_W - font.width(title)) / 2, py + 9, TITLE, false);
 
         int listTop = py + 48;
         int listBottom = py + panelH - 30;
@@ -234,7 +234,7 @@ public class PmFilterListScreen extends Screen {
     private void drawMini(GuiGraphicsExtractor ctx, int x, int y, String glyph, int color, int mx, int my) {
         boolean hov = mx >= x && mx < x + 16 && my >= y && my < y + 14;
         ctx.fill(x, y, x + 16, y + 14, hov ? 0xFF2A4A5C : 0xFF101A16);
-        ctx.text(font, glyph, x + 8 - font.getWidth(glyph) / 2, y + 3, color, false);
+        ctx.text(font, glyph, x + 8 - font.width(glyph) / 2, y + 3, color, false);
     }
 
     private List<String> wrap(String text, int maxW) {
@@ -242,7 +242,7 @@ public class PmFilterListScreen extends Screen {
         StringBuilder cur = new StringBuilder();
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
-            if (font.getWidth(cur.toString() + c) > maxW && cur.length() > 0) {
+            if (font.width(cur.toString() + c) > maxW && cur.length() > 0) {
                 out.add(cur.toString());
                 cur = new StringBuilder();
             }
@@ -306,9 +306,9 @@ public class PmFilterListScreen extends Screen {
             String pl = text.toLowerCase(Locale.ROOT);
             tabMatches.clear();
             Minecraft mc = Minecraft.getInstance();
-            if (mc.getNetworkHandler() != null) {
+            if (mc.getConnection() != null) {
                 List<String> names = new ArrayList<>();
-                for (net.minecraft.client.multiplayer.PlayerInfo e : mc.getNetworkHandler().getPlayerList()) {
+                for (net.minecraft.client.multiplayer.PlayerInfo e : mc.getConnection().getOnlinePlayers()) {
                     String n = e.getProfile().name();
                     if (n != null && n.toLowerCase(Locale.ROOT).startsWith(pl)) names.add(n);
                 }
@@ -334,7 +334,7 @@ public class PmFilterListScreen extends Screen {
     public void close() {
         config.save();
         PmChatClient.reloadPatterns();
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

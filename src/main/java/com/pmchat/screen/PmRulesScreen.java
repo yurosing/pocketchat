@@ -166,7 +166,7 @@ public class PmRulesScreen extends Screen {
         context.outline(px, py, PANEL_W, panelH, BORDER);
 
         Component title = getTitle();
-        context.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 10, TITLE, false);
+        context.text(font, title, px + (PANEL_W - font.width(title)) / 2, py + 10, TITLE, false);
         context.fill(px + 12, py + 24, px + PANEL_W - 12, py + 25, BORDER);
 
         int textW = PANEL_W - 32;
@@ -214,7 +214,7 @@ public class PmRulesScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(viewOnly ? returnTo : null);
+        Minecraft.getInstance().gui.setScreen(viewOnly ? returnTo : null);
     }
 
     @Override

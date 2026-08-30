@@ -47,8 +47,8 @@ public class PmToast implements Toast {
         context.text(font, Component.literal("✉ " + sender), 9, 7, ACCENT, false);
         String text = preview;
         int maxW = getWidth() - 18;
-        if (font.getWidth(text) > maxW) {
-            text = font.trimToWidth(text, maxW - font.getWidth("…")) + "…";
+        if (font.width(text) > maxW) {
+            text = font.trimToWidth(text, maxW - font.width("…")) + "…";
         }
         context.text(font, Component.literal(text), 9, 19, 0xFFEDF3F0, false);
     }

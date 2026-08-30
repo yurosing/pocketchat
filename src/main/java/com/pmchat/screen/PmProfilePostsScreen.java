@@ -242,7 +242,7 @@ public class PmProfilePostsScreen extends Screen {
         StringBuilder cur = new StringBuilder();
         for (String word : text.split(" ")) {
             String candidate = cur.isEmpty() ? word : cur + " " + word;
-            if (font.getWidth(candidate.replaceAll("\\*\\*|__|_", "")) > maxW && !cur.isEmpty()) {
+            if (font.width(candidate.replaceAll("\\*\\*|__|_", "")) > maxW && !cur.isEmpty()) {
                 lines.add(cur.toString());
                 cur = new StringBuilder(word);
             } else {
@@ -278,14 +278,14 @@ public class PmProfilePostsScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

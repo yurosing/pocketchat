@@ -122,7 +122,7 @@ public class PmBotsScreen extends Screen {
                 btn -> createBot()));
         addRenderableWidget(FlatButton.centered(font, fx + createW + 4, y, fw - createW - 4, 15,
                 Component.translatable("pmchat.bots.store"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
-                btn -> Minecraft.getInstance().setScreen(new PmBotStoreScreen(this))));
+                btn -> Minecraft.getInstance().gui.setScreen(new PmBotStoreScreen(this))));
         y += 22;
 
         // Список моих ботов
@@ -140,16 +140,16 @@ public class PmBotsScreen extends Screen {
                 addRenderableWidget(FlatButton.centered(font, fx, actY, actW, 13,
                         Component.translatable("pmchat.bots.copytoken"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
                         btn -> {
-                            Minecraft.getInstance().keyboard.setClipboard(b.token);
+                            Minecraft.getInstance().keyboardHandler.setClipboard(b.token);
                             status = Component.translatable("pmchat.bots.copied");
                             statusColor = 0xFF8FD8A8;
                         }));
                 addRenderableWidget(FlatButton.centered(font, fx + actW + 4, actY, actW, 13,
                         Component.translatable("pmchat.bots.openchat"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF8FD8A8,
-                        btn -> Minecraft.getInstance().setScreen(new PmScreen(b.username))));
+                        btn -> Minecraft.getInstance().gui.setScreen(new PmScreen(b.username))));
                 addRenderableWidget(FlatButton.centered(font, fx + 2 * (actW + 4), actY, actW, 13,
                         Component.literal("✎"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
-                        btn -> Minecraft.getInstance().setScreen(new PmBotEditScreen(this, b))));
+                        btn -> Minecraft.getInstance().gui.setScreen(new PmBotEditScreen(this, b))));
                 addRenderableWidget(FlatButton.centered(font, fx + 3 * (actW + 4), actY, actW, 13,
                         Component.literal("✖"), 0xFF5A2A22, 0xFF6E332A, 0xFFA0463A, 0xFFE07A6A,
                         btn -> deleteBot(b.username)));
@@ -206,7 +206,7 @@ public class PmBotsScreen extends Screen {
                 nameField.setValue("");
                 userField.setValue("");
                 nameText = ""; userText = "";
-                Minecraft.getInstance().keyboard.setClipboard(bot.token);
+                Minecraft.getInstance().keyboardHandler.setClipboard(bot.token);
                 loadBots();
             } else if (err != null && err.contains("insufficient balance")) {
                 status = Component.translatable("pmchat.bots.needcoins", createPrice);
@@ -301,7 +301,7 @@ public class PmBotsScreen extends Screen {
         for (Object[] r : searchRowRects) {
             if (mx >= (int) r[0] && mx < (int) r[0] + (int) r[2]
                     && my >= (int) r[1] && my < (int) r[1] + (int) r[3]) {
-                Minecraft.getInstance().setScreen(new PmScreen((String) r[4]));
+                Minecraft.getInstance().gui.setScreen(new PmScreen((String) r[4]));
                 return true;
             }
         }
@@ -316,14 +316,14 @@ public class PmBotsScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

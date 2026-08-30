@@ -482,12 +482,12 @@ public class PmPhotoEditScreen extends Screen {
         context.fill(0, 0, width, height, 0xE6000000);
 
         String titleStr = Component.translatable("pmchat.photoedit.title").getString();
-        context.text(font, titleStr, width / 2 - font.getWidth(titleStr) / 2, 8,
+        context.text(font, titleStr, width / 2 - font.width(titleStr) / 2, 8,
                 TITLE, false);
 
         if (loadError) {
             String err = Component.translatable("pmchat.photoedit.error").getString();
-            context.text(font, err, width / 2 - font.getWidth(err) / 2, height / 2,
+            context.text(font, err, width / 2 - font.width(err) / 2, height / 2,
                     0xFFE07A6A, false);
             super.extractRenderState(context, mouseX, mouseY, delta);
             return;
@@ -504,7 +504,7 @@ public class PmPhotoEditScreen extends Screen {
             }
             if (drawMode) {
                 String hint = Component.translatable("pmchat.photoedit.drawhint").getString();
-                context.text(font, hint, width / 2 - font.getWidth(hint) / 2,
+                context.text(font, hint, width / 2 - font.width(hint) / 2,
                         height - 92, LABEL, false);
             }
             if (cropMode && (cropDragging || cropHasSelection)) {
@@ -514,7 +514,7 @@ public class PmPhotoEditScreen extends Screen {
                 context.outline(x1, y1, x2 - x1, y2 - y1, 0xFFFFFFFF);
             } else if (cropMode) {
                 String hint = Component.translatable("pmchat.photoedit.crophint").getString();
-                context.text(font, hint, width / 2 - font.getWidth(hint) / 2,
+                context.text(font, hint, width / 2 - font.width(hint) / 2,
                         height - 92, LABEL, false);
             }
             if (textMode && r != null) {
@@ -528,7 +528,7 @@ public class PmPhotoEditScreen extends Screen {
                     }
                 } else {
                     String hint = Component.translatable("pmchat.photoedit.texthint").getString();
-                    context.text(font, hint, width / 2 - font.getWidth(hint) / 2,
+                    context.text(font, hint, width / 2 - font.width(hint) / 2,
                             height - 108, LABEL, false);
                 }
             }
@@ -544,7 +544,7 @@ public class PmPhotoEditScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

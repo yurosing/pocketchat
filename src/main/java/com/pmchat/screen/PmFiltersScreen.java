@@ -126,7 +126,7 @@ public class PmFiltersScreen extends Screen {
 
         Component title = Component.translatable("pmchat.filters.title");
         context.text(font, title,
-                px + (PANEL_W - font.getWidth(title)) / 2, py + 9, TITLE, false);
+                px + (PANEL_W - font.width(title)) / 2, py + 9, TITLE, false);
 
         for (Object[] l : labels) {
             context.text(font, (String) l[0], (int) l[1], (int) l[2], (int) l[3], false);
@@ -141,14 +141,14 @@ public class PmFiltersScreen extends Screen {
             String count = String.valueOf(categoryCount(config, cat));
             // Крупное число по центру
             context.text(font, count,
-                    t[0] + (t[2] - font.getWidth(count)) / 2, t[1] + 14, VALUE, false);
+                    t[0] + (t[2] - font.width(count)) / 2, t[1] + 14, VALUE, false);
             // Подпись снизу (в 1–2 строки)
             String label = Component.translatable(categoryKey(cat)).getString();
             List<String> lines = wrap(label, t[2] - 8);
             int ly = t[1] + t[3] - lines.size() * 10 - 4;
             for (String line : lines) {
                 context.text(font, line,
-                        t[0] + (t[2] - font.getWidth(line)) / 2, ly, SECTION, false);
+                        t[0] + (t[2] - font.width(line)) / 2, ly, SECTION, false);
                 ly += 10;
             }
         }
@@ -161,7 +161,7 @@ public class PmFiltersScreen extends Screen {
         StringBuilder cur = new StringBuilder();
         for (String w : words) {
             String test = cur.length() == 0 ? w : cur + " " + w;
-            if (font.getWidth(test) > maxW && cur.length() > 0) {
+            if (font.width(test) > maxW && cur.length() > 0) {
                 out.add(cur.toString());
                 cur = new StringBuilder(w);
             } else {
@@ -177,7 +177,7 @@ public class PmFiltersScreen extends Screen {
         int mx = (int) click.x(), my = (int) click.y();
         for (int[] t : tiles) {
             if (mx >= t[0] && mx < t[0] + t[2] && my >= t[1] && my < t[1] + t[3]) {
-                Minecraft.getInstance().setScreen(new PmFilterListScreen(this, t[4]));
+                Minecraft.getInstance().gui.setScreen(new PmFilterListScreen(this, t[4]));
                 return true;
             }
         }
@@ -192,7 +192,7 @@ public class PmFiltersScreen extends Screen {
     public void close() {
         config.save();
         PmChatClient.reloadPatterns();
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

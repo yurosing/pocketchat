@@ -16,7 +16,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import org.lwjgl.glfw.GLFW;
 
 import java.text.SimpleDateFormat;
@@ -115,7 +115,7 @@ public class PmContactMediaScreen extends Screen {
         ctx.text(font, trim(title.getString(), pw - 40), px + 12, py + 9, TEXT, false);
 
         String x = "✕";
-        int xw = font.getWidth(x) + 8;
+        int xw = font.width(x) + 8;
         closeRect = new int[]{px + pw - xw - 6, py + 5, xw, 14};
         boolean hovX = in(mouseX, mouseY, closeRect);
         ctx.text(font, x, closeRect[0] + 4, closeRect[1] + 3, hovX ? TEXT : SUBTLE, false);
@@ -129,7 +129,7 @@ public class PmContactMediaScreen extends Screen {
         int ty = py + 24;
         int tx = px + 10;
         for (int i = 0; i < labels.length; i++) {
-            int w = font.getWidth(labels[i]) + 14;
+            int w = font.width(labels[i]) + 14;
             tabW[i] = w;
             tabRects[i] = tx;
             boolean sel = tab == i;
@@ -191,7 +191,7 @@ public class PmContactMediaScreen extends Screen {
             ctx.text(font, Component.translatable("pmchat.sharedmedia.video"),
                     x + iconSz + 6, y + 2, TEXT, false);
         }
-        ctx.text(font, when, x + w - font.getWidth(when), y + 2, SUBTLE, false);
+        ctx.text(font, when, x + w - font.width(when), y + 2, SUBTLE, false);
     }
 
     /** Затемнённый оверлей с картинкой, вписанной в окно (как в PmScreen). */
@@ -209,7 +209,7 @@ public class PmContactMediaScreen extends Screen {
                     w, h, e.width, e.height, e.width, e.height);
         }
         Component hint = Component.translatable("pmchat.image.close");
-        ctx.text(font, hint, (width - font.getWidth(hint)) / 2, height - 16, 0xFFB8C6CE, false);
+        ctx.text(font, hint, (width - font.width(hint)) / 2, height - 16, 0xFFB8C6CE, false);
     }
 
     @Override
@@ -288,7 +288,7 @@ public class PmContactMediaScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override
@@ -311,8 +311,8 @@ public class PmContactMediaScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 }

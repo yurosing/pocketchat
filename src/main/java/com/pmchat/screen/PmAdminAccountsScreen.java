@@ -108,7 +108,7 @@ public class PmAdminAccountsScreen extends Screen {
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.text(font, getTitle(), px + (PANEL_W - font.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(font, getTitle(), px + (PANEL_W - font.width(getTitle())) / 2, py + 8, TITLE, false);
 
         int y = listTop;
         int visible = accounts.size();
@@ -122,7 +122,7 @@ public class PmAdminAccountsScreen extends Screen {
                     a.official ? 0xFFF0C34E : a.verified ? 0xFF4CC26A : LABEL, false);
             String balanceStr = String.valueOf(a.balance);
             context.text(font, balanceStr,
-                    px + PANEL_W - 14 - font.getWidth(balanceStr), y + 2, VALUE, false);
+                    px + PANEL_W - 14 - font.width(balanceStr), y + 2, VALUE, false);
             net.minecraft.network.chat.Component lastSeen = PmBackend.humanizeLastSeen(a.lastSeenAt, config.preciseLastSeen && a.sharePrecise);
             context.text(font, lastSeen, px + 10, y + 13, LABEL, false);
             y += ROW_H;
@@ -160,7 +160,7 @@ public class PmAdminAccountsScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

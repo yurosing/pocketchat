@@ -118,7 +118,7 @@ public class FlatButton extends AbstractWidget {
         Component message = getMessage();
         int textY = y0 + (getHeight() - font.fontHeight) / 2;
         if (centered) {
-            int textX = x0 + getWidth() / 2 - font.getWidth(message) / 2;
+            int textX = x0 + getWidth() / 2 - font.width(message) / 2;
             context.text(font, message, textX, textY, textColor, false);
         } else {
             context.text(font, message, x0 + 6, textY, textColor, false);

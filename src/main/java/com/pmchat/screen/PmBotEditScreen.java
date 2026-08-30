@@ -108,7 +108,7 @@ public class PmBotEditScreen extends Screen {
             if (ok && bot != null) {
                 currentUsername = bot.username;
                 if (regenerateToken) {
-                    Minecraft.getInstance().keyboard.setClipboard(bot.token);
+                    Minecraft.getInstance().keyboardHandler.setClipboard(bot.token);
                     status = Component.translatable("pmchat.bots.regenok");
                 } else {
                     status = Component.translatable("pmchat.bots.saved");
@@ -123,7 +123,7 @@ public class PmBotEditScreen extends Screen {
 
     private void back() {
         parent.loadBots();
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override
@@ -143,8 +143,8 @@ public class PmBotEditScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 

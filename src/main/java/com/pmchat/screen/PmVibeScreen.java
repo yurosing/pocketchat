@@ -66,7 +66,7 @@ public class PmVibeScreen extends Screen {
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.text(font, getTitle(), px + (PANEL_W - font.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(font, getTitle(), px + (PANEL_W - font.width(getTitle())) / 2, py + 8, TITLE, false);
 
         int listTop = py + 24;
         int listBottom = py + PANEL_H - 28;
@@ -93,8 +93,8 @@ public class PmVibeScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 
@@ -114,7 +114,7 @@ public class PmVibeScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

@@ -8,7 +8,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.File;
@@ -72,7 +72,7 @@ public class PmMediaScreen extends Screen {
         ctx.text(font, title, px + 12, py + 10, TEXT, false);
         // Кнопка «открыть папку музыки»
         Component openLbl = Component.translatable("pmchat.media.openfolder");
-        int owL = font.getWidth(openLbl) + 16;
+        int owL = font.width(openLbl) + 16;
         int oX = px + pw - owL - 10, oY = py + 7;
         openFolderRect = new int[]{oX, oY, owL, 16};
         boolean hovOpen = in(mouseX, mouseY, openFolderRect);
@@ -107,7 +107,7 @@ public class PmMediaScreen extends Screen {
                 String right = dir ? count + " " + Component.translatable("pmchat.media.tracks").getString() : "";
                 ctx.text(font, trim(label, pw - 60), px + 26, y + 5, TEXT, false);
                 if (!right.isEmpty()) {
-                    ctx.text(font, right, px + pw - 12 - font.getWidth(right), y + 5, SUBTLE, false);
+                    ctx.text(font, right, px + pw - 12 - font.width(right), y + 5, SUBTLE, false);
                 }
                 rowRects.add(new Object[]{px + 6, y, pw - 12, rowH, f});
             }
@@ -210,8 +210,8 @@ public class PmMediaScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 }

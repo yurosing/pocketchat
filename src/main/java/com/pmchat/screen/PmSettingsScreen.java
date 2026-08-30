@@ -254,7 +254,7 @@ public class PmSettingsScreen extends Screen {
         y = addOption(y, "pmchat.filters.open",
                 () -> Component.literal("⚙"),
                 () -> 0xFF8FD8A8,
-                () -> Minecraft.getInstance().setScreen(new PmFiltersScreen(this)));
+                () -> Minecraft.getInstance().gui.setScreen(new PmFiltersScreen(this)));
 
         return y;
     }
@@ -298,7 +298,7 @@ public class PmSettingsScreen extends Screen {
         y = addOption(y, "pmchat.rules.view",
                 () -> Component.literal("⚙"),
                 () -> LABEL,
-                () -> Minecraft.getInstance().setScreen(new PmRulesScreen(this)));
+                () -> Minecraft.getInstance().gui.setScreen(new PmRulesScreen(this)));
 
         if (!backendConfigured() || editBackendUrl) {
             int fx = px + 16;
@@ -339,19 +339,19 @@ public class PmSettingsScreen extends Screen {
         y = addOption(y, "pmchat.login.open",
                 () -> Component.literal("⚙"),
                 () -> 0xFF8FD8A8,
-                () -> Minecraft.getInstance().setScreen(new PmLoginScreen(this)));
+                () -> Minecraft.getInstance().gui.setScreen(new PmLoginScreen(this)));
 
         if (isAdminAccount()) {
             y = addOption(y, "pmchat.admin.open",
                     () -> Component.literal("⚙"),
                     () -> 0xFFF0C34E,
-                    () -> Minecraft.getInstance().setScreen(new PmAdminScreen(this)));
+                    () -> Minecraft.getInstance().gui.setScreen(new PmAdminScreen(this)));
         }
 
         y = addOption(y, "pmchat.support.open",
                 () -> Component.literal("✉"),
                 () -> 0xFF5AA0E0,
-                () -> Minecraft.getInstance().setScreen(new PmSupportScreen(this)));
+                () -> Minecraft.getInstance().gui.setScreen(new PmSupportScreen(this)));
 
         y = addOption(y, "pmchat.settings.backendurl.change",
                 () -> Component.literal("⚙"),
@@ -400,7 +400,7 @@ public class PmSettingsScreen extends Screen {
                 y += 12;
                 addRenderableWidget(FlatButton.centered(font, fx, y, fw, 16,
                         Component.translatable("pmchat.tip.shop"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
-                        btn -> Minecraft.getInstance().setScreen(new PmShopScreen(this))));
+                        btn -> Minecraft.getInstance().gui.setScreen(new PmShopScreen(this))));
                 y += 20;
             }
         }
@@ -459,7 +459,7 @@ public class PmSettingsScreen extends Screen {
 
         Component title = Component.translatable("pmchat.settings.title");
         context.text(font, title,
-                px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
+                px + (PANEL_W - font.width(title)) / 2, py + 8, TITLE, false);
 
         for (Object[] entry : optionLabels) {
             context.text(font, Component.translatable((String) entry[0]),
@@ -510,7 +510,7 @@ public class PmSettingsScreen extends Screen {
         config.save();
         Minecraft client = Minecraft.getInstance();
         // Возвращаемся в чат с уже применёнными настройками
-        client.setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
+        client.gui.setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
     }
 
     @Override

@@ -153,8 +153,8 @@ public class PmChatClient implements ClientModInitializer {
             // опция «полоска при вводе», продолжаем рисовать её поверх ванильного
             // чата, чтобы плеер не исчезал, пока пишешь сообщение.
             boolean overChat = config.mediaBarWhileTyping
-                    && mc.currentScreen instanceof net.minecraft.client.gui.screens.ChatScreen;
-            if (mc.currentScreen != null && !overChat) return;
+                    && mc.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen;
+            if (mc.gui.screen() != null && !overChat) return;
             if (PmMedia.get().hasActive()) {
                 PmMedia.get().renderMini(ctx, -1, -1, false);
             }
@@ -196,7 +196,7 @@ public class PmChatClient implements ClientModInitializer {
                 (handler, client) -> PmBackend.goOffline());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            boolean chatScreenOpenNow = client.currentScreen instanceof net.minecraft.client.gui.screens.ChatScreen;
+            boolean chatScreenOpenNow = client.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen;
             if (chatScreenOpenLastTick && !chatScreenOpenNow) {
                 chatScreenClosedAt = System.currentTimeMillis();
             }
@@ -209,14 +209,14 @@ public class PmChatClient implements ClientModInitializer {
             // открывала мессенджер следом.
             while (openKey.wasPressed()) {
                 boolean justClosedChat = System.currentTimeMillis() - chatScreenClosedAt < 300;
-                if (client.currentScreen == null && !justClosedChat) {
+                if (client.gui.screen() == null && !justClosedChat) {
                     openMessenger(client);
                 }
             }
             // медиа-меню и управление плеером в игре
             while (mediaKey.wasPressed()) {
-                if (client.currentScreen == null) {
-                    client.setScreen(new com.pmchat.screen.PmMediaScreen());
+                if (client.gui.screen() == null) {
+                    client.gui.setScreen(new com.pmchat.screen.PmMediaScreen());
                 }
             }
             while (mediaPlayKey.wasPressed()) PmMedia.get().togglePause();
@@ -252,8 +252,8 @@ public class PmChatClient implements ClientModInitializer {
                     && PmBackend.isConfigured() && PmBackend.hasAccount()) {
                 nextGiftPollAt = System.currentTimeMillis() + 20_000L;
                 PmBackend.checkNewGifts((g, gift) -> {
-                    if (client.currentScreen == null) {
-                        client.setScreen(new com.pmchat.screen.PmGiftPopupScreen(g.from, gift, g.giftId));
+                    if (client.gui.screen() == null) {
+                        client.gui.setScreen(new com.pmchat.screen.PmGiftPopupScreen(g.from, gift, g.giftId));
                     } else {
                         giftToast(g.from, gift != null ? gift.name : g.giftId, gift != null ? gift.icon : null);
                     }
@@ -262,9 +262,9 @@ public class PmChatClient implements ClientModInitializer {
             // Кэшируем роль КАЖДОГО игрока в таб-листе, а не только того, чей чат/профиль
             // сейчас открыт — иначе после выхода игрока, чей ник мы ни разу не посмотрели,
             // значок его должности пропадал бы вовсе (казалось бы «нет роли»).
-            if (client.getNetworkHandler() != null && System.currentTimeMillis() >= nextRoleCacheAt) {
+            if (client.getConnection() != null && System.currentTimeMillis() >= nextRoleCacheAt) {
                 nextRoleCacheAt = System.currentTimeMillis() + 3000L;
-                for (net.minecraft.client.multiplayer.PlayerInfo e : client.getNetworkHandler().getPlayerList()) {
+                for (net.minecraft.client.multiplayer.PlayerInfo e : client.getConnection().getOnlinePlayers()) {
                     String name = e.getProfile().name();
                     String code = com.pmchat.screen.PmRoles.detect(com.pmchat.screen.PmNames.displayString(name));
                     config.cacheRole(name, code);
@@ -278,10 +278,10 @@ public class PmChatClient implements ClientModInitializer {
                 PmBackend.pollMailbox(m -> onIncoming(m.from, m.wire));
             }
             // Закрыть меню при получении урона (если включено в настройках)
-            if (config.closeOnDamage && client.currentScreen instanceof PmScreen && client.player != null) {
+            if (config.closeOnDamage && client.gui.screen() instanceof PmScreen && client.player != null) {
                 float hp = client.player.getHealth();
                 if (hp < lastHealth - 0.01f) {
-                    client.setScreen(null);
+                    client.gui.setScreen(null);
                 }
                 lastHealth = hp;
             } else if (client.player != null) {
@@ -647,7 +647,7 @@ public class PmChatClient implements ClientModInitializer {
             }
 
             Minecraft client = Minecraft.getInstance();
-            boolean viewing = client.currentScreen instanceof PmScreen screen
+            boolean viewing = client.gui.screen() instanceof PmScreen screen
                     && screen.isViewing(CHANNEL_PREFIX + channel.id);
             if (!viewing && !msg.out) {
                 channelUnread.merge(channel.id, 1, Integer::sum);
@@ -846,7 +846,7 @@ public class PmChatClient implements ClientModInitializer {
         addToGroupFeed(id, msg);
 
         Minecraft client = Minecraft.getInstance();
-        boolean viewing = client.currentScreen instanceof PmScreen screen
+        boolean viewing = client.gui.screen() instanceof PmScreen screen
                 && screen.isViewing(GROUP_PREFIX + id);
         if (!viewing) {
             groupUnread.merge(id, 1, Integer::sum);
@@ -1176,7 +1176,7 @@ public class PmChatClient implements ClientModInitializer {
         addToBroadcastFeed(id, msg);
 
         Minecraft client = Minecraft.getInstance();
-        boolean viewing = client.currentScreen instanceof PmScreen screen
+        boolean viewing = client.gui.screen() instanceof PmScreen screen
                 && screen.isViewing(BCAST_PREFIX + id);
         if (viewing) {
             sendBroadcastView(id, PmHistory.msgHash(text));
@@ -1209,7 +1209,7 @@ public class PmChatClient implements ClientModInitializer {
         // Упоминание в общем чате — пинг + тост
         if (!msg.out && mentionsMe(text, sender)) {
             Minecraft client = Minecraft.getInstance();
-            boolean viewing = client.currentScreen instanceof PmScreen s && s.isViewing(GLOBAL);
+            boolean viewing = client.gui.screen() instanceof PmScreen s && s.isViewing(GLOBAL);
             if (!viewing && !config.dnd) notifyMention(client, sender, text);
         }
     }
@@ -1443,7 +1443,7 @@ public class PmChatClient implements ClientModInitializer {
         com.pmchat.client.api.PocketChatClientImpl.fireReceived(sender, msg);
 
         Minecraft client = Minecraft.getInstance();
-        boolean viewing = client.currentScreen instanceof PmScreen screen && screen.isViewing(sender);
+        boolean viewing = client.gui.screen() instanceof PmScreen screen && screen.isViewing(sender);
         if (viewing) {
             sendSeen(sender);
         } else {
@@ -1953,7 +1953,7 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Same as {@link #openMessenger(Minecraft)}, but jumps straight to {@code conversationId}. */
     public static void openMessenger(Minecraft client, String conversationId) {
-        Runnable open = () -> client.setScreen(conversationId == null || conversationId.isBlank()
+        Runnable open = () -> client.gui.setScreen(conversationId == null || conversationId.isBlank()
                 ? new PmScreen() : new PmScreen(conversationId));
         PmBackend.RulesContent rules = PmBackend.cachedRules();
         // Не знаем актуальную версию (бэкенд не настроен/ещё не ответил) — доверяем
@@ -1962,7 +1962,7 @@ public class PmChatClient implements ClientModInitializer {
         if (config.rulesAcceptedVersion >= latestVersion) {
             open.run();
         } else {
-            client.setScreen(new com.pmchat.screen.PmRulesScreen(open));
+            client.gui.setScreen(new com.pmchat.screen.PmRulesScreen(open));
         }
     }
 
@@ -2094,8 +2094,8 @@ public class PmChatClient implements ClientModInitializer {
     /** В таб-листе текущего Minecraft-сервера ли игрок — единственное, что мод может проверить локально. */
     private static boolean isPlayerOnlineHere(String name) {
         Minecraft client = Minecraft.getInstance();
-        return name != null && client.getNetworkHandler() != null
-                && client.getNetworkHandler().getPlayerListEntry(name) != null;
+        return name != null && client.getConnection() != null
+                && client.getConnection().getPlayerInfo(name) != null;
     }
 
     // ---------- Мета: печатает / прочитано (только между модами) ----------
@@ -2229,7 +2229,7 @@ public class PmChatClient implements ClientModInitializer {
         com.pmchat.client.api.PocketChatClientImpl.fireReceived(from, msg);
 
         Minecraft client = Minecraft.getInstance();
-        boolean viewing = client.currentScreen instanceof PmScreen screen && screen.isViewing(from);
+        boolean viewing = client.gui.screen() instanceof PmScreen screen && screen.isViewing(from);
         if (!viewing) {
             history.markUnread(from);
             if (!config.dnd && !config.isMutedThread(from)) {
@@ -2277,7 +2277,7 @@ public class PmChatClient implements ClientModInitializer {
                 ? "https://yurosing.github.io/pocketchat/"
                 : "https://yurosing.github.io/pocketchat/en/";
         try {
-            net.minecraft.Util.getOperatingSystem().open(url);
+            net.minecraft.util.Util.getOperatingSystem().open(url);
         } catch (Exception e) {
             LOGGER.warn("Failed to open docs URL: {}", e.toString());
         }
@@ -2288,7 +2288,7 @@ public class PmChatClient implements ClientModInitializer {
         String url = config.discordUrl;
         if (url == null || url.isBlank()) return;
         try {
-            net.minecraft.Util.getOperatingSystem().open(url);
+            net.minecraft.util.Util.getOperatingSystem().open(url);
         } catch (Exception e) {
             LOGGER.warn("Failed to open Discord URL: {}", e.toString());
         }

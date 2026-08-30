@@ -168,7 +168,7 @@ public class PmAdminScreen extends Screen {
         // вылезали за края экрана (FlatButton текст не обрезает). Переносим лишние вкладки
         // на вторую (и далее) строку вместо этого.
         int minTabW = 0;
-        for (String k : TAB_KEYS) minTabW = Math.max(minTabW, font.getWidth(Component.translatable(k)) + 16);
+        for (String k : TAB_KEYS) minTabW = Math.max(minTabW, font.width(Component.translatable(k)) + 16);
         int cols = Math.max(1, Math.min(TAB_KEYS.length, width / Math.max(1, minTabW)));
         tabRows = (int) Math.ceil(TAB_KEYS.length / (double) cols);
         int tabW = width / cols;
@@ -266,7 +266,7 @@ public class PmAdminScreen extends Screen {
         String pillText = online ? "● ONLINE" : dashStatus == null ? "…" : "● OFFLINE";
         int pillColor = online ? OK : dashStatus == null ? SUBTLE : BAD;
         context.text(font, pillText,
-                cx - font.getWidth(pillText) / 2, top + 6, pillColor, false);
+                cx - font.width(pillText) / 2, top + 6, pillColor, false);
 
         int tilesY = top + 32;
         int tileW = Math.min(150, (width - 80) / 4);
@@ -291,16 +291,16 @@ public class PmAdminScreen extends Screen {
             drawPanel(context, x, tilesY, tileW, 56);
             context.fill(x, tilesY, x + tileW, tilesY + 2, accent[i]);
             String num = dashStatus != null ? String.valueOf(values[i]) : "—";
-            context.text(font, num, x + (tileW - font.getWidth(num)) / 2, tilesY + 14, TEXT_MAIN, false);
-            context.text(font, labels[i], x + (tileW - font.getWidth(labels[i])) / 2, tilesY + 38, SUBTLE, false);
+            context.text(font, num, x + (tileW - font.width(num)) / 2, tilesY + 14, TEXT_MAIN, false);
+            context.text(font, labels[i], x + (tileW - font.width(labels[i])) / 2, tilesY + 38, SUBTLE, false);
         }
 
         if (dashStatus != null) {
             String uptime = Component.translatable("pmchat.admin.dash.uptime", formatUptime(dashStatus.uptimeSec)).getString();
-            context.text(font, uptime, cx - font.getWidth(uptime) / 2, tilesY + 70, SUBTLE, false);
+            context.text(font, uptime, cx - font.width(uptime) / 2, tilesY + 70, SUBTLE, false);
         } else if (dashError) {
             Component err = Component.translatable("pmchat.admin.dash.fail");
-            context.text(font, err, cx - font.getWidth(err) / 2, tilesY + 70, BAD, false);
+            context.text(font, err, cx - font.width(err) / 2, tilesY + 70, BAD, false);
         }
 
         // Заголовок и состояние блока переключателей фич (кнопки уже добавлены в buildDashboard)
@@ -317,7 +317,7 @@ public class PmAdminScreen extends Screen {
         }
 
         if (!status.getString().isEmpty()) {
-            context.text(font, status, width / 2 - font.getWidth(status) / 2, height - 46, statusColor, false);
+            context.text(font, status, width / 2 - font.width(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -352,7 +352,7 @@ public class PmAdminScreen extends Screen {
         addRenderableWidget(dmTargetField);
         FlatButton browseBtn = FlatButton.centered(font, fx + dmTargetW + 4, dmY, 18, 16,
                 Component.literal("☰"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
-                btn -> Minecraft.getInstance().setScreen(
+                btn -> Minecraft.getInstance().gui.setScreen(
                         new PmAdminAccountsScreen(this, name -> dmTargetField.setValue(name))));
         addRenderableWidget(browseBtn);
 
@@ -407,7 +407,7 @@ public class PmAdminScreen extends Screen {
         addRenderableWidget(targetField);
         addRenderableWidget(FlatButton.centered(font, fx + targetFieldW + 4, y + 20, 18, 16,
                 Component.literal("☰"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
-                btn -> Minecraft.getInstance().setScreen(
+                btn -> Minecraft.getInstance().gui.setScreen(
                         new PmAdminAccountsScreen(this, name -> targetField.setValue(name)))));
 
         int ay = y + 44;
@@ -726,7 +726,7 @@ public class PmAdminScreen extends Screen {
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
             context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
             Component del = Component.translatable("pmchat.admin.shop.delete");
-            context.text(font, del, btnX + (btnW - font.getWidth(del)) / 2, btnY + 3, BAD, false);
+            context.text(font, del, btnX + (btnW - font.width(del)) / 2, btnY + 3, BAD, false);
             shopDeleteRects.add(new Object[]{btnX, btnY, btnW, btnH, item.id});
             shopRowRects.add(new Object[]{left, y, right - left - 46, ROW_H - 2, item.id});
 
@@ -736,7 +736,7 @@ public class PmAdminScreen extends Screen {
         if (shopItems.isEmpty() && !status.getString().isEmpty()) {
             context.text(font, status, left + 8, shopListTop + 2, statusColor, false);
         } else if (!status.getString().isEmpty()) {
-            context.text(font, status, width / 2 - font.getWidth(status) / 2, height - 46, statusColor, false);
+            context.text(font, status, width / 2 - font.width(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -936,7 +936,7 @@ public class PmAdminScreen extends Screen {
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
             context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
             Component del = Component.translatable("pmchat.admin.shop.delete");
-            context.text(font, del, btnX + (btnW - font.getWidth(del)) / 2, btnY + 3, BAD, false);
+            context.text(font, del, btnX + (btnW - font.width(del)) / 2, btnY + 3, BAD, false);
             roleDeleteRects.add(new Object[]{btnX, btnY, btnW, btnH, r.key});
             roleRowRects.add(new Object[]{left, y, right - left - 46, ROW_H - 2, r.key});
 
@@ -946,7 +946,7 @@ public class PmAdminScreen extends Screen {
         if (roleDefs.isEmpty() && !status.getString().isEmpty()) {
             context.text(font, status, left + 8, roleListTop + 2, statusColor, false);
         } else if (!status.getString().isEmpty()) {
-            context.text(font, status, width / 2 - font.getWidth(status) / 2, height - 46, statusColor, false);
+            context.text(font, status, width / 2 - font.width(status) / 2, height - 46, statusColor, false);
         }
     }
 
@@ -1052,11 +1052,11 @@ public class PmAdminScreen extends Screen {
             context.fill(apprX, btnY, apprX + btnW, btnY + btnH, apprHover ? BTN_HOVER : BTN_BG);
             context.outline(apprX, btnY, btnW, btnH, OK);
             Component approve = Component.translatable("pmchat.admin.bots.approve");
-            context.text(font, approve, apprX + (btnW - font.getWidth(approve)) / 2, btnY + 3, OK, false);
+            context.text(font, approve, apprX + (btnW - font.width(approve)) / 2, btnY + 3, OK, false);
             context.fill(rejX, btnY, rejX + btnW, btnY + btnH, rejHover ? BTN_HOVER : BTN_BG);
             context.outline(rejX, btnY, btnW, btnH, BAD);
             Component reject = Component.translatable("pmchat.admin.bots.reject");
-            context.text(font, reject, rejX + (btnW - font.getWidth(reject)) / 2, btnY + 3, BAD, false);
+            context.text(font, reject, rejX + (btnW - font.width(reject)) / 2, btnY + 3, BAD, false);
 
             botApproveRects.add(new Object[]{apprX, btnY, btnW, btnH, p.id});
             botRejectRects.add(new Object[]{rejX, btnY, btnW, btnH, p.id});
@@ -1137,7 +1137,7 @@ public class PmAdminScreen extends Screen {
             context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
             context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
             Component resolve = Component.translatable("pmchat.admin.resolve");
-            context.text(font, resolve, btnX + (btnW - font.getWidth(resolve)) / 2, btnY + 3, OK, false);
+            context.text(font, resolve, btnX + (btnW - font.width(resolve)) / 2, btnY + 3, OK, false);
             resolveBtnRects.add(new Object[]{btnX, btnY, btnW, btnH, reportsTab
                     ? reports.get(i).id : tickets.get(i).id});
 
@@ -1151,8 +1151,8 @@ public class PmAdminScreen extends Screen {
 
     private String trim(String text, int maxWidth) {
         if (maxWidth <= 0) return "";
-        if (font.getWidth(text) <= maxWidth) return text;
-        return font.trimToWidth(text, Math.max(0, maxWidth - font.getWidth("…"))) + "…";
+        if (font.width(text) <= maxWidth) return text;
+        return font.trimToWidth(text, Math.max(0, maxWidth - font.width("…"))) + "…";
     }
 
     // ---------- общее ----------
@@ -1184,7 +1184,7 @@ public class PmAdminScreen extends Screen {
         context.text(font, title, 12, 10, TITLE, false);
 
         String backend = config.backendUrl == null ? "" : config.backendUrl;
-        context.text(font, backend, width - 12 - font.getWidth(backend), 10, SUBTLE, false);
+        context.text(font, backend, width - 12 - font.width(backend), 10, SUBTLE, false);
 
         super.extractRenderState(context, mouseX, mouseY, delta);
 
@@ -1210,7 +1210,7 @@ public class PmAdminScreen extends Screen {
             case 8 -> drawBots(context, mouseX, mouseY);
             default -> {
                 if (!status.getString().isEmpty()) {
-                    context.text(font, status, width / 2 - font.getWidth(status) / 2,
+                    context.text(font, status, width / 2 - font.width(status) / 2,
                             height - 46, statusColor, false);
                 }
             }
@@ -1343,7 +1343,7 @@ public class PmAdminScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

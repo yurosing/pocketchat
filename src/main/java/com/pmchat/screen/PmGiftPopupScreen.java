@@ -101,7 +101,7 @@ public class PmGiftPopupScreen extends Screen {
     }
 
     private void drawCentered(GuiGraphicsExtractor ctx, String s, int centerX, int y, int color) {
-        ctx.text(font, Component.literal(s), centerX - font.getWidth(s) / 2, y, color, false);
+        ctx.text(font, Component.literal(s), centerX - font.width(s) / 2, y, color, false);
     }
 
     /** Текст с масштабом вокруг точки (centerX, y — центр по вертикали). */
@@ -110,7 +110,7 @@ public class PmGiftPopupScreen extends Screen {
         m.pushMatrix();
         m.translate(centerX, y);
         m.scale(scale, scale);
-        ctx.text(font, Component.literal(s), -font.getWidth(s) / 2, -font.fontHeight / 2, color, false);
+        ctx.text(font, Component.literal(s), -font.width(s) / 2, -font.fontHeight / 2, color, false);
         m.popMatrix();
     }
 
@@ -135,7 +135,7 @@ public class PmGiftPopupScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(null);
+        Minecraft.getInstance().gui.setScreen(null);
     }
 
     @Override

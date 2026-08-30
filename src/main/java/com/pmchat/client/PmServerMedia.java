@@ -361,7 +361,7 @@ public final class PmServerMedia {
         // Обнаружение плагина: сервер объявляет канал pmchat:media (canSend=true),
         // только если на нём стоит PocketChatMedia. canSend можно звать лишь при
         // активном соединении, иначе оно бросает исключение.
-        boolean connected = Minecraft.getInstance().getNetworkHandler() != null;
+        boolean connected = Minecraft.getInstance().getConnection() != null;
         boolean canSend = connected && ClientPlayNetworking.canSend(MediaPayload.ID);
         if (!serverHasPlugin) {
             if (canSend) {

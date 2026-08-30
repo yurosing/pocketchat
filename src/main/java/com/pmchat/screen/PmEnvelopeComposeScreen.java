@@ -147,8 +147,8 @@ public class PmEnvelopeComposeScreen extends Screen {
     }
 
     private String trimToButton(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 
@@ -198,7 +198,7 @@ public class PmEnvelopeComposeScreen extends Screen {
         context.fill(px, py + 2, px + PANEL_W, py + PANEL_H - 2, BG);
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
-        context.text(font, getTitle(), px + (PANEL_W - font.getWidth(getTitle())) / 2, py + 8, TITLE, false);
+        context.text(font, getTitle(), px + (PANEL_W - font.width(getTitle())) / 2, py + 8, TITLE, false);
 
         for (Object[] entry : fieldLabels) {
             context.text(font, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], LABEL, false);
@@ -214,12 +214,12 @@ public class PmEnvelopeComposeScreen extends Screen {
                     + "  (" + Component.translatable("pmchat.envelope.skin.next").getString() + ")";
             label = trimToButton(label, skinRect[2] - 6);
             context.text(font, label,
-                    skinRect[0] + (skinRect[2] - font.getWidth(label)) / 2, skinRect[1] + 4,
+                    skinRect[0] + (skinRect[2] - font.width(label)) / 2, skinRect[1] + 4,
                     PmWire.envelopeColor(skin), false);
         }
 
         if (!status.getString().isEmpty()) {
-            context.text(font, status, px + (PANEL_W - font.getWidth(status)) / 2, py + PANEL_H - 12, statusColor, false);
+            context.text(font, status, px + (PANEL_W - font.width(status)) / 2, py + PANEL_H - 12, statusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);
@@ -241,7 +241,7 @@ public class PmEnvelopeComposeScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

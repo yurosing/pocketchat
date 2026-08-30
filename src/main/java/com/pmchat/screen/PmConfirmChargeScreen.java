@@ -67,7 +67,7 @@ public class PmConfirmChargeScreen extends Screen {
     private void confirm() {
         if (sending) return;
         sending = true;
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
         onConfirmed.run();
     }
 
@@ -79,7 +79,7 @@ public class PmConfirmChargeScreen extends Screen {
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
         Component title = getTitle();
-        context.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(font, title, px + (PANEL_W - font.width(title)) / 2, py + 8, TITLE, false);
 
         Component ask = Component.translatable("pmchat.dm.confirm.ask", target, PmBackend.formatCoins(price));
         drawWrapped(context, ask, px + 12, py + 24, PANEL_W - 24, LABEL);
@@ -96,7 +96,7 @@ public class PmConfirmChargeScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

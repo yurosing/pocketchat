@@ -201,12 +201,12 @@ public class PmStreamsScreen extends Screen {
 
         Component title = Component.translatable("pmchat.streams.title");
         context.text(font, title,
-                px + (PANEL_W - font.getWidth(title)) / 2, py + 9, TITLE, false);
+                px + (PANEL_W - font.width(title)) / 2, py + 9, TITLE, false);
 
         if (!pluginPresent() && !startMode && donateTarget == null) {
             String note = Component.translatable("pmchat.streams.noplugin_note").getString();
             context.text(font, trimTo(note, PANEL_W - 24),
-                    px + (PANEL_W - font.getWidth(trimTo(note, PANEL_W - 24))) / 2, py + 19, SUBTLE, false);
+                    px + (PANEL_W - font.width(trimTo(note, PANEL_W - 24))) / 2, py + 19, SUBTLE, false);
         }
 
         if (!startMode && donateTarget == null) {
@@ -250,7 +250,7 @@ public class PmStreamsScreen extends Screen {
                 context.fill(bx, by, bx + bw, by + bh, hov ? BTN_HOVER : BTN_BG);
                 context.outline(bx, by, bw, bh, BTN_BORDER);
                 String lbl = Component.translatable("pmchat.streams.donate").getString();
-                context.text(font, lbl, bx + (bw - font.getWidth(lbl)) / 2, by + 5,
+                context.text(font, lbl, bx + (bw - font.width(lbl)) / 2, by + 5,
                         0xFFF0C34E, false);
                 donateRects.add(new Object[]{bx, by, bw, bh, s.player()});
             }
@@ -259,8 +259,8 @@ public class PmStreamsScreen extends Screen {
     }
 
     private String trimTo(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 
@@ -286,7 +286,7 @@ public class PmStreamsScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

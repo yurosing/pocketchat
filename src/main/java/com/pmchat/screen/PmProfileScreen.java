@@ -155,14 +155,14 @@ public class PmProfileScreen extends Screen {
             addRenderableWidget(FlatButton.centered(font, officialAccount ? px + 12 : px + 12 + halfW + 6,
                     contentY, officialAccount ? PANEL_W - 24 : halfW, 16,
                     Component.translatable("pmchat.report.open"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFE0B040,
-                    btn -> Minecraft.getInstance().setScreen(new PmReportScreen(this, player))));
+                    btn -> Minecraft.getInstance().gui.setScreen(new PmReportScreen(this, player))));
             contentY += 22;
 
             // Отправить монеты — только если есть свой аккаунт бэкенда
             if (backendGiftsAvailable()) {
                 addRenderableWidget(FlatButton.centered(font, px + 12, contentY, PANEL_W - 24, 16,
                         Component.translatable("pmchat.coins.open"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
-                        btn -> Minecraft.getInstance().setScreen(new PmSendCoinsScreen(this, player))));
+                        btn -> Minecraft.getInstance().gui.setScreen(new PmSendCoinsScreen(this, player))));
                 contentY += 22;
             }
 
@@ -211,7 +211,7 @@ public class PmProfileScreen extends Screen {
                 : trimTo(player, PANEL_W - 40);
         Component title = Component.literal(titleStr);
         context.text(font, title,
-                px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
+                px + (PANEL_W - font.width(title)) / 2, py + 8, TITLE, false);
 
         // ---- Шапка: аватар + ник + роль + статус (+ баланс для себя) ----
         int avX = px + 14, avY = py + 26, avS = 44;
@@ -230,11 +230,11 @@ public class PmProfileScreen extends Screen {
         // префикса). У серверного ника роль уже есть в самом префиксе — иначе дубль.
         if (config.hasAlias(player) && !icon.isEmpty()) {
             context.text(font, icon, nameX, py + 30, roleEff.color, false);
-            nameX += font.getWidth(icon) + 4;
+            nameX += font.width(icon) + 4;
         }
         int nameMax = px + PANEL_W - 10 - nameX;
         String nameDrawn;
-        if (font.getWidth(fullName) <= nameMax) {
+        if (font.width(fullName) <= nameMax) {
             context.text(font, fullName, nameX, py + 30, TITLE, false);
             nameDrawn = fullName.getString();
         } else {
@@ -245,7 +245,7 @@ public class PmProfileScreen extends Screen {
         if (com.pmchat.client.PmBackend.isConfigured()) {
             com.pmchat.client.PmBackend.AccountInfo acc = com.pmchat.client.PmBackend.cachedAccountInfo(player);
             if (acc != null && (acc.verified || acc.official)) {
-                PmScreen.drawVerifiedBadge(context, font, nameX + font.getWidth(nameDrawn) + 3, py + 29);
+                PmScreen.drawVerifiedBadge(context, font, nameX + font.width(nameDrawn) + 3, py + 29);
             }
         }
 
@@ -288,7 +288,7 @@ public class PmProfileScreen extends Screen {
         // определяется из ника автоматически)
         Component roleVal = Component.literal((icon.isEmpty() ? "" : icon + " ") + roleEff.label);
         context.text(font, roleVal,
-                px + PANEL_W - 12 - font.getWidth(roleVal), contentY + 4,
+                px + PANEL_W - 12 - font.width(roleVal), contentY + 4,
                 roleEff.none ? SUBTLE : roleEff.color, false);
         contentY += 21;
         if (self) {
@@ -330,12 +330,12 @@ public class PmProfileScreen extends Screen {
         int top = py + panelH - 42;
         context.fill(px + 8, top, px + PANEL_W - 8, top + 1, BORDER);
         Component postsTitle = Component.translatable("pmchat.posts.section");
-        boolean hover = mouseX >= px + 12 && mouseX < px + 12 + font.getWidth(postsTitle) + 60
+        boolean hover = mouseX >= px + 12 && mouseX < px + 12 + font.width(postsTitle) + 60
                 && mouseY >= top + 4 && mouseY < top + 15;
         context.text(font, postsTitle, px + 12, top + 5, hover ? VALUE : TITLE, false);
         Component openHint = Component.translatable("pmchat.posts.openhint");
-        context.text(font, openHint, px + 12 + font.getWidth(postsTitle) + 6, top + 5, SUBTLE, false);
-        openPostsRect = new int[]{px + 8, top + 4, font.getWidth(postsTitle) + font.getWidth(openHint) + 20, 11};
+        context.text(font, openHint, px + 12 + font.width(postsTitle) + 6, top + 5, SUBTLE, false);
+        openPostsRect = new int[]{px + 8, top + 4, font.width(postsTitle) + font.width(openHint) + 20, 11};
     }
 
     private final java.util.List<Object[]> giftRects = new java.util.ArrayList<>(); // x,y,w,h,giftId
@@ -347,12 +347,12 @@ public class PmProfileScreen extends Screen {
         openCatalogRect = null;
         context.fill(px + 8, top, px + PANEL_W - 8, top + 1, BORDER);
         Component giftsTitle = Component.translatable("pmchat.profile.gifts");
-        boolean titleHover = mouseX >= px + 12 && mouseX < px + 12 + font.getWidth(giftsTitle) + 12
+        boolean titleHover = mouseX >= px + 12 && mouseX < px + 12 + font.width(giftsTitle) + 12
                 && mouseY >= top && mouseY < top + 11;
         context.text(font, giftsTitle, px + 12, top + 5, titleHover ? VALUE : TITLE, false);
         Component openHint = Component.translatable("pmchat.gifts.openall");
-        context.text(font, openHint, px + 12 + font.getWidth(giftsTitle) + 6, top + 5, SUBTLE, false);
-        openGalleryRect = new int[]{px + 8, top, font.getWidth(giftsTitle) + font.getWidth(openHint) + 20, 11};
+        context.text(font, openHint, px + 12 + font.width(giftsTitle) + 6, top + 5, SUBTLE, false);
+        openGalleryRect = new int[]{px + 8, top, font.width(giftsTitle) + font.width(openHint) + 20, 11};
 
         boolean plugin = pluginPresent();
         boolean backend = !plugin && backendGiftsAvailable();
@@ -362,13 +362,13 @@ public class PmProfileScreen extends Screen {
         // каталог может быть длинным и не влезает в компактный профиль.
         if (!self && backend) {
             Component buyLink = Component.translatable("pmchat.profile.gifts.buyhint");
-            int bx = px + PANEL_W - 12 - font.getWidth(buyLink);
+            int bx = px + PANEL_W - 12 - font.width(buyLink);
             context.text(font, buyLink, bx, top + 5, SUBTLE, false);
-            openCatalogRect = new int[]{bx - 4, top, font.getWidth(buyLink) + 8, 11};
+            openCatalogRect = new int[]{bx - 4, top, font.width(buyLink) + 8, 11};
         } else if (!self && plugin) {
             String hint = Component.translatable("pmchat.profile.gifts.buyhint").getString();
             context.text(font, hint,
-                    px + PANEL_W - 12 - font.getWidth(hint), top + 5, SUBTLE, false);
+                    px + PANEL_W - 12 - font.width(hint), top + 5, SUBTLE, false);
         }
 
         if (plugin) {
@@ -398,7 +398,7 @@ public class PmProfileScreen extends Screen {
                 com.pmchat.client.PmServerMedia.ReceivedGift g = got.get(i);
                 String ic = g.icon() == null || g.icon().isEmpty() ? "•" : g.icon();
                 context.text(font, ic, gx, iy, 0xFFE0A0E0, false);
-                gx += font.getWidth(ic) + 4;
+                gx += font.width(ic) + 4;
             }
             if (got.size() > 14) {
                 context.text(font, "+" + (got.size() - 14), gx, iy, SUBTLE, false);
@@ -458,7 +458,7 @@ public class PmProfileScreen extends Screen {
                 context.fill(gx, iy, gx + cell, iy + cell, hover ? 0x40FFFFFF : 0x22FFFFFF);
                 context.outline(gx, iy, cell, cell, rarity);
                 float bob = hover ? 0 : (float) Math.sin(now / 400.0 + shown * 0.9) * 1f;
-                context.text(font, ic, gx + (cell - font.getWidth(ic)) / 2,
+                context.text(font, ic, gx + (cell - font.width(ic)) / 2,
                         iy + 4 + (int) bob, 0xFFFFFFFF, false);
 
                 // Цветной кружок-бейдж отправителя (первая буква ника) в углу — как в Telegram.
@@ -485,21 +485,21 @@ public class PmProfileScreen extends Screen {
         if (openGalleryRect != null) {
             int rx = openGalleryRect[0], ry = openGalleryRect[1], rw = openGalleryRect[2], rh = openGalleryRect[3];
             if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
-                Minecraft.getInstance().setScreen(new PmGiftsScreen(this, player, false));
+                Minecraft.getInstance().gui.setScreen(new PmGiftsScreen(this, player, false));
                 return true;
             }
         }
         if (openCatalogRect != null) {
             int rx = openCatalogRect[0], ry = openCatalogRect[1], rw = openCatalogRect[2], rh = openCatalogRect[3];
             if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
-                Minecraft.getInstance().setScreen(new PmGiftsScreen(this, player, true));
+                Minecraft.getInstance().gui.setScreen(new PmGiftsScreen(this, player, true));
                 return true;
             }
         }
         if (openPostsRect != null) {
             int rx = openPostsRect[0], ry = openPostsRect[1], rw = openPostsRect[2], rh = openPostsRect[3];
             if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
-                Minecraft.getInstance().setScreen(new PmProfilePostsScreen(this, player));
+                Minecraft.getInstance().gui.setScreen(new PmProfilePostsScreen(this, player));
                 return true;
             }
         }
@@ -516,14 +516,14 @@ public class PmProfileScreen extends Screen {
     }
 
     private String trimTo(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 
     private PlayerInfo onlineEntry() {
         Minecraft mc = Minecraft.getInstance();
-        return mc.getNetworkHandler() != null ? mc.getNetworkHandler().getPlayerListEntry(player) : null;
+        return mc.getConnection() != null ? mc.getConnection().getPlayerInfo(player) : null;
     }
 
     private void drawAvatar(GuiGraphicsExtractor context, int x, int y, int size) {
@@ -531,7 +531,7 @@ public class PmProfileScreen extends Screen {
         if (!self && config.isBlocked(player)) {
             fillCircle(context, x + size / 2, y + size / 2, (size + 1) / 2, 0xFF3A3F44);
             context.text(font, "⊘",
-                    x + size / 2 - font.getWidth("⊘") / 2, y + size / 2 - 4, 0xFF8A9096, false);
+                    x + size / 2 - font.width("⊘") / 2, y + size / 2 - 4, 0xFF8A9096, false);
             return;
         }
         if (com.pmchat.client.PmBackend.isConfigured()) {
@@ -553,7 +553,7 @@ public class PmProfileScreen extends Screen {
         fillCircle(context, x + size / 2, y + size / 2, (size + 1) / 2, bg);
         String letter = player.isEmpty() ? "?" : player.substring(0, 1).toUpperCase(Locale.ROOT);
         context.text(font, letter,
-                x + size / 2 - font.getWidth(letter) / 2, y + size / 2 - 4, 0xFFFFFFFF, false);
+                x + size / 2 - font.width(letter) / 2, y + size / 2 - 4, 0xFFFFFFFF, false);
     }
 
     private static void fillCircle(GuiGraphicsExtractor ctx, int cx, int cy, int r, int color) {
@@ -566,7 +566,7 @@ public class PmProfileScreen extends Screen {
     @Override
     public void close() {
         persistFields();
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

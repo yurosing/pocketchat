@@ -94,10 +94,10 @@ public class PmSupportScreen extends Screen {
         context.outline(px, py, PANEL_W, PANEL_H, BORDER);
 
         Component title = getTitle();
-        context.text(font, title, px + (PANEL_W - font.getWidth(title)) / 2, py + 8, TITLE, false);
+        context.text(font, title, px + (PANEL_W - font.width(title)) / 2, py + 8, TITLE, false);
 
         if (!status.getString().isEmpty()) {
-            context.text(font, status, px + (PANEL_W - font.getWidth(status)) / 2, py + PANEL_H - 40, statusColor, false);
+            context.text(font, status, px + (PANEL_W - font.width(status)) / 2, py + PANEL_H - 40, statusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);
@@ -105,7 +105,7 @@ public class PmSupportScreen extends Screen {
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

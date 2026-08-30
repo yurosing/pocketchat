@@ -107,11 +107,11 @@ public class PmWhatsNewScreen extends Screen {
 
         Component title = Component.translatable("pmchat.whatsnew.title");
         context.text(font, title,
-                px + (PANEL_W - font.getWidth(title)) / 2, py + 9, TITLE, false);
+                px + (PANEL_W - font.width(title)) / 2, py + 9, TITLE, false);
 
         Component ver = Component.translatable("pmchat.whatsnew.version", PmUpdate.currentVersion());
         context.text(font, ver,
-                px + (PANEL_W - font.getWidth(ver)) / 2, py + 22, SUBTLE, false);
+                px + (PANEL_W - font.width(ver)) / 2, py + 22, SUBTLE, false);
 
         // Разделитель под шапкой
         context.fill(px + 12, py + 36, px + PANEL_W - 12, py + 37, BORDER);
@@ -131,7 +131,7 @@ public class PmWhatsNewScreen extends Screen {
     @Override
     public void close() {
         Minecraft client = Minecraft.getInstance();
-        client.setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
+        client.gui.setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
     }
 
     @Override

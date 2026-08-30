@@ -114,12 +114,12 @@ public class PmChannelInfoScreen extends Screen {
         PmConfig.PmBroadcast b = broadcast();
         if (b == null) {
             Component gone = Component.translatable("pmchat.broadcast.gone");
-            ctx.text(font, gone, px + (PANEL_W - font.getWidth(gone)) / 2, py + 20, LABEL, false);
+            ctx.text(font, gone, px + (PANEL_W - font.width(gone)) / 2, py + 20, LABEL, false);
             super.extractRenderState(ctx, mouseX, mouseY, delta);
             return;
         }
 
-        ctx.text(font, b.name, px + (PANEL_W - font.getWidth(b.name)) / 2, py + 8, TITLE, false);
+        ctx.text(font, b.name, px + (PANEL_W - font.width(b.name)) / 2, py + 8, TITLE, false);
 
         int y = py + 24;
         boolean owner = isOwner();
@@ -193,7 +193,7 @@ public class PmChannelInfoScreen extends Screen {
         StringBuilder cur = new StringBuilder();
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
-            if (font.getWidth(cur.toString() + c) > maxW && !cur.isEmpty()) {
+            if (font.width(cur.toString() + c) > maxW && !cur.isEmpty()) {
                 out.add(cur.toString());
                 cur = new StringBuilder();
             }
@@ -204,8 +204,8 @@ public class PmChannelInfoScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        return font.trimToWidth(s, Math.max(0, maxW - font.getWidth("…"))) + "…";
+        if (font.width(s) <= maxW) return s;
+        return font.trimToWidth(s, Math.max(0, maxW - font.width("…"))) + "…";
     }
 
     @Override
@@ -215,7 +215,7 @@ public class PmChannelInfoScreen extends Screen {
                 && my >= copyRect[1] && my < copyRect[1] + copyRect[3]) {
             PmConfig.PmBroadcast b = broadcast();
             if (b != null) {
-                Minecraft.getInstance().keyboard.setClipboard(PmChatClient.broadcastInviteCode(b));
+                Minecraft.getInstance().keyboardHandler.setClipboard(PmChatClient.broadcastInviteCode(b));
                 copiedAt = System.currentTimeMillis();
             }
             return true;
@@ -243,7 +243,7 @@ public class PmChannelInfoScreen extends Screen {
     }
 
     private void closeToParent() {
-        Minecraft.getInstance().setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
+        Minecraft.getInstance().gui.setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
     }
 
     @Override

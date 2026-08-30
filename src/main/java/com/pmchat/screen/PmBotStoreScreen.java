@@ -10,7 +10,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -126,7 +126,7 @@ public class PmBotStoreScreen extends Screen {
         };
         int tx = px + 10;
         for (int i = 0; i < labels.length; i++) {
-            int w = font.getWidth(labels[i]) + 14;
+            int w = font.width(labels[i]) + 14;
             tabW[i] = w;
             tabRects[i] = tx;
             tx += w + 4;
@@ -373,7 +373,7 @@ public class PmBotStoreScreen extends Screen {
                         default -> 0xFFF0C34E;
                     };
                     String statLabel = Component.translatable("pmchat.botstore.status." + l.status).getString();
-                    ctx.text(font, statLabel, fx + fw - font.getWidth(statLabel), y, statColor, false);
+                    ctx.text(font, statLabel, fx + fw - font.width(statLabel), y, statColor, false);
                     y += rowH;
                 }
             }
@@ -419,14 +419,14 @@ public class PmBotStoreScreen extends Screen {
     }
 
     private String trim(String s, int maxW) {
-        if (font.getWidth(s) <= maxW) return s;
-        while (s.length() > 1 && font.getWidth(s + "…") > maxW) s = s.substring(0, s.length() - 1);
+        if (font.width(s) <= maxW) return s;
+        while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
     }
 
     @Override
     public void close() {
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override

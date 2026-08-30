@@ -16,15 +16,15 @@ public final class PmNames {
 
     private static PlayerInfo entry(String name) {
         Minecraft mc = Minecraft.getInstance();
-        if (name == null || mc.getNetworkHandler() == null) return null;
-        return mc.getNetworkHandler().getPlayerListEntry(name);
+        if (name == null || mc.getConnection() == null) return null;
+        return mc.getConnection().getPlayerInfo(name);
     }
 
     /** Отформатированный ник с префиксом/суффиксом как Component (или простой ник). */
     public static Component displayText(String name) {
         PlayerInfo e = entry(name);
         if (e != null) {
-            Component dn = e.getDisplayName();
+            Component dn = e.getTabListDisplayName();
             if (dn != null) {
                 String s = dn.getString();
                 if (s != null && !s.isBlank()) return dn;
