@@ -2099,7 +2099,15 @@ public class PmChatClient implements ClientModInitializer {
         // сообщение в почтовый ящик на бэкенде вместо этого — заберёт при опросе
         // (см. nextMailboxPollAt в тике), как только откроет мессенджер где угодно.
         boolean online = isPlayerOnlineHere(target);
-        if (PmBackend.isConfigured() && PmBackend.hasAccount() && PmBackend.isBot(target)) {
+        // Секретные чаты (E2E): ничего не идёт через бэкенд — ни очередь бота,
+        // ни офлайн-почтовый ящик. Только прямой /m (шифруется внутри pmDeliver);
+        // если собеседник офлайн, сообщение просто не дойдёт, как обычный /m.
+        if (PmSecretChat.isEnabled(target)) {
+            pmDeliver(target, wire);
+            synchronized (pendingEcho) {
+                pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
+            }
+        } else if (PmBackend.isConfigured() && PmBackend.hasAccount() && PmBackend.isBot(target)) {
             // Собеседник — бот: он не игрок, /m ему не дойдёт. Кладём в очередь
             // входящих бота через Bot API — бот заберёт это своим getUpdates.
             PmBackend.sendToBot(target, wire, null);
