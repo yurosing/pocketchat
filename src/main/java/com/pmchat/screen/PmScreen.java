@@ -725,11 +725,11 @@ public class PmScreen extends Screen {
     private void sendCircleSnapshot() {
         if (selected == null) return;
         Minecraft mc = Minecraft.getInstance();
-        net.minecraft.client.Screenshot.takeScreenshot(mc.getFramebuffer(), image -> {
+        net.minecraft.client.Screenshot.takeScreenshot(mc.getMainRenderTarget(), image -> {
             try {
                 java.nio.file.Path dir = mediaDir("pmchat-circles");
                 java.nio.file.Path file = dir.resolve("circle-" + System.currentTimeMillis() + ".png");
-                image.writeTo(file.toFile());
+                image.writeToFile(file.toFile());
                 image.close();
                 startUpload(file);
             } catch (Exception e) {
@@ -1333,7 +1333,7 @@ public class PmScreen extends Screen {
         FlatButton myProfileBtn = FlatButton.centered(font, footerX, py + PANEL_H - 19, 16, 13,
                 Component.literal("☺"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B,
                 btn -> openProfile(PmChatClient.selfName()));
-        myProfileBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable("pmchat.tip.myprofile")));
+        myProfileBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("pmchat.tip.myprofile")));
         addRenderableWidget(myProfileBtn);
         footerX += 20;
 
@@ -1343,7 +1343,7 @@ public class PmScreen extends Screen {
                     Component.literal(com.pmchat.client.PmBackend.CURRENCY_ICON), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
                     com.pmchat.client.PmBackend.CURRENCY_COLOR,
                     btn -> Minecraft.getInstance().gui.setScreen(new PmShopScreen(this)));
-            shopBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable("pmchat.tip.shop")));
+            shopBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("pmchat.tip.shop")));
             addRenderableWidget(shopBtn);
             footerX += 20;
         }
@@ -1366,7 +1366,7 @@ public class PmScreen extends Screen {
             FlatButton adminBtn = FlatButton.centered(font, footerX, py + PANEL_H - 19, adminW, 13,
                     adminLabel, 0xFF5A1418, 0xFF7A1C22, 0xFFE0203C, 0xFFFF4D63,
                     btn -> Minecraft.getInstance().gui.setScreen(new PmAdminScreen(this)));
-            adminBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable("pmchat.admin.open")));
+            adminBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("pmchat.admin.open")));
             addRenderableWidget(adminBtn);
         }
 
@@ -1392,7 +1392,7 @@ public class PmScreen extends Screen {
                 FlatButton profBtn = FlatButton.centered(font, px + PANEL_W - 152, py + 6, 18, 14,
                         Component.literal("☺"), WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, 0xFF6FBF8B,
                         btn -> openProfile(peer));
-                profBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(
+                profBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
                         Component.translatable("pmchat.tip.profile")));
                 addRenderableWidget(profBtn);
             }
@@ -1698,7 +1698,7 @@ public class PmScreen extends Screen {
                             FlatButton.PressAction act) {
         FlatButton b = FlatButton.centered(font, x, y, w, h, Component.translatable(tipKey),
                 WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER, color, act).withIcon(bmp);
-        b.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable(tipKey)));
+        b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable(tipKey)));
         return b;
     }
 
@@ -1991,7 +1991,7 @@ public class PmScreen extends Screen {
     }
 
     private void loadStickers() {
-        File dir = new File(Minecraft.getInstance().runDirectory, "config/pmchat-stickers");
+        File dir = new File(Minecraft.getInstance().gameDirectory, "config/pmchat-stickers");
         if (!dir.isDirectory()) {
             dir.mkdirs();
         }
@@ -2060,7 +2060,7 @@ public class PmScreen extends Screen {
     }
 
     private void loadScreenshots() {
-        File dir = new File(Minecraft.getInstance().runDirectory, "screenshots");
+        File dir = new File(Minecraft.getInstance().gameDirectory, "screenshots");
         List<Path> found = new ArrayList<>();
         if (dir.isDirectory()) {
             try (Stream<Path> stream = Files.list(dir.toPath())) {
@@ -2517,7 +2517,7 @@ public class PmScreen extends Screen {
 
         // Драг ползунков: пока зажата ЛКМ — тянем, отпустили — закончили.
         boolean lmbDown = GLFW.glfwGetMouseButton(
-                Minecraft.getInstance().getWindow().getHandle(),
+                Minecraft.getInstance().getWindow().handle(),
                 GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         if (!lmbDown) {
             videoDragSeek = false;
@@ -3901,7 +3901,7 @@ public class PmScreen extends Screen {
                 if (msg.envelopeOpened) {
                     envOpenedLines = wrapText((String) env[5], BUBBLE_MAX_TEXT_W);
                     textW = Math.max(font.width(skinLabel),
-                            envOpenedLines.stream().mapToInt(font::getWidth).max().orElse(10));
+                            envOpenedLines.stream().mapToInt(font::width).max().orElse(10));
                     bh = 12 + envOpenedLines.size() * lineH() + 5;
                 } else {
                     String line2 = envLocked
@@ -3939,9 +3939,9 @@ public class PmScreen extends Screen {
                         display = t != null ? t : "…";
                     }
                     voiceTranscriptLines = wrapText(display, BUBBLE_MAX_TEXT_W);
-                    int tw = voiceTranscriptLines.stream().mapToInt(font::getWidth).max().orElse(10);
+                    int tw = voiceTranscriptLines.stream().mapToInt(font::width).max().orElse(10);
                     textW = Math.max(textW, tw);
-                    bh += voiceTranscriptLines.size() * (font.fontHeight + 2) + 3;
+                    bh += voiceTranscriptLines.size() * (font.lineHeight + 2) + 3;
                 }
             } else if (vid != null) {
                 lines = List.of();
@@ -3961,7 +3961,7 @@ public class PmScreen extends Screen {
                 float ts = textScale();
                 lines = wrapText(msg.text != null ? msg.text : "",
                         Math.max(24, (int) (BUBBLE_MAX_TEXT_W / ts)));
-                textW = Math.round(lines.stream().mapToInt(font::getWidth).max().orElse(10) * ts);
+                textW = Math.round(lines.stream().mapToInt(font::width).max().orElse(10) * ts);
                 bh = lines.size() * lineH() + 7;
             }
             // Резервируем место под превью фото по ссылке (под текстом)
@@ -4192,7 +4192,7 @@ public class PmScreen extends Screen {
                 if (!voiceTranscriptLines.isEmpty()) {
                     int tfg = msg.out ? OUT_TEXT : IN_TEXT;
                     int ty = y + dy + quoteShift + 17;
-                    int th = font.fontHeight + 2;
+                    int th = font.lineHeight + 2;
                     for (String tl : voiceTranscriptLines) {
                         context.text(font, tl, bx + dx + 6, ty, applyAlpha(tfg, alpha), false);
                         ty += th;
@@ -4464,7 +4464,7 @@ public class PmScreen extends Screen {
         int lo = fragWordFrom < 0 ? -1 : Math.min(fragWordFrom, fragWordTo);
         int hi = fragWordFrom < 0 ? -1 : Math.max(fragWordFrom, fragWordTo);
         int wx = x0 + 6, wy = y0 + 28;
-        int lineH = font.fontHeight + 3;
+        int lineH = font.lineHeight + 3;
         int btnTop = y1 - 20;
         for (int i = 0; i < fragWords.size(); i++) {
             String w = fragWords.get(i);
@@ -6079,7 +6079,7 @@ public class PmScreen extends Screen {
         if (!cycling) tabBase = base;
         String completed = base + tabMatches.get(tabIndex);
         inputField.setValue(completed);
-        inputField.setCursorToEnd(false);
+        inputField.moveCursorToEnd(false);
         tabLastCompleted = completed;
     }
 
@@ -6240,7 +6240,7 @@ public class PmScreen extends Screen {
 
     private String trim(String text, int maxWidth) {
         if (font.width(text) <= maxWidth) return text;
-        return font.trimToWidth(text, Math.max(0, maxWidth - font.width("…"))) + "…";
+        return font.plainSubstrByWidth(text, Math.max(0, maxWidth - font.width("…"))) + "…";
     }
 
     private String groupDigits(long value) {
@@ -6264,9 +6264,9 @@ public class PmScreen extends Screen {
     // видео (yt-dlp), а сессии ещё нет и юзер закрыл экран — отменяем её,
     // чтобы не тратить трафик впустую (кроме уже свёрнутого сценария).
     @Override
-    public void close() {
+    public void onClose() {
         cancelPrepIfNoSession();
-        super.close();
+        super.onClose();
     }
 
     @Override

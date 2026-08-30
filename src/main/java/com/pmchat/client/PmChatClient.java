@@ -134,7 +134,7 @@ public class PmChatClient implements ClientModInitializer {
 
         // Категорию создаём ОДИН раз и переиспользуем для всех клавиш —
         // повторный create() с тем же id падает «already registered».
-        KeyMapping.Category category = KeyMapping.Category.register(Identifier.of(MOD_ID, "category"));
+        KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "category"));
         openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.pmchat.open", GLFW.GLFW_KEY_J, category));
         // медиа/плейлисты

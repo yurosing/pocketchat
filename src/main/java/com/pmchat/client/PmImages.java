@@ -137,10 +137,10 @@ public final class PmImages {
                         int[] delays = new int[n];
                         int total = 0;
                         for (int i = 0; i < n; i++) {
-                            Identifier texId = Identifier.of("pmchat", "img/" + safe + "_f" + i);
+                            Identifier texId = Identifier.fromNamespaceAndPath("pmchat", "img/" + safe + "_f" + i);
                             NativeImage img = gif.images().get(i);
                             final String frameName = safe + "_f" + i;
-                            client.getTextureManager().registerTexture(texId,
+                            client.getTextureManager().register(texId,
                                     new DynamicTexture(() -> "pmchat-" + frameName, img));
                             ids[i] = texId;
                             delays[i] = gif.delaysMs().get(i);
@@ -162,8 +162,8 @@ public final class PmImages {
                 NativeImage image = NativeImage.read(bytes);
                 client.execute(() -> {
                     try {
-                        Identifier texId = Identifier.of("pmchat", "img/" + safe);
-                        client.getTextureManager().registerTexture(texId,
+                        Identifier texId = Identifier.fromNamespaceAndPath("pmchat", "img/" + safe);
+                        client.getTextureManager().register(texId,
                                 new DynamicTexture(() -> "pmchat-" + safe, image));
                         entry.width = image.getWidth();
                         entry.height = image.getHeight();

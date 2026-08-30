@@ -205,7 +205,7 @@ public class PmChannelInfoScreen extends Screen {
 
     private String trim(String s, int maxW) {
         if (font.width(s) <= maxW) return s;
-        return font.trimToWidth(s, Math.max(0, maxW - font.width("…"))) + "…";
+        return font.plainSubstrByWidth(s, Math.max(0, maxW - font.width("…"))) + "…";
     }
 
     @Override
@@ -247,7 +247,7 @@ public class PmChannelInfoScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         closeToParent();
     }
 

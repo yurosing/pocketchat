@@ -129,7 +129,7 @@ public class PmWhatsNewScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         Minecraft client = Minecraft.getInstance();
         client.gui.setScreen(parent instanceof PmScreen ? new PmScreen() : parent);
     }

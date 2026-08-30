@@ -1152,7 +1152,7 @@ public class PmAdminScreen extends Screen {
     private String trim(String text, int maxWidth) {
         if (maxWidth <= 0) return "";
         if (font.width(text) <= maxWidth) return text;
-        return font.trimToWidth(text, Math.max(0, maxWidth - font.width("…"))) + "…";
+        return font.plainSubstrByWidth(text, Math.max(0, maxWidth - font.width("…"))) + "…";
     }
 
     // ---------- общее ----------
@@ -1342,7 +1342,7 @@ public class PmAdminScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         Minecraft.getInstance().gui.setScreen(parent);
     }
 

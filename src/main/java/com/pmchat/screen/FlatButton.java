@@ -88,7 +88,7 @@ public class FlatButton extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         int x0 = getX();
         int y0 = getY();
         int w = getWidth();
@@ -116,7 +116,7 @@ public class FlatButton extends AbstractWidget {
         }
 
         Component message = getMessage();
-        int textY = y0 + (getHeight() - font.fontHeight) / 2;
+        int textY = y0 + (getHeight() - font.lineHeight) / 2;
         if (centered) {
             int textX = x0 + getWidth() / 2 - font.width(message) / 2;
             context.text(font, message, textX, textY, textColor, false);
@@ -126,7 +126,7 @@ public class FlatButton extends AbstractWidget {
     }
 
     @Override
-    protected void appendClickableNarrations(NarrationElementOutput builder) {
-        appendDefaultNarrations(builder);
+    protected void updateWidgetNarration(NarrationElementOutput builder) {
+        defaultButtonNarrationText(builder);
     }
 }

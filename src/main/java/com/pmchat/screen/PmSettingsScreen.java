@@ -125,7 +125,7 @@ public class PmSettingsScreen extends Screen {
         FlatButton docsBtn = FlatButton.centered(font, px + PANEL_W - 24, py + 3, 18, 14,
                 Component.translatable("pmchat.tip.docs"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFF9CC4DC,
                 btn -> PmChatClient.openDocs()).withIcon(PmIcons.DOCS);
-        docsBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.of(Component.translatable("pmchat.tip.docs")));
+        docsBtn.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("pmchat.tip.docs")));
         addRenderableWidget(docsBtn);
     }
 
@@ -506,7 +506,7 @@ public class PmSettingsScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         config.save();
         Minecraft client = Minecraft.getInstance();
         // Возвращаемся в чат с уже применёнными настройками

@@ -66,7 +66,7 @@ public final class PmYtDlp {
 
     /** Папка для бинарника и временных видео: config/pmchat-bin. */
     private static File binDir() {
-        File dir = new File(Minecraft.getInstance().runDirectory, "config/pmchat-bin");
+        File dir = new File(Minecraft.getInstance().gameDirectory, "config/pmchat-bin");
         //noinspection ResultOfMethodCallIgnored
         dir.mkdirs();
         return dir;
@@ -171,7 +171,7 @@ public final class PmYtDlp {
         // Firefox). Извлечение из браузера часто не работает (браузер запущен
         // или свежее app-bound шифрование) — потому это лишь запасные попытки.
         List<String[]> strategies = new ArrayList<>();
-        File cookiesFile = new File(Minecraft.getInstance().runDirectory, "config/pmchat-cookies.txt");
+        File cookiesFile = new File(Minecraft.getInstance().gameDirectory, "config/pmchat-cookies.txt");
         if (cookiesFile.isFile()) {
             strategies.add(new String[]{"--cookies", cookiesFile.getAbsolutePath()});
         } else {

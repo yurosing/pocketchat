@@ -189,7 +189,7 @@ public class PmFiltersScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         config.save();
         PmChatClient.reloadPatterns();
         Minecraft.getInstance().gui.setScreen(parent);

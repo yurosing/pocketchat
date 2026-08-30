@@ -469,8 +469,8 @@ public final class PmMedia {
         String sub = (playlistName.isEmpty() ? "" : playlistName + "  ") + (trackIndex + 1) + "/" + playlist.size();
         if (avail > 40) {
             int subW = tr.getWidth(sub) + 10;
-            drawMarquee(ctx, tr, title, tx, (h - tr.fontHeight) / 2, avail - subW, th.title);
-            ctx.text(tr, trim(tr, sub, subW), volX - 16 - subW + 4, (h - tr.fontHeight) / 2, th.label, false);
+            drawMarquee(ctx, tr, title, tx, (h - tr.lineHeight) / 2, avail - subW, th.title);
+            ctx.text(tr, trim(tr, sub, subW), volX - 16 - subW + 4, (h - tr.lineHeight) / 2, th.label, false);
         }
 
         boolean playing = session != null && session.isPlaying();
@@ -512,7 +512,7 @@ public final class PmMedia {
             return;
         }
         boolean lmbDown = org.lwjgl.glfw.GLFW.glfwGetMouseButton(
-                Minecraft.getInstance().getWindow().getHandle(),
+                Minecraft.getInstance().getWindow().handle(),
                 org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
         if (!lmbDown) {
             volDragging = false;
@@ -538,7 +538,7 @@ public final class PmMedia {
         int period = tw + gap;
         int speed = 30;               // пикселей в секунду
         int off = (int) ((System.currentTimeMillis() / 1000.0 * speed) % period);
-        ctx.enableScissor(x, y - 1, x + maxW, y + tr.fontHeight + 1);
+        ctx.enableScissor(x, y - 1, x + maxW, y + tr.lineHeight + 1);
         ctx.text(tr, text, x - off, y, color, false);
         ctx.text(tr, text, x - off + period, y, color, false); // второй экземпляр для бесшовности
         ctx.disableScissor();
@@ -664,7 +664,7 @@ public final class PmMedia {
 
     /** Папка с музыкой пользователя: config/pmchat-music. */
     public static File musicDir() {
-        File dir = new File(Minecraft.getInstance().runDirectory, "config/pmchat-music");
+        File dir = new File(Minecraft.getInstance().gameDirectory, "config/pmchat-music");
         //noinspection ResultOfMethodCallIgnored
         dir.mkdirs();
         return dir;

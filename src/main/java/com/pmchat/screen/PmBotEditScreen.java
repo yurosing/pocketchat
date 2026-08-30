@@ -149,7 +149,7 @@ public class PmBotEditScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         back();
     }
 

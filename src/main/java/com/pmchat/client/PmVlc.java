@@ -138,13 +138,13 @@ public final class PmVlc {
 
         Session(String url, String audioSlaveUrl) {
             this.player = factory.mediaPlayers().newEmbeddedMediaPlayer();
-            this.textureId = Identifier.of("pmchat", "video/" + System.nanoTime());
+            this.textureId = Identifier.fromNamespaceAndPath("pmchat", "video/" + System.nanoTime());
             // Заглушка-текстура, пока не пришёл первый кадр (иначе drawTexture по
             // незарегистрированному id). Настоящая текстура нужного размера
             // создаётся в tick() на render-потоке, когда известны размеры кадра.
             NativeImage placeholder = new NativeImage(NativeImage.Format.RGBA, 2, 2, false);
             this.texture = new DynamicTexture(() -> "pmchat-video", placeholder);
-            Minecraft.getInstance().getTextureManager().registerTexture(textureId, texture);
+            Minecraft.getInstance().getTextureManager().register(textureId, texture);
 
             BufferFormatCallback formatCb = new BufferFormatCallback() {
                 @Override
@@ -244,7 +244,7 @@ public final class PmVlc {
                 if (frameImage == null || texW != w || texH != h) {
                     NativeImage img = new NativeImage(NativeImage.Format.RGBA, w, h, false);
                     DynamicTexture tex = new DynamicTexture(() -> "pmchat-video", img);
-                    Minecraft.getInstance().getTextureManager().registerTexture(textureId, tex);
+                    Minecraft.getInstance().getTextureManager().register(textureId, tex);
                     DynamicTexture old = texture;
                     texture = tex;
                     frameImage = img;

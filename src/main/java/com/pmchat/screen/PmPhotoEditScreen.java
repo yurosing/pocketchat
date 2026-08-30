@@ -102,7 +102,7 @@ public class PmPhotoEditScreen extends Screen {
             try {
                 current = PmPhotoEdit.load(sourceFile);
                 original = PmPhotoEdit.copy(current);
-                textureId = Identifier.of("pmchat", "photoedit/" + System.nanoTime());
+                textureId = Identifier.fromNamespaceAndPath("pmchat", "photoedit/" + System.nanoTime());
             } catch (Exception e) {
                 loadError = true;
             }
@@ -375,7 +375,7 @@ public class PmPhotoEditScreen extends Screen {
             if (nativeImage == null || texW != w || texH != h) {
                 NativeImage img = new NativeImage(NativeImage.Format.RGBA, w, h, false);
                 DynamicTexture tex = new DynamicTexture(() -> "pmchat-photoedit", img);
-                Minecraft.getInstance().getTextureManager().registerTexture(textureId, tex);
+                Minecraft.getInstance().getTextureManager().register(textureId, tex);
                 DynamicTexture old = texture;
                 texture = tex;
                 nativeImage = img;
@@ -543,7 +543,7 @@ public class PmPhotoEditScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         Minecraft.getInstance().gui.setScreen(parent);
     }
 

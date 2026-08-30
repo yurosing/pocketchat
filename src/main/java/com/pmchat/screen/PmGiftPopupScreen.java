@@ -110,7 +110,7 @@ public class PmGiftPopupScreen extends Screen {
         m.pushMatrix();
         m.translate(centerX, y);
         m.scale(scale, scale);
-        ctx.text(font, Component.literal(s), -font.width(s) / 2, -font.fontHeight / 2, color, false);
+        ctx.text(font, Component.literal(s), -font.width(s) / 2, -font.lineHeight / 2, color, false);
         m.popMatrix();
     }
 
@@ -134,7 +134,7 @@ public class PmGiftPopupScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         Minecraft.getInstance().gui.setScreen(null);
     }
 

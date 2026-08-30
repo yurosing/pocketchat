@@ -213,7 +213,7 @@ public class PmRulesScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         Minecraft.getInstance().gui.setScreen(viewOnly ? returnTo : null);
     }
 

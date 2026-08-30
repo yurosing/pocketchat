@@ -102,7 +102,7 @@ public class PmBotStoreScreen extends Screen {
     }
 
     private static File submissionsDir() {
-        File dir = new File(Minecraft.getInstance().runDirectory, "config/pmchat-bot-submissions");
+        File dir = new File(Minecraft.getInstance().gameDirectory, "config/pmchat-bot-submissions");
         //noinspection ResultOfMethodCallIgnored
         dir.mkdirs();
         return dir;
@@ -425,7 +425,7 @@ public class PmBotStoreScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         Minecraft.getInstance().gui.setScreen(parent);
     }
 

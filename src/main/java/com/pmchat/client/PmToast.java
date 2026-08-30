@@ -48,7 +48,7 @@ public class PmToast implements Toast {
         String text = preview;
         int maxW = getWidth() - 18;
         if (font.width(text) > maxW) {
-            text = font.trimToWidth(text, maxW - font.width("…")) + "…";
+            text = font.plainSubstrByWidth(text, maxW - font.width("…")) + "…";
         }
         context.text(font, Component.literal(text), 9, 19, 0xFFEDF3F0, false);
     }

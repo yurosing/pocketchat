@@ -20,8 +20,8 @@ import java.util.Optional;
  */
 public final class PmOfficialIcon {
 
-    private static final Identifier RESOURCE = Identifier.of("pmchat", "textures/gui/pocketchat_logo.png");
-    private static final Identifier TEXTURE_ID = Identifier.of("pmchat", "pocketchat_logo");
+    private static final Identifier RESOURCE = Identifier.fromNamespaceAndPath("pmchat", "textures/gui/pocketchat_logo.png");
+    private static final Identifier TEXTURE_ID = Identifier.fromNamespaceAndPath("pmchat", "pocketchat_logo");
 
     private static boolean attempted;
     private static boolean ready;
@@ -45,7 +45,7 @@ public final class PmOfficialIcon {
             NativeImage image = NativeImage.read(bytes);
             width = image.getWidth();
             height = image.getHeight();
-            client.getTextureManager().registerTexture(TEXTURE_ID,
+            client.getTextureManager().register(TEXTURE_ID,
                     new DynamicTexture(() -> "pmchat-official-icon", image));
             ready = true;
         } catch (IOException e) {

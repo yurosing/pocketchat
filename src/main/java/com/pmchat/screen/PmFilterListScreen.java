@@ -322,7 +322,7 @@ public class PmFilterListScreen extends Screen {
         tabIndex = (tabIndex + 1) % tabMatches.size();
         String completed = tabBase + tabMatches.get(tabIndex);
         field.setValue(completed);
-        field.setCursorToEnd(false);
+        field.moveCursorToEnd(false);
         tabLastCompleted = completed;
     }
 
@@ -331,7 +331,7 @@ public class PmFilterListScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         config.save();
         PmChatClient.reloadPatterns();
         Minecraft.getInstance().gui.setScreen(parent);

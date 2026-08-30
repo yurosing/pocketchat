@@ -104,7 +104,7 @@ public class PmSupportScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         Minecraft.getInstance().gui.setScreen(parent);
     }
 

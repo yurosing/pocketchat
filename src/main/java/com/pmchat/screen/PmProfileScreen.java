@@ -564,7 +564,7 @@ public class PmProfileScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         persistFields();
         Minecraft.getInstance().gui.setScreen(parent);
     }
