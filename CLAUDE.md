@@ -5,7 +5,7 @@ architecture each session.
 
 ## What this is
 
-**PocketChat** is a **client-side Fabric mod for Minecraft 1.21.11** that turns a
+**PocketChat** is a **client-side Fabric mod for Minecraft 26.2** that turns a
 server's plain `/m` private messages into a Telegram-style messenger (threaded
 chats, bubbles, voice notes, stickers, media, calls, profiles, gifts). It works
 **with no server plugin** — it parses `/m` chat lines. This repo no longer builds
@@ -116,12 +116,24 @@ body so existing implementors keep compiling.
 
 ## Build & release
 
-- Gradle + **fabric-loom**, Java 21, MC 1.21.11, Yarn mappings. **Mod Menu is resolved
-  from Modrinth's maven** (`maven.modrinth:modmenu:...`) — terraformersmc is flaky/404s,
-  do NOT depend on it. Deps are shaded via loom `include` (Vosk, gson, JCodec, vlcj/JNA).
+- Gradle + **fabric-loom** (1.17), **Java 25**, MC 26.2, **official Mojang mappings**
+  (`loom.officialMojangMappings()` — 26.1+ ships unobfuscated and Fabric dropped Yarn
+  from that point on; there is no `yarn_mappings` property anymore). **Mod Menu is
+  resolved from Modrinth's maven** (`maven.modrinth:modmenu:...`) — terraformersmc is
+  flaky/404s, do NOT depend on it. Deps are shaded via loom `include` (Vosk, gson,
+  JCodec, vlcj/JNA).
 - **You cannot build in this sandbox** — maven.fabricmc.net, Mojang, and repo.papermc.io
   are blocked by egress policy (403). Only Maven Central + the Gradle plugin portal are
   reachable. **Rely on GitHub Actions to compile.**
+- **26.2 port status**: `build.gradle`/`gradle.properties`/the workflow YAMLs are updated
+  for 26.2 (loader 0.19.0, fabric-api 0.158.0+26.2, Loom 1.17, Java 25, official
+  mappings), but the actual Yarn→Mojang identifier migration in `src/` has **not** been
+  done — that needs Loom's `migrateMappings` Gradle task run somewhere with real network
+  access to `maven.fabricmc.net` (this sandbox can't reach it), then a normal
+  compile-fix-push loop against whatever it flags. The mod doesn't register any
+  items/blocks, so the registration-rewrite / item-model-definition / `ItemStackTemplate`
+  breaks from the 1.21.2–26.1 migration notes don't apply here — the remaining risk is
+  purely renamed GUI/rendering/client-network class and method names.
 - `release.yml` builds the mod and publishes a GitHub Release using
   `RELEASE_NOTES.md` as the body. Pushing to `main` also rebuilds docs.
 - **Releasing**: pushing a tag is blocked (proxy 403). Instead trigger `release.yml` via

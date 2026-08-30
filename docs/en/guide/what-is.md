@@ -49,7 +49,7 @@ expects by default. Easy to fix — see
 
 | Component | Version |
 |---|---|
-| Minecraft | 1.21.11 |
+| Minecraft | 26.2 |
 | [Fabric Loader](https://fabricmc.net/use/) | any recent version |
 | [Fabric API](https://modrinth.com/mod/fabric-api) | required, the mod won't work without it |
 | Where to install | only your own computer |

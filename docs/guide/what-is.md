@@ -50,7 +50,7 @@ Telegram: цветные пузыри, голосовые, реакции, ст�
 
 | Компонент | Версия |
 |---|---|
-| Minecraft | 1.21.11 |
+| Minecraft | 26.2 |
 | [Fabric Loader](https://fabricmc.net/use/) | любая свежая |
 | [Fabric API](https://modrinth.com/mod/fabric-api) | обязательно, без него не заработает |
 | Куда ставить | только к себе на компьютер |

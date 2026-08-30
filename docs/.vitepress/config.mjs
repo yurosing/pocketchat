@@ -215,7 +215,7 @@ export default defineConfig({
           { text: 'Настройка', link: '/config/' },
           { text: 'API', link: '/api/' },
           { text: 'v1.16.0', items: [
-            { text: 'Minecraft 1.21.11', link: '/guide/install' },
+            { text: 'Minecraft 26.2', link: '/guide/install' },
             { text: 'API 1.0.0', link: '/api/' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},
@@ -232,7 +232,7 @@ export default defineConfig({
         langMenuLabel: 'Сменить язык',
         footer: {
           message: 'Клиентский мод · серверный плагин не нужен · MIT',
-          copyright: 'PocketChat для Minecraft 1.21.11',
+          copyright: 'PocketChat для Minecraft 26.2',
         },
       },
     },
@@ -246,7 +246,7 @@ export default defineConfig({
           { text: 'Config', link: '/en/config/' },
           { text: 'API', link: '/en/api/' },
           { text: 'v1.16.0', items: [
-            { text: 'Minecraft 1.21.11', link: '/en/guide/install' },
+            { text: 'Minecraft 26.2', link: '/en/guide/install' },
             { text: 'API 1.0.0', link: '/en/api/' },
             { text: 'GitHub', link: 'https://github.com/yurosing/pocketchat' },
           ]},
@@ -256,7 +256,7 @@ export default defineConfig({
         docFooter: { prev: 'Previous', next: 'Next' },
         footer: {
           message: 'Client-side mod · no server plugin · MIT',
-          copyright: 'PocketChat for Minecraft 1.21.11',
+          copyright: 'PocketChat for Minecraft 26.2',
         },
       },
     },

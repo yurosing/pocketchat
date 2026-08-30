@@ -11,7 +11,7 @@ Just 4 steps if Minecraft already has Fabric. If not, here's the full walkthroug
 | Fabric API | A mod almost every other mod depends on, including PocketChat | [modrinth.com/mod/fabric-api](https://modrinth.com/mod/fabric-api) |
 | PocketChat | The messenger itself | from whoever sent it to you / the mod's page |
 
-Minecraft version — **1.21.11**.
+Minecraft version — **26.2**.
 
 ## If Minecraft doesn't have Fabric yet (from scratch)
 
@@ -19,7 +19,7 @@ Minecraft version — **1.21.11**.
    **installer** (Fabric Installer).
 2. Run the downloaded file. In the window that opens:
    - tab **Client**;
-   - Minecraft version — **1.21.11**;
+   - Minecraft version — **26.2**;
    - click **Install**.
 3. The installer creates a new profile in the Minecraft launcher called
    "fabric-loader-...". Nothing else to do there, you can close it.
@@ -63,7 +63,7 @@ they do, you'll both get reactions, typing status and read receipts.
   "Release" or "Latest release" one.
 - Make sure both `fabric-api` and `pmchat-mod` are **directly** in the `mods`
   folder, not inside a subfolder or a `.zip` archive.
-- Check that the Fabric profile's Minecraft version is **1.21.11**, matching the
+- Check that the Fabric profile's Minecraft version is **26.2**, matching the
   mod's version.
 
 ### The game crashes on startup
