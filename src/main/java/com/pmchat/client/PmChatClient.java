@@ -1889,7 +1889,13 @@ public class PmChatClient implements ClientModInitializer {
         if (PmWire.isTyping(text) || PmWire.isSeen(text) || PmWire.isHi(text)
                 || PmWire.parseReaction(text) != null || PmWire.isPinMeta(text)
                 || PmWire.isVoteMeta(text) || PmWire.isEditMeta(text) || PmWire.isUnpinMeta(text)
-                || PmWire.isCallMeta(text)) {
+                || PmWire.isCallMeta(text)
+                // Секретные чаты: эхо своего же рукопожатия (pmc sek) и уже
+                // зашифрованного тела (pmc sec) — тоже чистая мета. Без этого эхо
+                // не находило совпадения в pendingEcho (там записан ДО-шифрованный
+                // wire, а эхо приходит уже зашифрованным) и падало в историю как
+                // новое сообщение — сырым hex вместо текста.
+                || PmWire.parseSecHello(text) != null || PmWire.parseSecMsg(text) != null) {
             return 2; // эхо собственной меты — прячем, в историю не пишем
         }
         long now = System.currentTimeMillis();

@@ -51,7 +51,7 @@ public class PmConfig {
     public int customPanelH = 0;
 
     /** Прятать перехваченные строки ЛС из обычного чата. */
-    public boolean hideChatLines = false;
+    public boolean hideChatLines = true;
 
     /**
      * Принял ли игрок правила мода ({@link com.pmchat.screen.PmRulesScreen}).
