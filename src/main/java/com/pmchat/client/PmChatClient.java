@@ -2116,13 +2116,15 @@ public class PmChatClient implements ClientModInitializer {
         } else {
             wire = text;
         }
-        // Получателя нет в таб-листе этого Minecraft-сервера — /m ему уйдёт в никуда
-        // (офлайн вовсе или на другом сервере сети, чего мод отсюда не видит). Кладём
-        // сообщение в почтовый ящик на бэкенде вместо этого — заберёт при опросе
-        // (см. nextMailboxPollAt в тике), как только откроет мессенджер где угодно.
-        boolean online = isPlayerOnlineHere(target);
+        // Собеседник — пользователь PocketChat (есть аккаунт на бэкенде)? Если да,
+        // шлём через бэкенд (v1/mailbox/send, забирается опросом раз в ~25с — см.
+        // nextMailboxPollAt в тике) вместо /m — независимо от того, в таб-листе ли
+        // он сейчас на ЭТОМ Minecraft-сервере: он мог быть на другом сервере сети,
+        // или ещё не открывал мод здесь, а бэкенд всё равно доставит. Если аккаунта
+        // на бэкенде нет (не пользуется PocketChat) — обычный /m, как раньше.
+        PmBackend.AccountInfo targetAccount = PmBackend.isConfigured() ? PmBackend.cachedAccountInfo(target) : null;
         // Секретные чаты (E2E): ничего не идёт через бэкенд — ни очередь бота,
-        // ни офлайн-почтовый ящик. Только прямой /m (шифруется внутри pmDeliver);
+        // ни почтовый ящик. Только прямой /m (шифруется внутри pmDeliver);
         // если собеседник офлайн, сообщение просто не дойдёт, как обычный /m.
         if (PmSecretChat.isEnabled(target)) {
             pmDeliver(target, wire);
@@ -2133,13 +2135,13 @@ public class PmChatClient implements ClientModInitializer {
             // Собеседник — бот: он не игрок, /m ему не дойдёт. Кладём в очередь
             // входящих бота через Bot API — бот заберёт это своим getUpdates.
             PmBackend.sendToBot(target, wire, null);
-        } else if (online || !(PmBackend.isConfigured() && PmBackend.hasAccount())) {
+        } else if (PmBackend.isConfigured() && PmBackend.hasAccount() && targetAccount != null) {
+            PmBackend.sendMailbox(target, wire, null);
+        } else {
             pmDeliver(target, wire);
             synchronized (pendingEcho) {
                 pendingEcho.add(new String[]{target, wire, String.valueOf(System.currentTimeMillis() + 5000)});
             }
-        } else {
-            PmBackend.sendMailbox(target, wire, null);
         }
         PmMessage msg = history.add(target, true, text, 0);
         if (replyToHash != null) {
@@ -2149,13 +2151,6 @@ public class PmChatClient implements ClientModInitializer {
         }
         com.pmchat.client.api.PocketChatClientImpl.fireSent(target, msg);
         return msg;
-    }
-
-    /** В таб-листе текущего Minecraft-сервера ли игрок — единственное, что мод может проверить локально. */
-    private static boolean isPlayerOnlineHere(String name) {
-        Minecraft client = Minecraft.getInstance();
-        return name != null && client.getConnection() != null
-                && client.getConnection().getPlayerInfo(name) != null;
     }
 
     // ---------- Мета: печатает / прочитано (только между модами) ----------
