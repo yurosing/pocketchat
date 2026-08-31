@@ -70,7 +70,7 @@ public class PmSettingsScreen extends Screen {
     /** Сколько строк займёт текущая вкладка — панель подстраивается под неё, а не под самую длинную. */
     private int rowsForTab(int t) {
         return switch (t) {
-            case 1 -> 10;
+            case 1 -> 11;
             case 2 -> 4;
             case 3 -> backendConfigured() && !editBackendUrl
                     ? (4 + (isAdminAccount() ? 1 : 0)) : 5;
@@ -249,6 +249,13 @@ public class PmSettingsScreen extends Screen {
                 () -> Component.translatable(config.mediaBarWhileTyping ? "pmchat.set.on" : "pmchat.set.off"),
                 () -> config.mediaBarWhileTyping ? 0xFF8FD8A8 : VALUE,
                 () -> config.mediaBarWhileTyping = !config.mediaBarWhileTyping);
+
+        // Прятать строки ЛС (включая служебные pmc-метки) из обычного ванильного
+        // чата — переписка видна только в окне мессенджера, как в Telegram.
+        y = addOption(y, "pmchat.set.hidechatlines",
+                () -> Component.translatable(config.hideChatLines ? "pmchat.set.on" : "pmchat.set.off"),
+                () -> config.hideChatLines ? 0xFF8FD8A8 : VALUE,
+                () -> config.hideChatLines = !config.hideChatLines);
 
         // Отдельный экран фильтров чата («No Global Chat»)
         y = addOption(y, "pmchat.filters.open",
