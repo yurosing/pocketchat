@@ -1,3 +1,5 @@
+## PocketChat 26.2.1
+
 ## PocketChat 26.2.0
 
 Обновление таргета на Minecraft 26.2 (fabric-loader 0.19.3, fabric-api 0.158.0+26.2,
