@@ -1,3 +1,5 @@
+## PocketChat 26.2.3
+
 ## PocketChat 26.2.2
 
 ## PocketChat 26.2.1
