@@ -1420,9 +1420,19 @@ public class PmChatClient implements ClientModInitializer {
         // Структурированные сообщения (фото/голос/цитата) — точно от мода
         if (PmWire.isStructured(text)) {
             config.addModUser(sender);
-        } else {
-            // Обычный текст: представляемся один раз — вдруг у него тоже мод
-            sendHi(sender);
+        } else if (!config.isModUser(sender)) {
+            // Обычное сообщение от ещё не подтверждённого собеседника: раньше тут
+            // слепо слали "pmc hi" через /m — если у него нет мода, это сырой
+            // текст "pmc hi" всплывал у него в чате как будто настоящее сообщение.
+            // Вместо слепого зонда — тихая проверка через бэкенд-аккаунт (если он
+            // настроен): есть аккаунт -> точно ставили мод, безопасно поздороваться
+            // pmc hi в ответ; нет бэкенда/аккаунта -> просто не трогаем — обычные
+            // сообщения этому собеседнику дальше идут как обычный читаемый текст.
+            PmBackend.AccountInfo acc = PmBackend.isConfigured() ? PmBackend.cachedAccountInfo(sender) : null;
+            if (acc != null) {
+                config.addModUser(sender);
+                sendHi(sender);
+            }
         }
         typingUntil.remove(sender);
 
@@ -1999,8 +2009,20 @@ public class PmChatClient implements ClientModInitializer {
         }
         if (PmServerMedia.get().isAvailable()) {
             PmServerMedia.get().sendPm(target, toSend, readableFallback(toSend));
-        } else {
+            return;
+        }
+        // Без серверного плагина шлём обычный /m. Собеседнику, у которого мод не
+        // подтверждён (см. config.isModUser/addModUser), нельзя показывать сырой
+        // wire-текст (pmc hi/typ/seen, зашифрованные pmc sec и т.п.) — только тем,
+        // кто уже точно поймёт формат. Остальным — читаемая замена (readableFallback),
+        // а чистую мету без читаемого содержимого вообще не отправляем.
+        if (config.isModUser(to)) {
             client.player.connection.sendCommand(config.msgCommand + " " + target + " " + toSend);
+        } else {
+            String readable = readableFallback(toSend);
+            if (!readable.isEmpty()) {
+                client.player.connection.sendCommand(config.msgCommand + " " + target + " " + readable);
+            }
         }
     }
 
