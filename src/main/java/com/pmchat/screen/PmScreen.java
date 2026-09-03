@@ -761,11 +761,9 @@ public class PmScreen extends Screen {
     private static final int CALL_STATUS_Y = 64;
     private static final int CALL_TIMER_Y = 76;
     // idle (настройка звонка)
-    private static final int CALL_TYPE_Y = 100;      // кнопки типа группы
-    private static final int CALL_PASS_Y = 124;      // тумблер пароля
+    private static final int CALL_TYPE_Y = 100;      // подсказка над кнопкой звонка
     // active (идёт звонок)
-    private static final int CALL_PASSVAL_Y = 96;    // строка пароля
-    private static final int CALL_PARTIC_Y = 110;    // ряд аватарок участников
+    private static final int CALL_PARTIC_Y = 110;    // своя аватарка (подсветка при разговоре)
     // общая кнопка позвонить/завершить
     private static final int CALL_ACT_Y = 150;
     private static final int CALL_CARD_H = 180;
@@ -784,6 +782,12 @@ public class PmScreen extends Screen {
                 && selected != null && selected.equalsIgnoreCase(PmChatClient.callTarget());
     }
 
+    /** Нам звонит именно открытый сейчас собеседник и мы ещё не приняли/отклонили. */
+    private boolean callIncomingHere() {
+        String from = PmChatClient.pendingCallFrom();
+        return from != null && selected != null && selected.equalsIgnoreCase(from);
+    }
+
     private void buildCallMenu() {
         int[] r = callCardRect();
         int x = r[0], y = r[1], w = r[2];
@@ -798,7 +802,7 @@ public class PmScreen extends Screen {
                 }));
 
         if (callActiveHere()) {
-            // В звонке: только кнопка «Завершить» (тип/пароль — настройки до звонка)
+            // В звонке: анонимный релей через бэкенд уже поднят — только «Завершить»
             addRenderableWidget(FlatButton.centered(font, x + pad, y + CALL_ACT_Y, innerW, 22,
                     Component.translatable("pmchat.call.hangup"),
                     0xFF7A2E2E, 0xFF8A3636, 0xFFB05050, 0xFFF6DADA, btn -> {
@@ -808,32 +812,23 @@ public class PmScreen extends Screen {
             return;
         }
 
-        // Настройка звонка: селектор типа группы (три кнопки в ряд)
-        int tw = (innerW - 8) / 3;
-        String[] typeKeys = {"pmchat.call.type.normal", "pmchat.call.type.open", "pmchat.call.type.isolated"};
-        for (int i = 0; i < 3; i++) {
-            final int idx = i;
-            boolean sel = config.voiceGroupType == i;
-            addRenderableWidget(FlatButton.centered(font, x + pad + i * (tw + 4), y + CALL_TYPE_Y, tw, 16,
-                    Component.translatable(typeKeys[i]),
-                    sel ? ACCENT_BG : WBTN_BG, sel ? ACCENT_HOVER : WBTN_BG_HOVER,
-                    sel ? ACCENT_BORDER : WBTN_BORDER, sel ? ACCENT_TEXT : WBTN_TEXT, btn -> {
-                        config.voiceGroupType = idx;
-                        config.save();
+        if (callIncomingHere()) {
+            // Входящий звонок: принять или отклонить
+            int hw = (innerW - 8) / 2;
+            addRenderableWidget(FlatButton.centered(font, x + pad, y + CALL_ACT_Y, hw, 22,
+                    Component.translatable("pmchat.call.accept"),
+                    ACCENT_BG, ACCENT_HOVER, ACCENT_BORDER, ACCENT_TEXT, btn -> {
+                        PmChatClient.acceptCall();
                         rebuild();
                     }));
+            addRenderableWidget(FlatButton.centered(font, x + pad + hw + 8, y + CALL_ACT_Y, hw, 22,
+                    Component.translatable("pmchat.call.decline"),
+                    0xFF7A2E2E, 0xFF8A3636, 0xFFB05050, 0xFFF6DADA, btn -> {
+                        PmChatClient.declineCall();
+                        rebuild();
+                    }));
+            return;
         }
-
-        // Тумблер пароля
-        addRenderableWidget(FlatButton.centered(font, x + pad, y + CALL_PASS_Y, innerW, 15,
-                Component.translatable(config.voiceGroupPassword
-                        ? "pmchat.call.pass.on" : "pmchat.call.pass.off"),
-                WBTN_BG, WBTN_BG_HOVER, WBTN_BORDER,
-                config.voiceGroupPassword ? 0xFF8FD8A8 : WBTN_TEXT, btn -> {
-                    config.voiceGroupPassword = !config.voiceGroupPassword;
-                    config.save();
-                    rebuild();
-                }));
 
         addRenderableWidget(FlatButton.centered(font, x + pad, y + CALL_ACT_Y, innerW, 22,
                 Component.translatable("pmchat.call.start"),
@@ -858,12 +853,13 @@ public class PmScreen extends Screen {
         fillRound(context, x, y, w, h, 8, cardBg);
 
         boolean activeHere = callActiveHere();
+        boolean incomingHere = callIncomingHere();
 
         // Аватар собеседника + подсветка, если он говорит
         int av = 16;
         int avCy = y + CALL_AV_CY;
         java.util.UUID targetId = playerId(selected);
-        boolean targetSpeaks = activeHere && targetId != null && PmChatClient.isSpeaking(targetId);
+        boolean targetSpeaks = activeHere && PmChatClient.isSpeaking(false);
         if (targetSpeaks) fillCircle(context, cx, avCy, av + 3, 0xFF6FBF8B);
         drawAvatarCircle(context, selected, targetId, cx - av, avCy - av, av * 2);
 
@@ -872,9 +868,10 @@ public class PmScreen extends Screen {
 
         // Статус + пульсирующая точка
         boolean on = ((System.currentTimeMillis() / 500) % 2) == 0;
-        int dotCol = activeHere ? (on ? 0xFF6FBF8B : 0xFF2E5F46) : 0xFF54748A;
+        int dotCol = activeHere ? (on ? 0xFF6FBF8B : 0xFF2E5F46) : incomingHere ? (on ? 0xFFD8B25B : 0xFF6F5A2E) : 0xFF54748A;
         String status = Component.translatable(activeHere
-                ? "pmchat.call.status.active" : "pmchat.call.status.idle").getString();
+                ? "pmchat.call.status.active" : incomingHere
+                ? "pmchat.call.status.incoming" : "pmchat.call.status.idle").getString();
         int sw = font.width(status);
         int sx = cx - (sw + 10) / 2;
         context.fill(sx, y + CALL_STATUS_Y + 1, sx + 6, y + CALL_STATUS_Y + 7, dotCol);
@@ -885,34 +882,18 @@ public class PmScreen extends Screen {
         drawScaledCentered(context, dur, cx, y + CALL_TIMER_Y, 1.8f, 0xFFEAF2F6);
 
         if (activeHere) {
-            // Пароль текущего звонка
-            String pass = PmChatClient.callPassword();
-            String passLine = pass.isEmpty()
-                    ? Component.translatable("pmchat.call.pass.none").getString()
-                    : Component.translatable("pmchat.call.pass.label").getString() + " " + pass;
-            drawCentered(context, passLine, cx, y + CALL_PASSVAL_Y, 0xFFB9E0C8);
-
-            // Ряд аватарок участников (кто в группе + подсветка говорящих)
-            java.util.List<java.util.UUID> ids = PmChatClient.callMemberIds();
-            int size = 16, gap = 4;
-            int shown = Math.max(1, Math.min(ids.size(), (w - 16) / (size + gap)));
-            int rowW = shown * size + (shown - 1) * gap;
-            int rx = cx - rowW / 2;
-            int ry = y + CALL_PARTIC_Y;
-            for (int i = 0; i < shown; i++) {
-                java.util.UUID id = ids.get(i);
-                if (PmChatClient.isSpeaking(id)) {
-                    fillCircle(context, rx + size / 2, ry + size / 2, size / 2 + 2, 0xFF6FBF8B);
-                }
-                drawAvatarById(context, id, rx, ry, size);
-                rx += size + gap;
-            }
-            if (ids.size() > shown) {
-                context.text(font, "+" + (ids.size() - shown), rx + 2, ry + 4, SUBTLE, false);
-            }
+            // Своя аватарка + подсветка, если говорим мы (звонок 1-на-1, без списка участников группы)
+            boolean selfSpeaks = PmChatClient.isSpeaking(true);
+            int sSize = 16;
+            int srx = cx - sSize / 2;
+            int sry = y + CALL_PARTIC_Y;
+            if (selfSpeaks) fillCircle(context, srx + sSize / 2, sry + sSize / 2, sSize / 2 + 2, 0xFF6FBF8B);
+            Minecraft mc = Minecraft.getInstance();
+            java.util.UUID selfId = mc.player != null ? mc.player.getUUID() : null;
+            drawAvatarById(context, selfId, srx, sry, sSize);
         } else {
-            // Метка «тип войс-группы» над кнопками выбора
-            drawCentered(context, Component.translatable("pmchat.call.type").getString(),
+            // Анонимный релей — звонок сразу 1-на-1, без настроек типа/пароля группы
+            drawCentered(context, Component.translatable("pmchat.call.anon.hint").getString(),
                     cx, y + CALL_TYPE_Y - 11, SUBTLE);
         }
     }

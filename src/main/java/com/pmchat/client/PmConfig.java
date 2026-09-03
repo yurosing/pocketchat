@@ -613,15 +613,6 @@ public class PmConfig {
     /** Закрывать меню при получении урона. */
     public boolean closeOnDamage = false;
 
-    /**
-     * Тип голосовой группы при звонке через Simple Voice Chat:
-     * 0 — обычная (NORMAL), 1 — открытая (OPEN), 2 — изолированная (ISOLATED).
-     */
-    public int voiceGroupType = 0;
-
-    /** Защищать войс-группу случайным паролем (звонящий делится им сам). */
-    public boolean voiceGroupPassword = true;
-
     /** При копировании текста добавлять «ник: » в начало. */
     public boolean mentionOnCopy = false;
 

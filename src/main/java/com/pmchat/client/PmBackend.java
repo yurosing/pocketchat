@@ -1363,6 +1363,62 @@ public final class PmBackend {
         });
     }
 
+    // ---------- анонимные звонки (релей поверх WebSocket, без группы SVC) ----------
+
+    /**
+     * Просит бэкенд выдать одноразовый {@code callId} для звонка {@code target}.
+     * Собеседник узнаёт о звонке только через {@link #callPoll}, никакого
+     * сообщения через {@code /m} не отправляется.
+     */
+    public static void callInvite(String target, java.util.function.Consumer<String> onCallId) {
+        if (!isConfigured() || !hasAccount()) {
+            onCallId.accept(null);
+            return;
+        }
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("targetUsername", target);
+        postJson("/v1/call/invite", body, resp -> {
+            String callId = resp != null && resp.has("callId") ? resp.get("callId").getAsString() : null;
+            onCallId.accept(callId);
+        }, (ok, v, err) -> {
+            if (!ok) onCallId.accept(null);
+        });
+    }
+
+    /** Короткий опрос: не звонит ли кто-то нам прямо сейчас (callId ещё без нашего сокета). */
+    public static void callPoll(java.util.function.BiConsumer<String, String> onResult) {
+        if (!isConfigured() || !hasAccount()) return;
+        getJson("/v1/call/poll?token=" + enc(PmChatClient.getConfig().backendToken), json -> {
+            if (json == null || !json.has("callId")) return;
+            String callId = json.get("callId").getAsString();
+            String from = json.has("from") ? json.get("from").getAsString() : null;
+            if (callId.isBlank() || from == null) return;
+            Minecraft.getInstance().execute(() -> onResult.accept(callId, from));
+        });
+    }
+
+    /** Отменяет/завершает звонок на стороне сигналинга (не влияет на уже открытый WS-сокет). */
+    public static void callCancel(String callId) {
+        if (!isConfigured() || !hasAccount() || callId == null) return;
+        JsonObject body = new JsonObject();
+        body.addProperty("token", PmChatClient.getConfig().backendToken);
+        body.addProperty("callId", callId);
+        postJson("/v1/call/cancel", body, null, null);
+    }
+
+    /** URL WebSocket-релея для звонка (ws:// или wss:// в зависимости от backendUrl), null — бэкенд не настроен. */
+    public static String callWsUrl(String callId) {
+        if (!isConfigured() || !hasAccount() || callId == null) return null;
+        String httpBase = base();
+        String wsBase = httpBase.startsWith("https://")
+                ? "wss://" + httpBase.substring("https://".length())
+                : httpBase.startsWith("http://")
+                ? "ws://" + httpBase.substring("http://".length())
+                : httpBase;
+        return wsBase + "/v1/call/ws?callId=" + enc(callId) + "&token=" + enc(PmChatClient.getConfig().backendToken);
+    }
+
     // ---------- админ-панель ----------
 
     public static void adminBroadcast(String message, Callback<Void> cb) {

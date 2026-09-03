@@ -278,6 +278,8 @@ public class PmChatClient implements ClientModInitializer {
                 nextMailboxPollAt = System.currentTimeMillis() + 25_000L;
                 PmBackend.pollMailbox(m -> onIncoming(m.from, m.wire));
             }
+            // Опрос входящих звонков (анонимный релей через бэкенд, см. PmCall).
+            PmCall.pollTick();
             // Закрыть меню при получении урона (если включено в настройках)
             if (config.closeOnDamage && client.gui.screen() instanceof PmScreen && client.player != null) {
                 float hp = client.player.getHealth();
@@ -1282,11 +1284,10 @@ public class PmChatClient implements ClientModInitializer {
             return 2;
         }
 
-        // входящий звонок — просто уведомление; само приглашение в голосовой
-        // канал уже пришло от сервера через команду /voicechat invite отправителя.
+        // pmc call больше не отправляется (звонки сигналятся через бэкенд, см.
+        // PmCall) — оставляем разбор ради совместимости со старыми версиями мода.
         if (PmWire.isCall(text)) {
             config.addModUser(sender);
-            onIncomingCall(sender);
             return 2;
         }
         // Общий вайб (5.8) — собеседник включил/выключил синхронный эмбиент.
@@ -1711,27 +1712,15 @@ public class PmChatClient implements ClientModInitializer {
         }
     }
 
-    // ---------- звонки через Simple Voice Chat ----------
+    // ---------- звонки: анонимный релей через бэкенд (PmCall), без группы SVC ----------
 
-    /**
-     * Позвонить через Simple Voice Chat. Важно: «/voicechat invite ник»
-     * работает только если ты УЖЕ в голосовой группе — сама группа при
-     * инвайте не создаётся. Поэтому (5.0): если группы нет, принудительно
-     * создаём её через API SVC (тем же пакетом, что и родное GUI), ждём
-     * подтверждения от сервера и только потом шлём инвайт. Плюс лёгкое
-     * уведомление через /m, чтобы собеседник увидел тост в моде.
-     * Если SVC не установлен — команды просто не выполнятся, ничего не ломается.
-     */
     // ---------- Состояние текущего звонка (для меню звонка в моде) ----------
 
-    private static volatile boolean callActive = false;
     private static volatile String callTarget = null;
     private static volatile long callStartedAt = 0L;
-    private static volatile String callPassword = null;
-    private static volatile int callTypeIndex = 0;
 
     public static boolean isCallActive() {
-        return callActive;
+        return PmCall.isConnected() && callTarget != null;
     }
 
     public static String callTarget() {
@@ -1740,114 +1729,50 @@ public class PmChatClient implements ClientModInitializer {
 
     /** Длительность текущего звонка в секундах (0, если звонок не идёт). */
     public static int callDurationSeconds() {
-        return callActive ? (int) ((System.currentTimeMillis() - callStartedAt) / 1000) : 0;
+        return isCallActive() ? (int) ((System.currentTimeMillis() - callStartedAt) / 1000) : 0;
     }
 
-    /** Пароль войс-группы текущего звонка (пусто — без пароля). */
-    public static String callPassword() {
-        return callPassword == null ? "" : callPassword;
+    /** Собеседник, который сейчас нам звонит (ждёт принятия/отклонения), null — если такого нет. */
+    public static String pendingCallFrom() {
+        return PmCall.pendingCallFrom();
     }
 
-    public static int callTypeIndex() {
-        return callTypeIndex;
-    }
-
-    /** Число участников в войс-группе (по данным SVC; 0 — неизвестно). */
-    public static int callParticipants() {
-        return PmSvc.participantCount();
-    }
-
-    /** UUID участников войс-группы (мы первыми), для показа аватарок в меню. */
-    public static java.util.List<java.util.UUID> callMemberIds() {
-        java.util.List<java.util.UUID> ids = new java.util.ArrayList<>();
-        Minecraft client = Minecraft.getInstance();
-        if (client.player != null) ids.add(client.player.getUUID());
-        for (java.util.UUID id : PmSvc.groupMemberIds()) {
-            if (!ids.contains(id)) ids.add(id);
+    public static void acceptCall() {
+        String from = PmCall.pendingCallFrom();
+        PmCall.acceptPendingCall();
+        if (from != null) {
+            callTarget = from;
+            callStartedAt = System.currentTimeMillis();
         }
-        return ids;
     }
 
-    /** Говорит ли участник сейчас (для подсветки аватарки). */
-    public static boolean isSpeaking(java.util.UUID id) {
-        Minecraft client = Minecraft.getInstance();
-        if (client.player != null && client.player.getUUID().equals(id)) {
-            // Себя нет в TalkCache — смотрим состояние микрофона
-            return PmSvc.isSelfSpeaking() || PmSvc.isSpeaking(id);
-        }
-        return PmSvc.isSpeaking(id);
+    public static void declineCall() {
+        PmCall.declinePendingCall();
     }
 
-    /** Случайный пароль войс-группы (без похожих символов). */
-    private static String randomPassword() {
-        final String alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
-        java.util.Random r = new java.security.SecureRandom();
-        StringBuilder sb = new StringBuilder(6);
-        for (int i = 0; i < 6; i++) sb.append(alphabet.charAt(r.nextInt(alphabet.length())));
-        return sb.toString();
+    /** Говорит ли сейчас указанная сторона звонка (я или собеседник). */
+    public static boolean isSpeaking(boolean self) {
+        return self ? PmCall.isSelfSpeaking() : PmCall.isPeerSpeaking();
     }
 
-    /** Завершить звонок: выйти из войс-группы SVC и сбросить состояние. */
+    /** Завершить звонок: закрыть релей-сокет и сбросить состояние. */
     public static void endCall() {
-        PmSvc.leaveGroup();
-        callActive = false;
+        PmCall.endCall();
         callTarget = null;
         callStartedAt = 0L;
-        callPassword = null;
     }
 
+    /**
+     * Позвонить {@code target} — напрямую через бэкенд {@code server-pocketchat}:
+     * анонимный одноразовый релей (см. {@link PmCall}), никакой войс-группы SVC
+     * и никакого сигнального сообщения через {@code /m} (сигналинг целиком на
+     * бэкенде, чтобы служебный текст не светился в чате не-модовым игрокам).
+     */
     public static void startCall(String target) {
-        Minecraft client = Minecraft.getInstance();
-        if (client.player == null || target == null || target.isBlank()) return;
-        pmDeliver(target, PmWire.call());
-
-        // Отмечаем звонок как активный для меню звонка в моде
-        callActive = true;
+        if (target == null || target.isBlank()) return;
         callTarget = target;
         callStartedAt = System.currentTimeMillis();
-        callTypeIndex = config.voiceGroupType;
-
-        if (PmSvc.isInGroup() == Boolean.TRUE) {
-            client.player.connection.sendCommand("voicechat invite " + target);
-            return;
-        }
-        callPassword = config.voiceGroupPassword ? randomPassword() : null;
-        if (!PmSvc.createGroup(selfName(), callPassword, config.voiceGroupType)) {
-            // API SVC недоступен (мода нет или версия незнакомая) — шлём
-            // инвайт как раньше: вдруг игрок уже в группе, а API не читается.
-            callPassword = null;
-            client.player.connection.sendCommand("voicechat invite " + target);
-            return;
-        }
-        // Группа создаётся раунд-трипом на сервер — подождём подтверждения
-        // (до ~3 с) в фоне и позовём собеседника, когда мы реально в группе.
-        Thread waiter = new Thread(() -> {
-            for (int i = 0; i < 30; i++) {
-                if (PmSvc.isInGroup() == Boolean.TRUE) break;
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    return;
-                }
-            }
-            client.execute(() -> {
-                if (client.player != null) {
-                    client.player.connection.sendCommand("voicechat invite " + target);
-                }
-            });
-        }, "pmchat-call-invite");
-        waiter.setDaemon(true);
-        waiter.start();
-    }
-
-    /** Уведомление о звонке — сам голосовой канал уже подключает сервер через /voicechat invite. */
-    private static void onIncomingCall(String sender) {
-        Minecraft client = Minecraft.getInstance();
-        if (!config.dnd) {
-            client.gui.toastManager().addToast(new PmToast(sender,
-                    Component.translatable("pmchat.call.incoming.toast").getString()));
-            playNotifySound(client);
-        }
+        PmCall.startCall(target);
     }
 
     /** Упоминают ли тебя: свой ник или доп. слова из настроек. */
