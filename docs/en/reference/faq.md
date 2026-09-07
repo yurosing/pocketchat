@@ -47,10 +47,9 @@ an "Open in browser" button appears instead. More in
 
 ## The "Call" button doesn't do anything
 
-Calls run through the **Simple Voice Chat** mod, which needs to be installed
-**on the server** (not just on your computer). If the server doesn't have
-it, the call command just fails silently — no errors, no crashes. More in
-[Voice calls](/en/guide/calls).
+Calls run through the PocketChat backend — you and your contact both need a
+backend account configured. If it isn't, the call command just fails
+silently — no errors, no crashes. More in [Voice calls](/en/guide/calls).
 
 ## The mod isn't in the mod list / the game doesn't see it
 

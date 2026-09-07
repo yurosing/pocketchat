@@ -1,38 +1,31 @@
 # Voice calls
 
-One button right in the chat sends your contact an invite to a voice
-channel — no typing commands by hand.
+One button right in the chat, and you're talking to your contact directly —
+no server plugins, no shared voice group that anyone else could join.
 
 ## What it needs
 
-Calls run through **[Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat)**
-— the same mod many people already use for regular voice chat on a server.
-Important: it needs to be installed **on the server** you're playing on (not
-just on your own computer) — the invite command is handled by the server.
-
-If the server doesn't have Simple Voice Chat, the call button simply does
-nothing — no errors, no crashes.
+Both of you need a PocketChat backend account configured (the same one that
+gives you the green verification checkmark and syncs history across
+servers) — the voice channel itself runs through it. If the backend isn't
+configured, the call button simply does nothing — no errors, no crashes.
 
 ## How to call someone
 
-1. Open a chat with someone who definitely has PocketChat.
+1. Open a chat with someone who definitely has PocketChat and a configured
+   backend.
 2. Click the phone-handset icon in the chat's top toolbar.
-3. Done. If you're not in a voice group yet, PocketChat creates one for you
-   (named after your nickname) and sends the invite as soon as the server
-   confirms the group. From there it's the usual Simple Voice Chat flow:
-   your contact sees the invite through that mod itself.
+3. Your contact sees an incoming-call toast and can accept or decline it
+   right from their PocketChat window.
 
-## How to leave the channel
+## Privacy
 
-There's no button for this in PocketChat — use the same way you always would
-with Simple Voice Chat: the `/voicechat leave` command, or its own menu
-(opens with <kbd>V</kbd> by default — the group tab).
+Calls are anonymous: the server hands out a one-time call ID known only to
+you and your contact, and simply relays audio between your two connections
+— it never decrypts, stores, or logs it. There's no "group" a third player
+could join — just a pair of connections for one specific call, which
+disappears the moment either of you hangs up.
 
-::: tip Under the hood
-`/voicechat invite <nickname>` only works when you're already in a group — the
-invite itself does not create one. So PocketChat first checks group membership
-through the Simple Voice Chat API and, if needed, creates a group with the
-same network packet its own menu uses, then runs the official
-`/voicechat invite <nickname>`. Everything else is handled by Simple Voice
-Chat itself.
-:::
+## How to end a call
+
+The "Hang up" button is in the same call window you started it from.

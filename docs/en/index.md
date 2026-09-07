@@ -26,7 +26,7 @@ features:
     link: /en/guide/video
   - icon: 📞
     title: 'Voice calls'
-    details: One button puts you and your contact in the same voice channel, no manual setup.
+    details: One button and you're talking to your contact directly and anonymously — no third party can ever join.
     link: /en/guide/calls
   - icon: 🙈
     title: 'Spoiler photos and videos'
