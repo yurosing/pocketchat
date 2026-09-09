@@ -43,20 +43,10 @@ public final class PmServerMedia {
     private static final byte PM_SEND = 0x30;
     private static final byte PM_RECV = 0x31;
     private static final byte PM_OFFLINE = 0x32;
-    private static final byte GIFT_LIST_REQ = 0x40;
-    private static final byte GIFT_BUY = 0x41;
-    private static final byte GIFT_INV_REQ = 0x42;
-    private static final byte GIFT_CATALOG = 0x43;
-    private static final byte GIFT_RESULT = 0x44;
-    private static final byte GIFT_RECV = 0x45;
-    private static final byte GIFT_INV = 0x46;
     private static final byte STREAM_START = 0x50;
     private static final byte STREAM_STOP = 0x51;
     private static final byte STREAM_LIST_REQ = 0x52;
     private static final byte STREAM_LIST = 0x53;
-    private static final byte STREAM_DONATE = 0x54;
-    private static final byte STREAM_DONATE_RESULT = 0x55;
-    private static final byte STREAM_DONATE_RECV = 0x56;
 
     private static final int DEFAULT_CHUNK_BYTES = 24_000;
     private static final int MESSAGES_PER_TICK = 8;
@@ -82,26 +72,7 @@ public final class PmServerMedia {
     private final ConcurrentHashMap<Long, Pending<String>> uploads = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Download> downloads = new ConcurrentHashMap<>();
 
-    // ---------- Gifts (Vault) ----------
-
-    /** Каталожный подарок: id, название, иконка, цена в монетах. */
-    public record Gift(String id, String name, String icon, double price) {
-    }
-
-    /** Полученный подарок в профиле: название, иконка, от кого. */
-    public record ReceivedGift(String name, String icon, String from) {
-    }
-
-    private volatile java.util.List<Gift> catalog = java.util.List.of();
-    private volatile double selfBalance = 0d;
-    private volatile boolean hasBalance = false;
-    private final ConcurrentHashMap<String, java.util.List<ReceivedGift>> inventories = new ConcurrentHashMap<>();
-    private volatile String lastResultMsg = null;
-    private volatile boolean lastResultOk = false;
-    private volatile long lastResultAt = 0L;
-    private final java.util.concurrent.atomic.AtomicInteger giftVersion = new java.util.concurrent.atomic.AtomicInteger();
-
-    // ---------- Streams (announcement + Vault donations) ----------
+    // ---------- Streams (announcement) ----------
 
     /** Один активный стрим: игрок, название, ссылка (Twitch/YouTube/...). */
     public record LiveStream(String player, String title, String url) {
@@ -109,9 +80,6 @@ public final class PmServerMedia {
 
     private volatile java.util.List<LiveStream> liveStreams = java.util.List.of();
     private volatile boolean selfStreaming = false;
-    private volatile String lastDonateMsg = null;
-    private volatile boolean lastDonateOk = false;
-    private volatile long lastDonateAt = 0L;
     private final java.util.concurrent.atomic.AtomicInteger streamVersion = new java.util.concurrent.atomic.AtomicInteger();
 
     private PmServerMedia() {
@@ -150,65 +118,6 @@ public final class PmServerMedia {
         enqueue(build(HELLO, dos -> dos.writeInt(1)));
     }
 
-    // ---------- gift API ----------
-
-    /** Запрос каталога подарков + своего баланса. */
-    public void requestGifts() {
-        if (serverHasPlugin) enqueue(build(GIFT_LIST_REQ, dos -> {
-        }));
-    }
-
-    /** Запрос списка полученных подарков указанного игрока (для его профиля). */
-    public void requestGiftInventory(String player) {
-        if (serverHasPlugin && player != null && !player.isBlank()) {
-            enqueue(build(GIFT_INV_REQ, dos -> dos.writeUTF(player)));
-        }
-    }
-
-    /** Купить подарок {@code giftId} и отправить игроку {@code target}. */
-    public void buyGift(String target, String giftId) {
-        if (serverHasPlugin && target != null && giftId != null) {
-            enqueue(build(GIFT_BUY, dos -> {
-                dos.writeUTF(target);
-                dos.writeUTF(giftId);
-            }));
-        }
-    }
-
-    public java.util.List<Gift> giftCatalog() {
-        return catalog;
-    }
-
-    public boolean hasBalance() {
-        return hasBalance;
-    }
-
-    public double selfBalance() {
-        return selfBalance;
-    }
-
-    public java.util.List<ReceivedGift> giftsFor(String player) {
-        if (player == null) return java.util.List.of();
-        return inventories.getOrDefault(player.toLowerCase(java.util.Locale.ROOT), java.util.List.of());
-    }
-
-    /** Счётчик изменений состояния подарков — экран профиля перечитывает по нему. */
-    public int giftVersion() {
-        return giftVersion.get();
-    }
-
-    public String lastResultMsg() {
-        return lastResultMsg;
-    }
-
-    public boolean lastResultOk() {
-        return lastResultOk;
-    }
-
-    public long lastResultAt() {
-        return lastResultAt;
-    }
-
     // ---------- streams API ----------
 
     /** Список сейчас идущих стримов (обновляется сервером push'ом). */
@@ -220,21 +129,9 @@ public final class PmServerMedia {
         return selfStreaming;
     }
 
-    /** Счётчик изменений списка стримов/доната — экран стримов перечитывает по нему. */
+    /** Счётчик изменений списка стримов — экран стримов перечитывает по нему. */
     public int streamVersion() {
         return streamVersion.get();
-    }
-
-    public String lastDonateMsg() {
-        return lastDonateMsg;
-    }
-
-    public boolean lastDonateOk() {
-        return lastDonateOk;
-    }
-
-    public long lastDonateAt() {
-        return lastDonateAt;
     }
 
     /** Объявить, что этот игрок начал стримить. Требует серверный плагин. */
@@ -259,28 +156,10 @@ public final class PmServerMedia {
         }));
     }
 
-    /** Задонатить {@code amount} монет стримеру {@code target} (должен сейчас стримить). */
-    public void donate(String target, double amount) {
-        if (!serverHasPlugin || target == null || target.isBlank()) return;
-        enqueue(build(STREAM_DONATE, dos -> {
-            dos.writeUTF(target);
-            dos.writeDouble(amount);
-        }));
-    }
-
-    private static String formatCoins(double d) {
-        long l = (long) d;
-        return d == l ? Long.toString(l) : String.format(java.util.Locale.ROOT, "%.2f", d);
-    }
-
     /** Called on disconnect — drop state and fail anything in flight. */
     public void reset() {
         serverHasPlugin = false;
         tier = TIER_FREE;
-        catalog = java.util.List.of();
-        inventories.clear();
-        hasBalance = false;
-        selfBalance = 0d;
         liveStreams = java.util.List.of();
         selfStreaming = false;
         outbound.clear();
@@ -474,56 +353,6 @@ public final class PmServerMedia {
                     String target = in.readUTF();
                     PmChatClient.notifyPmOffline(target);
                 }
-                case GIFT_CATALOG -> {
-                    double bal = in.readDouble();
-                    int n = in.readInt();
-                    java.util.List<Gift> list = new java.util.ArrayList<>();
-                    for (int i = 0; i < n; i++) {
-                        String id = in.readUTF();
-                        String name = in.readUTF();
-                        String icon = in.readUTF();
-                        double price = in.readDouble();
-                        list.add(new Gift(id, name, icon, price));
-                    }
-                    catalog = list;
-                    selfBalance = bal;
-                    hasBalance = true;
-                    PmChatClient.setKnownBalance(formatCoins(bal));
-                    giftVersion.incrementAndGet();
-                }
-                case GIFT_RESULT -> {
-                    boolean ok = in.readBoolean();
-                    String msg = in.readUTF();
-                    double nb = in.readDouble();
-                    selfBalance = nb;
-                    hasBalance = true;
-                    PmChatClient.setKnownBalance(formatCoins(nb));
-                    lastResultOk = ok;
-                    lastResultMsg = msg;
-                    lastResultAt = System.currentTimeMillis();
-                    giftVersion.incrementAndGet();
-                }
-                case GIFT_RECV -> {
-                    String from = in.readUTF();
-                    String name = in.readUTF();
-                    String icon = in.readUTF();
-                    PmChatClient.giftToast(from, name, icon);
-                    requestGiftInventory(PmChatClient.selfName());
-                    giftVersion.incrementAndGet();
-                }
-                case GIFT_INV -> {
-                    String who = in.readUTF();
-                    int n = in.readInt();
-                    java.util.List<ReceivedGift> list = new java.util.ArrayList<>();
-                    for (int i = 0; i < n; i++) {
-                        String name = in.readUTF();
-                        String icon = in.readUTF();
-                        String frm = in.readUTF();
-                        list.add(new ReceivedGift(name, icon, frm));
-                    }
-                    inventories.put(who.toLowerCase(java.util.Locale.ROOT), list);
-                    giftVersion.incrementAndGet();
-                }
                 case STREAM_LIST -> {
                     int n = in.readInt();
                     java.util.List<LiveStream> list = new java.util.ArrayList<>();
@@ -535,24 +364,6 @@ public final class PmServerMedia {
                     }
                     liveStreams = list;
                     selfStreaming = list.stream().anyMatch(l -> l.player().equalsIgnoreCase(PmChatClient.selfName()));
-                    streamVersion.incrementAndGet();
-                }
-                case STREAM_DONATE_RESULT -> {
-                    boolean ok = in.readBoolean();
-                    String msg = in.readUTF();
-                    double nb = in.readDouble();
-                    selfBalance = nb;
-                    hasBalance = true;
-                    PmChatClient.setKnownBalance(formatCoins(nb));
-                    lastDonateOk = ok;
-                    lastDonateMsg = msg;
-                    lastDonateAt = System.currentTimeMillis();
-                    streamVersion.incrementAndGet();
-                }
-                case STREAM_DONATE_RECV -> {
-                    String from = in.readUTF();
-                    double amount = in.readDouble();
-                    PmChatClient.giftToast(from, "+" + formatCoins(amount), "$");
                     streamVersion.incrementAndGet();
                 }
                 default -> { /* unknown — ignore */ }

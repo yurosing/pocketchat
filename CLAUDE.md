@@ -7,7 +7,7 @@ architecture each session.
 
 **PocketChat** is a **client-side Fabric mod for Minecraft 26.2** that turns a
 server's plain `/m` private messages into a Telegram-style messenger (threaded
-chats, bubbles, voice notes, stickers, media, calls, profiles, gifts). It works
+chats, bubbles, voice notes, stickers, media, calls, profiles). It works
 **with no server plugin** — it parses `/m` chat lines. This repo no longer builds
 or ships a server plugin at all (removed — see "No server plugin" below); the
 client mod still speaks the `pmchat:media` wire protocol client-side
@@ -27,14 +27,28 @@ This repo (`yurosing/pocketchat`) is the **public** build:
 
 The Paper server plugin (`server-plugin/`, editions `PocketChat`/`PocketChatPro`,
 its published API `pocketchat-api-plugin`) has been **removed from this repo** —
-gifts, Vault balance, server-relayed media, streams, and the offline-message
-mailbox all went with it, since they were plugin-only features. Client code that
-optionally talks to a plugin (`PmServerMedia`, gift/balance/streams UI) was left
-in place — it degrades gracefully when no plugin answers, which is now always —
-but don't add anything that *requires* a plugin to exist; there isn't one to
-build or test against. `docs/api/plugin.md` and `docs/api/protocol.md` were
-deleted along with their sidebar entries; `docs/api/index.md` and
-`docs/api/examples.md` were trimmed to the mod API only.
+Vault balance, server-relayed media, streams, and the offline-message mailbox
+all went with it, since they were plugin-only features. Client code that
+optionally talks to a plugin (`PmServerMedia`, streams UI) was left in place —
+it degrades gracefully when no plugin answers, which is now always — but don't
+add anything that *requires* a plugin to exist; there isn't one to build or
+test against. `docs/api/plugin.md` and `docs/api/protocol.md` were deleted
+along with their sidebar entries; `docs/api/index.md` and `docs/api/examples.md`
+were trimmed to the mod API only.
+
+**Gifts, coins/balances (own or others'), the features shop, and paid DMs have
+been removed from the mod entirely** — not just left as dead plugin-gated code.
+`PmGiftsScreen`/`PmShopScreen`/`PmSendCoinsScreen`/`PmGiftPopupScreen`/
+`PmConfirmChargeScreen` are gone, as is every currency-related method on
+`PmBackend` (gifts, shop items, `dmPrice`/`chargeDm`, `adminGrantCurrency`,
+admin shop management) and on `PmServerMedia` (the `GIFT_*`/`STREAM_DONATE_*`
+opcodes). Bot creation and the bot-store marketplace (`PmBotsScreen`/
+`PmBotStoreScreen`) are free — no price fields, no admin-configurable prices.
+The public API's `PocketChatClientApi.knownBalance()` and
+`PocketChatListener.onGiftReceived(...)` still exist (removing them would be a
+breaking Maven Central change) but are permanently inert: `knownBalance()`
+always returns `""`, `onGiftReceived` is never called. Don't resurrect any of
+this without being asked — it was a deliberate product decision, not cleanup.
 
 ::: warning
 This repo is normally synced FROM `pocketchat-sec` (see the note at the bottom
@@ -64,8 +78,7 @@ docs/                    — VitePress docs site (RU root + /en); published from
 - **PmChatClient** — entrypoint + hub. Chat-line capture/parsing (incoming/outgoing/
   global/channel/Discord/CoreProtect regexes from config), routing sends through
   `pmDeliver`, history, toasts, mentions, update check. Static `config`, `history`.
-  `selfName()`, `commandTarget(conv)` (alias→/m target), `giftToast(...)`,
-  `setBlocked/isBlocked`, `knownBalance`.
+  `selfName()`, `commandTarget(conv)` (alias→/m target), `setBlocked/isBlocked`.
 - **PmConfig** — the whole config model (GSON `pmchat.json`). Every feature flag /
   list / map lives here. `load()` has per-field null-guards + migrations — ADD A
   GUARD for every new collection field. Notable: contacts, aliases(+aliasAsTarget),
@@ -73,16 +86,17 @@ docs/                    — VitePress docs site (RU root + /en); published from
   filters, pinned, stickerCache.
 - **PmServerMedia** — client side of the `pmchat:media` plugin channel. Detects a
   plugin (`isAvailable()`), tier (`isPro()`), streams media up/down, routes PMs,
-  and the **gift** subsystem (catalog/balance/inventory + buy) — all no-ops now
-  that this repo ships no plugin to answer the handshake. Opcode constants are
-  private to this class (no external API mirrors them anymore).
+  and announces streams — all no-ops now that this repo ships no plugin to
+  answer the handshake. Opcode constants are private to this class (no external
+  API mirrors them anymore). Gifts and stream donations were removed outright,
+  not just left dead — see "No server plugin" above.
 - **PmWire** — wire-string encoding for structured messages over `/m` (voice, images,
   reactions, replies, forwards, polls, typing/seen meta).
 - **PmHistory / PmMessage** — persisted conversations + message model.
 - Media/voice stack: PmImages, PmHosts (external image hosts w/ fallback order),
   PmMedia/PmVlc/PmVideo/PmYtDlp/PmYouTube/PmGif (VLC + JCodec players), PmVoice
   (recording), PmStt/PmVoiceTranscript (Vosk offline speech-to-text — **Pro-gated**),
-  PmSvc (Simple Voice Chat calls), PmClipboard, PmCrypto (local history encryption
+  PmCall (anonymous backend-relayed voice calls), PmClipboard, PmCrypto (local history encryption
   at rest), PmUpdate.
 
 ### Screen package (`com.pmchat.screen`) — key files
@@ -91,7 +105,7 @@ docs/                    — VitePress docs site (RU root + /en); published from
   palette from `config.theme`. Custom immediate-mode drawing + `FlatButton` widgets;
   hit-testing via stored `int[]` rects. Rebuilds widgets in `rebuild()`/`init()`.
 - **PmProfileScreen** — player profile (own + others): full display name, auto role,
-  status, birthday/description (own), balance (own), gifts, blacklist, rename(alias).
+  status, birthday/description (own), blacklist, rename(alias).
 - **PmSettingsScreen** — options grid (cycle-a-value rows). Bump `rows` when adding one.
 - **PmTheme** — dialog-window palettes + theme registry (`COUNT`, `isLight`, `nameKey`).
   Themes: 0 dark,1 light,2 slate,3 midnight,4 nord,5 rosé,6 sand. `PmScreen.applyTheme`
@@ -110,9 +124,11 @@ into the mod jar (`from project(':api-mod').sourceSets.main.output` in the `jar`
 task), so consumers use `compileOnly`/`modCompileOnly` only.
 
 Fire points live in `PocketChatClientImpl` (static `fireX` helpers) and are called
-from `PmChatClient` (receive/send/gift/init), `PmServerMedia` (HELLO_ACK, reset)
+from `PmChatClient` (receive/send/init), `PmServerMedia` (HELLO_ACK, reset)
 and `PmScreen` (conversation opened). Adding a listener method → give it a `default`
-body so existing implementors keep compiling.
+body so existing implementors keep compiling — that's also why `onGiftReceived`
+is still on `PocketChatListener` even though nothing fires it anymore (see
+"No server plugin" above): removing it would be a breaking change to consumers.
 
 ## Build & release
 

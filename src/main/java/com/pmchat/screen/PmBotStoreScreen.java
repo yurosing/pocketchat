@@ -17,10 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Магазин готовых ботов-файлов: игрок присылает свой файл бота на рассмотрение
- * (взнос — см. {@code /v1/botstore/price}, задаёт админ), очередь смотрит
- * админ по порядку (см. PmAdminScreen), одобренное появляется в открытом рынке
- * — там его можно скачать бесплатно или купить, если автор поставил цену.
+ * Магазин готовых ботов-файлов: игрок присылает свой файл бота на рассмотрение,
+ * очередь смотрит админ по порядку (см. PmAdminScreen), одобренное появляется
+ * в открытом рынке — там его можно бесплатно скачать.
  */
 @Environment(EnvType.CLIENT)
 public class PmBotStoreScreen extends Screen {
@@ -46,10 +45,8 @@ public class PmBotStoreScreen extends Screen {
     // Заявка
     private EditBox nameField;
     private EditBox descField;
-    private EditBox priceField;
-    private String nameText = "", descText = "", priceText = "0";
+    private String nameText = "", descText = "";
     private File selectedFile;
-    private long submitPrice = -1;
 
     // Мои заявки
     private List<PmBackend.BotListing> mine = null;
@@ -78,12 +75,6 @@ public class PmBotStoreScreen extends Screen {
         py = (height - ph) / 2;
         if (market == null) loadMarket();
         if (mine == null) loadMine();
-        if (submitPrice < 0) {
-            PmBackend.getBotstoreSubmitPrice((ok, price, err) -> {
-                submitPrice = ok && price != null ? price : 0;
-                if (minecraft != null) layout();
-            });
-        }
         layout();
     }
 
@@ -112,7 +103,6 @@ public class PmBotStoreScreen extends Screen {
         if (marketSearchField != null) marketSearchText = marketSearchField.getValue();
         if (nameField != null) nameText = nameField.getValue();
         if (descField != null) descText = descField.getValue();
-        if (priceField != null) priceText = priceField.getValue();
         clearWidgets();
 
         int fx = px + 12;
@@ -154,9 +144,8 @@ public class PmBotStoreScreen extends Screen {
                     if (y + rowH >= listTop && y <= listBottom) {
                         int btnW = 56;
                         boolean owned = l.owner != null && l.owner.equalsIgnoreCase(PmChatClient.selfNamePublic());
-                        Component btnLabel = owned ? Component.translatable("pmchat.botstore.download")
-                                : (l.price > 0 ? Component.translatable("pmchat.botstore.buy", l.price)
-                                : Component.translatable("pmchat.botstore.getfree"));
+                        Component btnLabel = Component.translatable(owned
+                                ? "pmchat.botstore.download" : "pmchat.botstore.getfree");
                         long id = l.id;
                         addRenderableWidget(FlatButton.centered(font, fx + fw - btnW, y + 16, btnW, 14,
                                 btnLabel, 0xFF244A33, 0xFF2E5C40, 0xFF4C8A66, 0xFFCFEEDA,
@@ -179,11 +168,7 @@ public class PmBotStoreScreen extends Screen {
             addRenderableWidget(descField);
             y += 19;
 
-            priceField = new EditBox(font, fx, y, 90, 15, Component.translatable("pmchat.botstore.price"));
-            priceField.setMaxLength(9);
-            priceField.setValue(priceText);
-            addRenderableWidget(priceField);
-            addRenderableWidget(FlatButton.centered(font, fx + 94, y, fw - 94, 15,
+            addRenderableWidget(FlatButton.centered(font, fx, y, fw, 15,
                     Component.translatable("pmchat.botstore.openfolder"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
                     btn -> Util.getPlatform().openFile(submissionsDir())));
             y += 22;
@@ -229,9 +214,6 @@ public class PmBotStoreScreen extends Screen {
                     Util.getPlatform().openUri(PmBackend.botFileUrl(fileId));
                 } catch (Exception ignored) {
                 }
-            } else if (err != null && err.contains("insufficient balance")) {
-                status = Component.translatable("pmchat.botstore.needcoins");
-                statusColor = 0xFFE07A6A;
             } else {
                 status = Component.translatable("pmchat.botstore.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
@@ -242,12 +224,6 @@ public class PmBotStoreScreen extends Screen {
     private void submit() {
         String name = nameField.getValue().trim();
         String desc = descField.getValue().trim();
-        long price;
-        try {
-            price = Math.max(0, Long.parseLong(priceField.getValue().trim()));
-        } catch (NumberFormatException e) {
-            price = 0;
-        }
         if (name.isEmpty()) {
             status = Component.translatable("pmchat.botstore.needname");
             statusColor = 0xFFE07A6A;
@@ -261,24 +237,20 @@ public class PmBotStoreScreen extends Screen {
         status = Component.translatable("pmchat.botstore.uploading");
         statusColor = LABEL;
         String finalName = name, finalDesc = desc;
-        long finalPrice = price;
         PmBackend.uploadBotFile(selectedFile.toPath(), (ok, fileId, err) -> {
             if (!ok || fileId == null) {
                 status = Component.translatable("pmchat.botstore.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
                 return;
             }
-            PmBackend.submitBotListing(finalName, finalDesc, fileId, finalPrice, (ok2, id, err2) -> {
+            PmBackend.submitBotListing(finalName, finalDesc, fileId, (ok2, id, err2) -> {
                 if (ok2) {
                     status = Component.translatable("pmchat.botstore.submitted");
                     statusColor = 0xFF8FD8A8;
-                    nameField.setValue(""); descField.setValue(""); priceField.setValue("0");
-                    nameText = ""; descText = ""; priceText = "0";
+                    nameField.setValue(""); descField.setValue("");
+                    nameText = ""; descText = "";
                     selectedFile = null;
                     loadMine();
-                } else if (err2 != null && err2.contains("insufficient balance")) {
-                    status = Component.translatable("pmchat.botstore.needcoins");
-                    statusColor = 0xFFE07A6A;
                 } else {
                     status = Component.translatable("pmchat.botstore.fail", String.valueOf(err2));
                     statusColor = 0xFFE07A6A;
@@ -334,11 +306,7 @@ public class PmBotStoreScreen extends Screen {
                         ctx.fill(fx, y, fx + fw, y + rowH - 2, BTN_BG);
                         String head = l.name + "  ·  @" + l.owner;
                         ctx.text(font, trim(head, fw - 60), fx + 4, y + 3, VALUE, false);
-                        String priceStr = l.price > 0
-                                ? Component.translatable("pmchat.botstore.pricetag", l.price).getString()
-                                : Component.translatable("pmchat.botstore.freetag").getString();
-                        String subLine = priceStr + (l.description != null && !l.description.isBlank()
-                                ? "  ·  " + l.description : "");
+                        String subLine = l.description != null ? l.description : "";
                         ctx.text(font, trim(subLine, fw - 60), fx + 4, y + 16, LABEL, false);
                     }
                     y += rowH;
@@ -346,10 +314,6 @@ public class PmBotStoreScreen extends Screen {
             }
             ctx.disableScissor();
         } else if (tab == TAB_SUBMIT) {
-            if (submitPrice > 0) {
-                ctx.text(font, Component.translatable("pmchat.botstore.feeline", submitPrice),
-                        fx, py + ph - 62, LABEL, false);
-            }
             if (selectedFile != null) {
                 ctx.text(font, Component.translatable("pmchat.botstore.selected", selectedFile.getName()),
                         fx, py + ph - 52, LABEL, false);

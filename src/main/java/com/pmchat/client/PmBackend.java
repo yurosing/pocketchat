@@ -14,10 +14,9 @@ import java.util.function.BiConsumer;
 
 /**
  * Клиент отдельного бэкенда PocketChat (репозиторий {@code server-pocketchat}):
- * своя валюта, логин/пароль (не Mojang), верификация (зелёная галочка),
- * официальный аккаунт и админ-панель. Всё выключено, если
- * {@link PmConfig#backendUrl} пусто — мод продолжает работать как раньше,
- * через обычные строки чата.
+ * логин/пароль (не Mojang), верификация (зелёная галочка), официальный аккаунт
+ * и админ-панель. Всё выключено, если {@link PmConfig#backendUrl} пусто — мод
+ * продолжает работать как раньше, через обычные строки чата.
  */
 public final class PmBackend {
 
@@ -60,15 +59,13 @@ public final class PmBackend {
         /** Модерация (см. PmAdminScreen): временно замучен / забанен. */
         public final boolean muted;
         public final boolean banned;
-        /** Цена в монетах за входящее ЛС этому игроку (0 — бесплатно/фича paid_dm не активна). */
-        public final long dmPrice;
         /** Ключ должности, назначенной вручную в админ-панели (null — не назначена, см. {@link RoleDef}). */
         public final String roleKey;
         /** Это бот (см. таблицу bots) — ЛС ему идут через Bot API бэкенда, а не через /m. */
         public final boolean bot;
 
         AccountInfo(String username, boolean verified, boolean official, String avatarUrl, long lastSeenAt,
-                    boolean sharePrecise, boolean muted, boolean banned, long dmPrice, String roleKey, boolean bot) {
+                    boolean sharePrecise, boolean muted, boolean banned, String roleKey, boolean bot) {
             this.username = username;
             this.verified = verified;
             this.official = official;
@@ -77,7 +74,6 @@ public final class PmBackend {
             this.sharePrecise = sharePrecise;
             this.muted = muted;
             this.banned = banned;
-            this.dmPrice = dmPrice;
             this.roleKey = roleKey;
             this.bot = bot;
         }
@@ -260,447 +256,6 @@ public final class PmBackend {
         postJson("/v1/set-password", body, null, cb);
     }
 
-    // ---------- кошелёк ----------
-
-    private static volatile Long cachedSelfBalance = null;
-    private static volatile long selfBalanceFetchedAt = 0;
-    private static volatile boolean selfBalanceInFlight = false;
-    private static final long SELF_BALANCE_TTL_MS = 20_000L;
-
-    /**
-     * Синхронно отдаёт последний известный баланс своей валюты (для отрисовки в
-     * профиле без блокировки рендера), фоново обновляя, если устарел. Возвращает
-     * null, пока ответ ещё не пришёл или если аккаунт не настроен.
-     */
-    public static Long cachedSelfBalance() {
-        if (!isConfigured() || !hasAccount()) return null;
-        long now = System.currentTimeMillis();
-        if ((cachedSelfBalance == null || now - selfBalanceFetchedAt > SELF_BALANCE_TTL_MS) && !selfBalanceInFlight) {
-            selfBalanceInFlight = true;
-            wallet((ok, bal, err) -> {
-                selfBalanceInFlight = false;
-                if (ok) {
-                    cachedSelfBalance = bal;
-                    selfBalanceFetchedAt = System.currentTimeMillis();
-                }
-            });
-        }
-        return cachedSelfBalance;
-    }
-
-    public static void wallet(Callback<Long> cb) {
-        getJson("/v1/wallet?token=" + enc(PmChatClient.getConfig().backendToken), json -> {
-            long balance = json != null && json.has("balance") ? json.get("balance").getAsLong() : 0;
-            run(cb, json != null, balance, json != null ? null : "request failed");
-        });
-    }
-
-    // ---------- подарки (каталог/инвентарь) ----------
-
-    public static final class Gift {
-        public final String id;
-        public final String name;
-        public final String icon;
-        public final long price;
-        /** common/rare/epic/legendary — определяет цвет свечения в UI (см. {@link #rarityColor}). */
-        public final String rarity;
-
-        Gift(String id, String name, String icon, long price, String rarity) {
-            this.id = id;
-            this.name = name;
-            this.icon = icon;
-            this.price = price;
-            this.rarity = rarity;
-        }
-    }
-
-    public static final class ReceivedGift {
-        public final String giftId;
-        public final String from;
-        /** Эпоха в мс получения подарка, 0 — неизвестно (старый формат ответа). */
-        public final long at;
-        public final boolean seen;
-
-        ReceivedGift(String giftId, String from, long at, boolean seen) {
-            this.giftId = giftId;
-            this.from = from;
-            this.at = at;
-            this.seen = seen;
-        }
-    }
-
-    /** Цвет свечения по редкости подарка — общая для профиля и всплывающей анимации. */
-    public static int rarityColor(String rarity) {
-        if (rarity == null) return 0xFFBFC6CC;
-        return switch (rarity) {
-            case "rare" -> 0xFF5AA0E0;
-            case "epic" -> 0xFFB07AE0;
-            case "legendary" -> 0xFFE0B040;
-            default -> 0xFFBFC6CC;
-        };
-    }
-
-    /** Значок и цвет валюты PocketChat — везде, где показывается баланс/цена в монетах. */
-    public static final String CURRENCY_ICON = "Ⓒ";
-    public static final int CURRENCY_COLOR = 0xFF38D94E;
-
-    /** "Ⓒ 123" — единый вид суммы монет PocketChat в UI. */
-    public static String formatCoins(long amount) {
-        return CURRENCY_ICON + " " + amount;
-    }
-
-    private static volatile java.util.List<Gift> cachedCatalog = null;
-    private static volatile boolean catalogInFlight = false;
-
-    /** Каталог подарков — кэшируется один раз (цены не меняются на лету). */
-    public static java.util.List<Gift> cachedCatalog() {
-        if (!isConfigured()) return java.util.List.of();
-        if (cachedCatalog == null && !catalogInFlight) {
-            catalogInFlight = true;
-            getJson("/v1/catalog", json -> {
-                catalogInFlight = false;
-                if (json == null || !json.has("gifts")) return;
-                java.util.List<Gift> list = new java.util.ArrayList<>();
-                for (var el : json.getAsJsonArray("gifts")) {
-                    JsonObject g = el.getAsJsonObject();
-                    list.add(new Gift(
-                            g.get("id").getAsString(),
-                            g.has("name") ? g.get("name").getAsString() : g.get("id").getAsString(),
-                            g.has("icon") ? g.get("icon").getAsString() : "*",
-                            g.get("price").getAsLong(),
-                            g.has("rarity") ? g.get("rarity").getAsString() : "common"));
-                }
-                cachedCatalog = list;
-            });
-        }
-        return cachedCatalog != null ? cachedCatalog : java.util.List.of();
-    }
-
-    private static final class InboxEntry {
-        final java.util.List<ReceivedGift> gifts;
-        final long at;
-
-        InboxEntry(java.util.List<ReceivedGift> gifts, long at) {
-            this.gifts = gifts;
-            this.at = at;
-        }
-    }
-
-    private static final java.util.Map<String, InboxEntry> INBOX_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final java.util.Set<String> INBOX_IN_FLIGHT = java.util.concurrent.ConcurrentHashMap.newKeySet();
-    private static final long INBOX_TTL_MS = 15_000L;
-
-    /** Полученные подарки игрока (для витрины в профиле), с фоновым обновлением по TTL. */
-    public static java.util.List<ReceivedGift> cachedGiftInbox(String username) {
-        if (!isConfigured() || !hasAccount() || username == null || username.isBlank()) return java.util.List.of();
-        String key = username.toLowerCase(java.util.Locale.ROOT);
-        InboxEntry e = INBOX_CACHE.get(key);
-        boolean stale = e == null || System.currentTimeMillis() - e.at > INBOX_TTL_MS;
-        if (stale && INBOX_IN_FLIGHT.add(key)) {
-            String path = "/v1/gift/inbox?token=" + enc(PmChatClient.getConfig().backendToken) + "&username=" + enc(username);
-            getJson(path, json -> {
-                INBOX_IN_FLIGHT.remove(key);
-                if (json == null || !json.has("gifts")) return;
-                java.util.List<ReceivedGift> list = new java.util.ArrayList<>();
-                for (var el : json.getAsJsonArray("gifts")) {
-                    JsonObject g = el.getAsJsonObject();
-                    list.add(new ReceivedGift(g.get("giftId").getAsString(), g.get("from").getAsString(),
-                            g.has("at") && !g.get("at").isJsonNull() ? parseIsoMillis(g.get("at").getAsString()) : 0L,
-                            !g.has("seen") || g.get("seen").getAsBoolean()));
-                }
-                INBOX_CACHE.put(key, new InboxEntry(list, System.currentTimeMillis()));
-            });
-        }
-        return e != null ? e.gifts : java.util.List.of();
-    }
-
-    /** Купить подарок {@code giftId} и отправить игроку {@code target}. */
-    public static void sendGift(String target, String giftId, Callback<Long> cb) {
-        JsonObject body = new JsonObject();
-        body.addProperty("token", PmChatClient.getConfig().backendToken);
-        body.addProperty("targetUsername", target);
-        body.addProperty("giftId", giftId);
-        postJson("/v1/gift/send", body, resp -> {
-            // баланс мог измениться — забудем кэш, следующий cachedSelfBalance() перечитает
-            cachedSelfBalance = null;
-        }, (ok, v, err) -> {
-            if (ok) INBOX_CACHE.remove(target == null ? "" : target.toLowerCase(java.util.Locale.ROOT));
-            if (cb != null) cb.onResult(ok, null, err);
-        });
-    }
-
-    /** Подарок из каталога по id, или {@code null}, если каталог ещё не подгрузился/id неизвестен. */
-    public static Gift giftById(String id) {
-        if (id == null) return null;
-        for (Gift g : cachedCatalog()) {
-            if (g.id.equals(id)) return g;
-        }
-        return null;
-    }
-
-    /**
-     * Фоновая проверка новых подарков — вызывается периодически из тика клиента
-     * (см. {@code PmChatClient}). Сверяет свежий (по TTL) собственный инбокс с
-     * {@link PmConfig#lastGiftNotifiedAt} и зовёт {@code onNewGift} для каждого
-     * ещё не показанного подарка (от старых к новым), затем сдвигает отметку.
-     */
-    public static void checkNewGifts(BiConsumer<ReceivedGift, Gift> onNewGift) {
-        if (!isConfigured() || !hasAccount()) return;
-        String self = PmChatClient.selfName();
-        if (self.isBlank()) return;
-        java.util.List<ReceivedGift> gifts = cachedGiftInbox(self);
-        if (gifts.isEmpty()) return;
-        PmConfig config = PmChatClient.getConfig();
-        if (config.lastGiftNotifiedAt == 0) {
-            // Первый запуск после обновления: не показываем анимацию для всех подарков,
-            // полученных раньше — просто ставим отметку на самый свежий из уже известных.
-            long baseline = 0;
-            for (ReceivedGift g : gifts) baseline = Math.max(baseline, g.at);
-            config.lastGiftNotifiedAt = Math.max(baseline, System.currentTimeMillis());
-            config.save();
-            return;
-        }
-        long newest = config.lastGiftNotifiedAt;
-        java.util.List<ReceivedGift> fresh = new java.util.ArrayList<>();
-        for (ReceivedGift g : gifts) {
-            if (g.at > config.lastGiftNotifiedAt) {
-                fresh.add(g);
-                if (g.at > newest) newest = g.at;
-            }
-        }
-        if (fresh.isEmpty()) return;
-        config.lastGiftNotifiedAt = newest;
-        config.save();
-        // От старых к новым, как они и пришли бы в реальном времени.
-        for (int i = fresh.size() - 1; i >= 0; i--) {
-            ReceivedGift g = fresh.get(i);
-            onNewGift.accept(g, giftById(g.giftId));
-        }
-    }
-
-    /** Прямой перевод монет игроку (не подарок — без каталога/иконки). */
-    public static void sendCoins(String target, long amount, Callback<Void> cb) {
-        JsonObject body = new JsonObject();
-        body.addProperty("token", PmChatClient.getConfig().backendToken);
-        body.addProperty("targetUsername", target);
-        body.addProperty("amount", amount);
-        postJson("/v1/coins/send", body, resp -> cachedSelfBalance = null, cb);
-    }
-
-    // ---------- магазин возможностей (оформление/функции за монеты, ограниченный срок) ----------
-
-    public static final class ShopItem {
-        public final long id;
-        public final String name, description, kind, featureKey;
-        public final long price;
-        public final int durationDays;
-
-        ShopItem(long id, String name, String description, String kind, String featureKey, long price, int durationDays) {
-            this.id = id;
-            this.name = name;
-            this.description = description;
-            this.kind = kind;
-            this.featureKey = featureKey;
-            this.price = price;
-            this.durationDays = durationDays;
-        }
-    }
-
-    public static final class MyFeature {
-        public final String featureKey;
-        public final long expiresAt;
-
-        MyFeature(String featureKey, long expiresAt) {
-            this.featureKey = featureKey;
-            this.expiresAt = expiresAt;
-        }
-    }
-
-    private static volatile java.util.List<ShopItem> cachedShop = null;
-    private static volatile boolean shopInFlight = false;
-
-    /** Товары магазина — кэшируются один раз за сессию (список меняется редко). */
-    public static java.util.List<ShopItem> cachedShopItems() {
-        if (!isConfigured()) return java.util.List.of();
-        if (cachedShop == null && !shopInFlight) {
-            shopInFlight = true;
-            getJson("/v1/shop", json -> {
-                shopInFlight = false;
-                if (json == null || !json.has("items")) return;
-                java.util.List<ShopItem> list = new java.util.ArrayList<>();
-                for (var el : json.getAsJsonArray("items")) {
-                    JsonObject o = el.getAsJsonObject();
-                    list.add(new ShopItem(
-                            o.get("id").getAsLong(),
-                            o.get("name").getAsString(),
-                            o.has("description") ? o.get("description").getAsString() : "",
-                            o.has("kind") ? o.get("kind").getAsString() : "feature",
-                            o.has("featureKey") && !o.get("featureKey").isJsonNull() ? o.get("featureKey").getAsString() : null,
-                            o.get("price").getAsLong(),
-                            o.get("durationDays").getAsInt()));
-                }
-                cachedShop = list;
-            });
-        }
-        return cachedShop != null ? cachedShop : java.util.List.of();
-    }
-
-    private static volatile java.util.List<MyFeature> cachedMyFeatures = null;
-    private static volatile long myFeaturesFetchedAt = 0;
-    private static volatile boolean myFeaturesInFlight = false;
-    private static final long MY_FEATURES_TTL_MS = 20_000L;
-
-    /** Свои активные покупки — с фоновым обновлением по TTL. */
-    public static java.util.List<MyFeature> cachedMyFeatures() {
-        if (!isConfigured() || !hasAccount()) return java.util.List.of();
-        long now = System.currentTimeMillis();
-        if ((cachedMyFeatures == null || now - myFeaturesFetchedAt > MY_FEATURES_TTL_MS) && !myFeaturesInFlight) {
-            myFeaturesInFlight = true;
-            getJson("/v1/shop/mine?token=" + enc(PmChatClient.getConfig().backendToken), json -> {
-                myFeaturesInFlight = false;
-                myFeaturesFetchedAt = System.currentTimeMillis();
-                if (json == null || !json.has("features")) return;
-                java.util.List<MyFeature> list = new java.util.ArrayList<>();
-                for (var el : json.getAsJsonArray("features")) {
-                    JsonObject o = el.getAsJsonObject();
-                    list.add(new MyFeature(o.get("featureKey").getAsString(), parseIsoMillis(o.get("expiresAt").getAsString())));
-                }
-                cachedMyFeatures = list;
-            });
-        }
-        return cachedMyFeatures != null ? cachedMyFeatures : java.util.List.of();
-    }
-
-    /** Активна ли прямо сейчас купленная фича (см. {@link #cachedMyFeatures}). */
-    public static boolean hasActiveFeature(String featureKey) {
-        long now = System.currentTimeMillis();
-        for (MyFeature f : cachedMyFeatures()) {
-            if (f.featureKey.equals(featureKey) && f.expiresAt > now) return true;
-        }
-        return false;
-    }
-
-    public static void buyShopItem(long itemId, Callback<Void> cb) {
-        JsonObject body = new JsonObject();
-        body.addProperty("token", PmChatClient.getConfig().backendToken);
-        body.addProperty("itemId", itemId);
-        postJson("/v1/shop/buy", body, resp -> {
-            cachedSelfBalance = null;
-            myFeaturesFetchedAt = 0;
-        }, cb);
-    }
-
-    /** Своя цена за входящее ЛС — требует активную фичу {@code paid_dm}. */
-    public static void setDmPrice(long price, Callback<Void> cb) {
-        JsonObject body = new JsonObject();
-        body.addProperty("token", PmChatClient.getConfig().backendToken);
-        body.addProperty("price", price);
-        postJson("/v1/dm-price", body, resp -> {
-            String self = PmChatClient.selfName();
-            if (self != null) ACCOUNT_CACHE.remove(self.toLowerCase(java.util.Locale.ROOT));
-        }, cb);
-    }
-
-    /**
-     * Списывает цену получателя за входящее ЛС перед фактической отправкой (бэкенд
-     * не видит {@code /m} сам). {@code charged} — сколько реально списано (0, если
-     * фича {@code paid_dm} у получателя не активна). При нехватке монет ok=false и
-     * cb получает цену через {@link #lastChargeRequiredPrice()}.
-     */
-    private static volatile long lastChargeRequiredPrice = 0;
-
-    public static long lastChargeRequiredPrice() {
-        return lastChargeRequiredPrice;
-    }
-
-    public static void chargeDm(String target, Callback<Long> cb) {
-        JsonObject body = new JsonObject();
-        body.addProperty("token", PmChatClient.getConfig().backendToken);
-        body.addProperty("targetUsername", target);
-        if (!isConfigured() || !hasAccount()) {
-            run(cb, true, 0L, null);
-            return;
-        }
-        Thread t = new Thread(() -> {
-            long charged = 0;
-            boolean ok;
-            String error = null;
-            try {
-                HttpRequest req = HttpRequest.newBuilder()
-                        .uri(URI.create(base() + "/v1/dm/charge"))
-                        .timeout(Duration.ofSeconds(10))
-                        .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8))
-                        .build();
-                HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-                JsonObject json = resp.body().isBlank() ? null : JsonParser.parseString(resp.body()).getAsJsonObject();
-                ok = resp.statusCode() / 100 == 2;
-                if (ok && json != null && json.has("charged")) charged = json.get("charged").getAsLong();
-                if (!ok) {
-                    error = json != null && json.has("error") ? json.get("error").getAsString() : ("HTTP " + resp.statusCode());
-                    if (json != null && json.has("price")) lastChargeRequiredPrice = json.get("price").getAsLong();
-                }
-            } catch (Exception e) {
-                ok = false;
-                error = e.toString();
-                PmChatClient.LOGGER.debug("PmBackend dm/charge failed: {}", e.toString());
-            }
-            if (ok) cachedSelfBalance = null;
-            boolean finalOk = ok;
-            long finalCharged = charged;
-            String finalError = error;
-            run(cb, finalOk, finalCharged, finalError);
-        }, "pmchat-backend-dm-charge");
-        t.setDaemon(true);
-        t.start();
-    }
-
-    // ---------- админ: товары магазина ----------
-
-    public static void adminListShop(Callback<java.util.List<ShopItem>> cb) {
-        String path = "/v1/admin/shop?token=" + enc(PmChatClient.getConfig().backendToken)
-                + "&adminSecret=" + enc(PmChatClient.getConfig().backendAdminSecret);
-        getJson(path, json -> {
-            if (json == null || !json.has("items")) {
-                run(cb, false, null, "request failed");
-                return;
-            }
-            java.util.List<ShopItem> list = new java.util.ArrayList<>();
-            for (var el : json.getAsJsonArray("items")) {
-                JsonObject o = el.getAsJsonObject();
-                list.add(new ShopItem(
-                        o.get("id").getAsLong(),
-                        o.get("name").getAsString(),
-                        o.has("description") ? o.get("description").getAsString() : "",
-                        o.has("kind") ? o.get("kind").getAsString() : "feature",
-                        o.has("featureKey") && !o.get("featureKey").isJsonNull() ? o.get("featureKey").getAsString() : null,
-                        o.get("price").getAsLong(),
-                        o.get("durationDays").getAsInt()));
-            }
-            run(cb, true, list, null);
-        });
-    }
-
-    /** {@code id <= 0} создаёт новый товар вместо изменения существующего. */
-    public static void adminUpsertShopItem(long id, String name, String description, String featureKey,
-                                           long price, int durationDays, Callback<Void> cb) {
-        JsonObject body = adminBody();
-        if (id > 0) body.addProperty("id", id);
-        body.addProperty("name", name);
-        body.addProperty("description", description);
-        body.addProperty("kind", "feature");
-        if (featureKey != null && !featureKey.isBlank()) body.addProperty("featureKey", featureKey);
-        body.addProperty("price", price);
-        body.addProperty("durationDays", durationDays);
-        postJson("/v1/admin/shop/upsert", body, resp -> cachedShop = null, cb);
-    }
-
-    public static void adminDeleteShopItem(long id, Callback<Void> cb) {
-        JsonObject body = adminBody();
-        body.addProperty("id", id);
-        postJson("/v1/admin/shop/delete", body, resp -> cachedShop = null, cb);
-    }
-
     // ---------- должности (роли) игроков: назначает админ, отдельно от встроенных C/H/M/E/D ----------
 
     public static final class RoleDef {
@@ -829,7 +384,6 @@ public final class PmBackend {
                     json.has("sharePrecise") && json.get("sharePrecise").getAsBoolean(),
                     json.has("muted") && json.get("muted").getAsBoolean(),
                     json.has("banned") && json.get("banned").getAsBoolean(),
-                    json.has("dmPrice") ? json.get("dmPrice").getAsLong() : 0L,
                     json.has("roleKey") && !json.get("roleKey").isJsonNull() ? json.get("roleKey").getAsString() : null,
                     json.has("bot") && json.get("bot").getAsBoolean());
             run(cb, true, info, null);
@@ -937,14 +491,6 @@ public final class PmBackend {
         postJson("/v1/bots/message", body, null, cb);
     }
 
-    /** Сколько монет стоит создать бота (0 — бесплатно), задаёт админ. */
-    public static void getBotCreatePrice(Callback<Long> cb) {
-        getJson("/v1/bots/createprice", json -> {
-            long price = json != null && json.has("price") ? json.get("price").getAsLong() : 0L;
-            run(cb, json != null, price, json == null ? "request failed" : null);
-        });
-    }
-
     /** Публичный поиск ботов по подстроке @username (без токенов/владельцев). */
     public static void searchBots(String query, Callback<java.util.List<BotInfo>> cb) {
         getJson("/v1/bots/search?q=" + enc(query), json -> {
@@ -967,24 +513,15 @@ public final class PmBackend {
         public final String owner;
         public final String name;
         public final String description;
-        public final long price;
         public final String status;    // pending/approved/rejected — только в "мои заявки"
 
-        BotListing(long id, String owner, String name, String description, long price, String status) {
+        BotListing(long id, String owner, String name, String description, String status) {
             this.id = id;
             this.owner = owner;
             this.name = name;
             this.description = description;
-            this.price = price;
             this.status = status;
         }
-    }
-
-    public static void getBotstoreSubmitPrice(Callback<Long> cb) {
-        getJson("/v1/botstore/price", json -> {
-            long price = json != null && json.has("price") ? json.get("price").getAsLong() : 0L;
-            run(cb, json != null, price, json == null ? "request failed" : null);
-        });
     }
 
     /** Загружает произвольный файл на бэкенд (POST /v1/media) — для заявки в магазин ботов. */
@@ -1029,14 +566,13 @@ public final class PmBackend {
         t.start();
     }
 
-    public static void submitBotListing(String name, String description, String fileId, long price, Callback<Long> cb) {
+    public static void submitBotListing(String name, String description, String fileId, Callback<Long> cb) {
         if (!isConfigured() || !hasAccount()) { run(cb, false, null, "no account"); return; }
         JsonObject body = new JsonObject();
         body.addProperty("token", PmChatClient.getConfig().backendToken);
         body.addProperty("name", name);
         body.addProperty("description", description);
         body.addProperty("fileId", fileId);
-        body.addProperty("price", price);
         postJson("/v1/botstore/submit", body,
                 resp -> {
                     if (resp != null && resp.has("id")) run(cb, true, resp.get("id").getAsLong(), null);
@@ -1055,7 +591,7 @@ public final class PmBackend {
                     list.add(new BotListing(o.get("id").getAsLong(), null,
                             o.get("name").getAsString(),
                             o.has("description") ? o.get("description").getAsString() : "",
-                            o.get("price").getAsLong(), o.get("status").getAsString()));
+                            o.get("status").getAsString()));
                 }
             }
             run(cb, json != null, list, json == null ? "request failed" : null);
@@ -1073,7 +609,7 @@ public final class PmBackend {
                     list.add(new BotListing(o.get("id").getAsLong(), o.get("owner").getAsString(),
                             o.get("name").getAsString(),
                             o.has("description") ? o.get("description").getAsString() : "",
-                            o.get("price").getAsLong(), null));
+                            null));
                 }
             }
             run(cb, json != null, list, json == null ? "request failed" : null);
@@ -1156,7 +692,7 @@ public final class PmBackend {
     private static final long FEATURES_TTL_MS = 30_000L;
 
     /**
-     * Включена ли фича ({@code gifts}/{@code reports}/{@code support}) прямо сейчас —
+     * Включена ли фича ({@code reports}/{@code support}) прямо сейчас —
      * читает кэш (обновляется в фоне раз в 30с), по умолчанию {@code true} (в т.ч. пока
      * бэкенд не настроен), чтобы ничего не блокировать без явного отключения админом.
      */
@@ -1427,13 +963,6 @@ public final class PmBackend {
         postJson("/v1/admin/broadcast", body, null, cb);
     }
 
-    public static void adminGrantCurrency(String targetUsername, long amount, Callback<Void> cb) {
-        JsonObject body = adminBody();
-        body.addProperty("targetUsername", targetUsername);
-        body.addProperty("amount", amount);
-        postJson("/v1/admin/grant-currency", body, null, cb);
-    }
-
     public static void adminVerify(String targetUsername, boolean verified, Callback<Void> cb) {
         JsonObject body = adminBody();
         body.addProperty("targetUsername", targetUsername);
@@ -1472,7 +1001,7 @@ public final class PmBackend {
         postJson("/v1/admin/ban", body, null, cb);
     }
 
-    /** Включить/выключить фичу целиком ({@code gifts}/{@code reports}/{@code support}). */
+    /** Включить/выключить фичу целиком ({@code reports}/{@code support}). */
     public static void adminSetFeature(String name, boolean enabled, int minutes, Callback<Void> cb) {
         JsonObject body = adminBody();
         body.addProperty("name", name);
@@ -1618,34 +1147,6 @@ public final class PmBackend {
         return body;
     }
 
-    /** {botCreatePrice, botstoreSubmitPrice} — цены, настраиваемые из этой же панели. */
-    public static final class AdminPrices {
-        public final long botCreatePrice;
-        public final long botstoreSubmitPrice;
-
-        AdminPrices(long botCreatePrice, long botstoreSubmitPrice) {
-            this.botCreatePrice = botCreatePrice;
-            this.botstoreSubmitPrice = botstoreSubmitPrice;
-        }
-    }
-
-    public static void adminGetPrices(Callback<AdminPrices> cb) {
-        getJson("/v1/admin/settings/prices?token=" + enc(PmChatClient.getConfig().backendToken)
-                + "&adminSecret=" + enc(PmChatClient.getConfig().backendAdminSecret), json -> {
-            if (json == null) { run(cb, false, null, "request failed"); return; }
-            run(cb, true, new AdminPrices(
-                    json.has("botCreatePrice") ? json.get("botCreatePrice").getAsLong() : 0L,
-                    json.has("botstoreSubmitPrice") ? json.get("botstoreSubmitPrice").getAsLong() : 0L), null);
-        });
-    }
-
-    public static void adminSetPrices(long botCreatePrice, long botstoreSubmitPrice, Callback<Void> cb) {
-        JsonObject body = adminBody();
-        body.addProperty("botCreatePrice", botCreatePrice);
-        body.addProperty("botstoreSubmitPrice", botstoreSubmitPrice);
-        postJson("/v1/admin/settings/prices", body, null, cb);
-    }
-
     /** Заявка в магазин ботов, ожидающая решения админа. */
     public static final class BotListingPending {
         public final long id;
@@ -1653,17 +1154,13 @@ public final class PmBackend {
         public final String name;
         public final String description;
         public final String fileId;
-        public final long price;
-        public final long feePaid;
 
-        BotListingPending(long id, String owner, String name, String description, String fileId, long price, long feePaid) {
+        BotListingPending(long id, String owner, String name, String description, String fileId) {
             this.id = id;
             this.owner = owner;
             this.name = name;
             this.description = description;
             this.fileId = fileId;
-            this.price = price;
-            this.feePaid = feePaid;
         }
     }
 
@@ -1677,7 +1174,7 @@ public final class PmBackend {
                     list.add(new BotListingPending(o.get("id").getAsLong(), o.get("owner").getAsString(),
                             o.get("name").getAsString(),
                             o.has("description") ? o.get("description").getAsString() : "",
-                            o.get("fileId").getAsString(), o.get("price").getAsLong(), o.get("feePaid").getAsLong()));
+                            o.get("fileId").getAsString()));
                 }
             }
             run(cb, json != null, list, json == null ? "request failed" : null);
@@ -1740,15 +1237,13 @@ public final class PmBackend {
 
     public static final class AdminAccount {
         public final String username;
-        public final long balance;
         public final boolean verified;
         public final boolean official;
         public final long lastSeenAt;
         public final boolean sharePrecise;
 
-        AdminAccount(String username, long balance, boolean verified, boolean official, long lastSeenAt, boolean sharePrecise) {
+        AdminAccount(String username, boolean verified, boolean official, long lastSeenAt, boolean sharePrecise) {
             this.username = username;
-            this.balance = balance;
             this.verified = verified;
             this.official = official;
             this.lastSeenAt = lastSeenAt;
@@ -1783,7 +1278,6 @@ public final class PmBackend {
                             JsonObject a = el.getAsJsonObject();
                             list.add(new AdminAccount(
                                     a.get("username").getAsString(),
-                                    a.get("balance").getAsLong(),
                                     a.has("verified") && a.get("verified").getAsBoolean(),
                                     a.has("official") && a.get("official").getAsBoolean(),
                                     a.has("lastSeen") && !a.get("lastSeen").isJsonNull()

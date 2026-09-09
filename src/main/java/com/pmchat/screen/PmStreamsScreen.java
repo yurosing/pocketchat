@@ -6,23 +6,20 @@ import com.pmchat.client.PmServerMedia;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * «Стримы» — список игроков, которые сейчас стримят (внешний сервис,
  * Twitch/YouTube — мод только показывает статус+ссылку, видео сам не тянет),
- * кнопка «начать/закончить стрим» для себя и донат Vault-монетами стримеру.
- * Кнопки видны и без серверного плагина (иначе нечего было бы нажать) — но
- * реально объявить стрим другим игрокам и задонатить можно только когда
- * плагин установлен: без него при попытке показывается пояснение вместо
- * молчаливого ничегонеделания.
+ * кнопка «начать/закончить стрим» для себя. Кнопки видны и без серверного
+ * плагина (иначе нечего было бы нажать) — но реально объявить стрим другим
+ * игрокам можно только когда плагин установлен: без него при попытке
+ * показывается пояснение вместо молчаливого ничегонеделания.
  */
 @Environment(EnvType.CLIENT)
 public class PmStreamsScreen extends Screen {
@@ -46,14 +43,7 @@ public class PmStreamsScreen extends Screen {
     private boolean startMode = false;
     private EditBox titleField, urlField;
 
-    // Диалог доната
-    private String donateTarget = null;
-    private EditBox amountField;
-
-    /** {x,y,w,h,player} — кнопки доната в списке. */
-    private final List<Object[]> donateRects = new ArrayList<>();
-
-    // Локальное сообщение (напр. «нужен плагин») — не путать с sm.lastDonateMsg
+    // Локальное сообщение (напр. «нужен плагин»)
     private String localMsg = null;
     private long localMsgAt = 0L;
 
@@ -77,7 +67,6 @@ public class PmStreamsScreen extends Screen {
     protected void init() {
         applyTheme();
         clearWidgets();
-        donateRects.clear();
         lastSeenVersion = sm.streamVersion();
 
         if (pluginPresent() && !requested) {
@@ -93,7 +82,7 @@ public class PmStreamsScreen extends Screen {
         px = (width - PANEL_W) / 2;
         py = (height - panelH) / 2;
 
-        if (!startMode && donateTarget == null) {
+        if (!startMode) {
             addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 70, py + headerH, 140, 16,
                     Component.translatable(sm.isSelfStreaming() ? "pmchat.streams.stop" : "pmchat.streams.start"),
                     sm.isSelfStreaming() ? 0xFF5A2A22 : 0xFF2E5F46,
@@ -147,27 +136,6 @@ public class PmStreamsScreen extends Screen {
                         startMode = false;
                         reinit();
                     }));
-        } else if (donateTarget != null) {
-            int fy = py + headerH + 22;
-            amountField = new EditBox(font, px + 16, fy, PANEL_W - 32, 16,
-                    Component.translatable("pmchat.streams.amounthint"));
-            amountField.setMaxLength(12);
-            addRenderableWidget(amountField);
-
-            addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 90, fy + 24, 84, 18,
-                    Component.translatable("pmchat.streams.cancel"),
-                    BTN_BG, BTN_HOVER, BTN_BORDER, VALUE, btn -> {
-                        donateTarget = null;
-                        reinit();
-                    }));
-            addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 + 6, fy + 24, 84, 18,
-                    Component.translatable("pmchat.streams.donate"),
-                    0xFF6B4A1E, 0xFF7E5824, 0xFFB98A3A, 0xFFF0D8A0, btn -> {
-                        double amount = parseAmount(amountField.getValue());
-                        if (amount > 0) sm.donate(donateTarget, amount);
-                        donateTarget = null;
-                        reinit();
-                    }).withIcon(PmIcons.MONEY));
         }
 
         addRenderableWidget(FlatButton.centered(font, px + PANEL_W / 2 - 40, py + panelH - 24, 80, 18,
@@ -180,18 +148,9 @@ public class PmStreamsScreen extends Screen {
         localMsgAt = System.currentTimeMillis();
     }
 
-    private static double parseAmount(String s) {
-        try {
-            double d = Double.parseDouble(s.trim().replace(',', '.'));
-            return Double.isFinite(d) ? d : 0;
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        if (sm.streamVersion() != lastSeenVersion && !startMode && donateTarget == null) {
+        if (sm.streamVersion() != lastSeenVersion && !startMode) {
             reinit();
         }
 
@@ -203,21 +162,17 @@ public class PmStreamsScreen extends Screen {
         context.text(font, title,
                 px + (PANEL_W - font.width(title)) / 2, py + 9, TITLE, false);
 
-        if (!pluginPresent() && !startMode && donateTarget == null) {
+        if (!pluginPresent() && !startMode) {
             String note = Component.translatable("pmchat.streams.noplugin_note").getString();
             context.text(font, trimTo(note, PANEL_W - 24),
                     px + (PANEL_W - font.width(trimTo(note, PANEL_W - 24))) / 2, py + 19, SUBTLE, false);
         }
 
-        if (!startMode && donateTarget == null) {
+        if (!startMode) {
             drawList(context, mouseX, mouseY);
         }
 
-        String rmsg = sm.lastDonateMsg();
-        if (rmsg != null && System.currentTimeMillis() - sm.lastDonateAt() < 4000) {
-            context.text(font, trimTo(rmsg, PANEL_W - 24),
-                    px + 12, py + panelH - 34, sm.lastDonateOk() ? 0xFF6FBF8B : 0xFFE0574C, false);
-        } else if (localMsg != null && System.currentTimeMillis() - localMsgAt < 4000) {
+        if (localMsg != null && System.currentTimeMillis() - localMsgAt < 4000) {
             context.text(font, trimTo(localMsg, PANEL_W - 24),
                     px + 12, py + panelH - 34, 0xFFE0574C, false);
         }
@@ -226,7 +181,6 @@ public class PmStreamsScreen extends Screen {
     }
 
     private void drawList(GuiGraphicsExtractor context, int mouseX, int mouseY) {
-        donateRects.clear();
         List<PmServerMedia.LiveStream> streams = sm.liveStreams();
         int listTop = py + headerH + 22;
         if (streams.isEmpty()) {
@@ -241,19 +195,7 @@ public class PmStreamsScreen extends Screen {
             context.text(font, "● " + config.aliasOf(s.player()), px + 14, y + 4, 0xFFE07A6A, false);
             String t = s.title() == null || s.title().isBlank()
                     ? Component.translatable("pmchat.streams.notitle").getString() : s.title();
-            context.text(font, trimTo(t, PANEL_W - 100), px + 14, y + 16, LABEL, false);
-
-            boolean self = s.player().equalsIgnoreCase(PmChatClient.selfName());
-            if (!self) {
-                int bx = px + PANEL_W - 70, by = y + 6, bw = 56, bh = 18;
-                boolean hov = mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + bh;
-                context.fill(bx, by, bx + bw, by + bh, hov ? BTN_HOVER : BTN_BG);
-                context.outline(bx, by, bw, bh, BTN_BORDER);
-                String lbl = Component.translatable("pmchat.streams.donate").getString();
-                context.text(font, lbl, bx + (bw - font.width(lbl)) / 2, by + 5,
-                        0xFFF0C34E, false);
-                donateRects.add(new Object[]{bx, by, bw, bh, s.player()});
-            }
+            context.text(font, trimTo(t, PANEL_W - 24), px + 14, y + 16, LABEL, false);
             y += ROW_H;
         }
     }
@@ -262,22 +204,6 @@ public class PmStreamsScreen extends Screen {
         if (font.width(s) <= maxW) return s;
         while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
         return s + "…";
-    }
-
-    @Override
-    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
-        if (!startMode && donateTarget == null && pluginPresent()) {
-            int mx = (int) click.x(), my = (int) click.y();
-            for (Object[] r : donateRects) {
-                int rx = (int) r[0], ry = (int) r[1], rw = (int) r[2], rh = (int) r[3];
-                if (mx >= rx && mx < rx + rw && my >= ry && my < ry + rh) {
-                    donateTarget = (String) r[4];
-                    reinit();
-                    return true;
-                }
-            }
-        }
-        return super.mouseClicked(click, doubled);
     }
 
     private void reinit() {

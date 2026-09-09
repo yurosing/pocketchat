@@ -38,8 +38,6 @@ public class PmBotsScreen extends Screen {
 
     /** null — ещё грузим список; иначе актуальный список ботов. */
     private List<PmBackend.BotInfo> bots = null;
-    /** Цена создания бота (задаёт админ), -1 — ещё не загружена. */
-    private long createPrice = -1;
     /** Результаты поиска по @username, вживую по мере ввода в searchField. */
     private List<PmBackend.BotInfo> searchResults = new ArrayList<>();
     private final List<Object[]> searchRowRects = new ArrayList<>(); // x,y,w,h,username
@@ -68,12 +66,6 @@ public class PmBotsScreen extends Screen {
         px = (width - pw) / 2;
         py = (height - ph) / 2;
         if (bots == null) loadBots();
-        if (createPrice < 0) {
-            PmBackend.getBotCreatePrice((ok, price, err) -> {
-                createPrice = ok && price != null ? price : 0;
-                if (minecraft != null) layout();
-            });
-        }
         layout();
     }
 
@@ -113,8 +105,6 @@ public class PmBotsScreen extends Screen {
         userField.setResponder(s -> userField.setSuggestion(s.isEmpty() ? userHint : null));
         addRenderableWidget(userField);
         y += 19;
-        // Цена создания (если админ её включил) рисуется в render() тут же, без виджета.
-        y += (createPrice > 0) ? 10 : 0;
 
         int createW = fw - 96;
         addRenderableWidget(FlatButton.centered(font, fx, y, createW, 15,
@@ -208,9 +198,6 @@ public class PmBotsScreen extends Screen {
                 nameText = ""; userText = "";
                 Minecraft.getInstance().keyboardHandler.setClipboard(bot.token);
                 loadBots();
-            } else if (err != null && err.contains("insufficient balance")) {
-                status = Component.translatable("pmchat.bots.needcoins", createPrice);
-                statusColor = 0xFFE07A6A;
             } else {
                 status = Component.translatable("pmchat.bots.fail", String.valueOf(err));
                 statusColor = 0xFFE07A6A;
@@ -247,10 +234,6 @@ public class PmBotsScreen extends Screen {
         int fx = px + 12;
         int fw = pw - 24;
         int y = py + 24 + 19;
-        if (createPrice > 0) {
-            ctx.text(font, Component.translatable("pmchat.bots.priceline", createPrice), fx, y, LABEL, false);
-            y += 10;
-        }
         y += 22; // строка кнопок «Создать»/«Магазин»
 
         // Список ботов (текстовая часть; кнопки рисует super.render)

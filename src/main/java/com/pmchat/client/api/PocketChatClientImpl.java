@@ -85,17 +85,6 @@ public final class PocketChatClientImpl implements PocketChatClientApi {
         return true;
     }
 
-    /** A gift arrived for the local player. */
-    public static void fireGift(String from, String giftName, String icon) {
-        for (PocketChatListener l : LISTENERS) {
-            try {
-                l.onGiftReceived(from, giftName, icon);
-            } catch (Exception e) {
-                PmChatClient.LOGGER.warn("PocketChat API listener failed in onGiftReceived", e);
-            }
-        }
-    }
-
     /** The player switched to a conversation in the messenger window. */
     public static void fireConversationOpened(String conversationId) {
         if (conversationId == null || LISTENERS.isEmpty()) return;
@@ -178,8 +167,7 @@ public final class PocketChatClientImpl implements PocketChatClientApi {
 
     @Override
     public String knownBalance() {
-        String bal = PmChatClient.knownBalance();
-        return bal == null ? "" : bal;
+        return "";
     }
 
     @Override

@@ -17,8 +17,8 @@ import java.util.List;
 /**
  * Админ-панель PocketChat — полноэкранная, в киберпанк-стиле (всегда красная,
  * независимо от темы мессенджера). Вкладки: сводка по бэкенду, рассылка +
- * личное сообщение от официального аккаунта, управление игроком (валюта/
- * галочка/официальный), жалобы и обращения в поддержку. Работает только если
+ * личное сообщение от официального аккаунта, управление игроком (галочка/
+ * официальный), жалобы и обращения в поддержку. Работает только если
  * сервер узнаёт в токене аккаунт {@code ADMIN_USERNAME} и совпадает
  * {@link PmConfig#backendAdminSecret} — без этого все вызовы вернут 403.
  */
@@ -51,7 +51,6 @@ public class PmAdminScreen extends Screen {
             "pmchat.admin.tab.reports",
             "pmchat.admin.tab.support",
             "pmchat.admin.tab.rules",
-            "pmchat.admin.tab.shop",
             "pmchat.admin.tab.roles",
             "pmchat.admin.tab.bots",
     };
@@ -80,7 +79,6 @@ public class PmAdminScreen extends Screen {
 
     // ---- Вкладка 2: игрок ----
     private EditBox targetField;
-    private EditBox amountField;
     private EditBox muteMinutesField;
 
     // ---- Вкладка 3/4: жалобы и поддержка ----
@@ -96,16 +94,7 @@ public class PmAdminScreen extends Screen {
     private String rulesHeaderCurrent = "";
     private static final int RULE_LINES = 5;
 
-    // ---- Вкладка 6: магазин возможностей ----
-    private List<PmBackend.ShopItem> shopItems = Collections.emptyList();
-    private int shopScroll = 0;
-    private int shopListTop, shopListBottom;
-    private long shopEditingId = 0;
-    private EditBox shopNameField, shopDescField, shopFeatureKeyField, shopPriceField, shopDurationField;
-    private final java.util.List<Object[]> shopRowRects = new java.util.ArrayList<>();
-    private final java.util.List<Object[]> shopDeleteRects = new java.util.ArrayList<>();
-
-    // ---- Вкладка 7: должности (роли) игроков ----
+    // ---- Вкладка 6: должности (роли) игроков ----
     private List<PmBackend.RoleDef> roleDefs = Collections.emptyList();
     private int roleScroll = 0;
     private int roleListTop, roleListBottom;
@@ -125,8 +114,7 @@ public class PmAdminScreen extends Screen {
     private static final String DEFAULT_ROLE_COLOR = "#25D366";
     private static boolean defaultRoleSeedAttempted = false;
 
-    // ---- Вкладка 8: боты — цены + заявки в магазин ботов ----
-    private EditBox botCreatePriceField, botstoreSubmitPriceField;
+    // ---- Вкладка 7: боты — заявки в магазин ботов ----
     private List<PmBackend.BotListingPending> botPending = Collections.emptyList();
     private int botScroll = 0;
     private int botListTop, botListBottom;
@@ -192,9 +180,8 @@ public class PmAdminScreen extends Screen {
             case 3 -> buildList(contentTop, true);
             case 4 -> buildList(contentTop, false);
             case 5 -> buildRules(contentTop);
-            case 6 -> buildShop(contentTop);
-            case 7 -> buildRoles(contentTop);
-            case 8 -> buildBots(contentTop);
+            case 6 -> buildRoles(contentTop);
+            case 7 -> buildBots(contentTop);
             default -> { }
         }
 
@@ -204,7 +191,7 @@ public class PmAdminScreen extends Screen {
 
     // ---------- вкладка 0: сводка по бэкенду ----------
 
-    private static final String[] FEATURES = {"gifts", "reports", "support"};
+    private static final String[] FEATURES = {"reports", "support"};
 
     private void buildDashboard(int y) {
         loadDashboard();
@@ -221,7 +208,7 @@ public class PmAdminScreen extends Screen {
         addRenderableWidget(featureMinutesField);
         fy += 20;
 
-        int colW = (fw - 8) / 3;
+        int colW = (fw - 8) / FEATURES.length;
         for (int i = 0; i < FEATURES.length; i++) {
             String name = FEATURES[i];
             String humanName = Component.translatable("pmchat.admin.feature." + name).getString();
@@ -308,7 +295,7 @@ public class PmAdminScreen extends Screen {
         int fx = cx - cardW / 2 + 12;
         Component featTitle = Component.translatable("pmchat.admin.feature.title");
         context.text(font, featTitle, fx, height - 140, SUBTLE, false);
-        int colW = (cardW - 24 - 8) / 3;
+        int colW = (cardW - 24 - 8) / FEATURES.length;
         for (int i = 0; i < FEATURES.length; i++) {
             boolean enabled = PmBackend.isFeatureEnabled(FEATURES[i]);
             int col = fx + i * (colW + 4);
@@ -410,15 +397,7 @@ public class PmAdminScreen extends Screen {
                 btn -> Minecraft.getInstance().gui.setScreen(
                         new PmAdminAccountsScreen(this, name -> targetField.setValue(name)))));
 
-        int ay = y + 44;
-        amountField = new EditBox(font, fx, ay, (fw - 6) / 2, 16, Component.translatable("pmchat.admin.amount.hint"));
-        amountField.setMaxLength(10);
-        placeholder(amountField, "pmchat.admin.amount.hint");
-        addRenderableWidget(amountField);
-        addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, ay, (fw - 6) / 2, 16,
-                Component.translatable("pmchat.admin.grant"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN, btn -> doGrant()));
-
-        int vy = ay + 24;
+        int vy = y + 44;
         addRenderableWidget(FlatButton.centered(font, fx, vy, (fw - 6) / 2, 16,
                 Component.translatable("pmchat.admin.verify.on"), BTN_BG, BTN_HOVER, OK, OK, btn -> doVerify(true)));
         addRenderableWidget(FlatButton.centered(font, fx + (fw - 6) / 2 + 6, vy, (fw - 6) / 2, 16,
@@ -464,21 +443,6 @@ public class PmAdminScreen extends Screen {
         String target = targetField.getValue().trim();
         if (target.isEmpty()) return;
         PmBackend.adminBan(target, banned, (ok, v, err) ->
-                setStatus(ok ? Component.translatable("pmchat.admin.ok") : Component.translatable("pmchat.admin.fail", String.valueOf(err)),
-                        ok ? OK : BAD));
-    }
-
-    private void doGrant() {
-        String target = targetField.getValue().trim();
-        long amount;
-        try {
-            amount = Long.parseLong(amountField.getValue().trim());
-        } catch (NumberFormatException e) {
-            setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
-            return;
-        }
-        if (target.isEmpty() || amount == 0) return;
-        PmBackend.adminGrantCurrency(target, amount, (ok, v, err) ->
                 setStatus(ok ? Component.translatable("pmchat.admin.ok") : Component.translatable("pmchat.admin.fail", String.valueOf(err)),
                         ok ? OK : BAD));
     }
@@ -586,161 +550,7 @@ public class PmAdminScreen extends Screen {
                         ok ? OK : BAD));
     }
 
-    // ---------- вкладка 6: магазин возможностей ----------
-
-    private void buildShop(int y) {
-        int cardW = Math.min(420, width - 40);
-        int cx = width / 2;
-        int fx = cx - cardW / 2 + 12;
-        int fw = cardW - 24;
-
-        section("pmchat.admin.shop.section.list", fx, y - 2);
-        shopListTop = y + 12;
-        shopListBottom = shopListTop + 5 * ROW_H;
-
-        int formY = shopListBottom + 10;
-        section("pmchat.admin.shop.section.edit", fx, formY);
-        formY += 14;
-
-        shopNameField = labeledField(fx, formY, fw, "pmchat.admin.shop.name", 64);
-        formY += 30;
-        shopDescField = labeledField(fx, formY, fw, "pmchat.admin.shop.desc", 200);
-        formY += 30;
-        shopFeatureKeyField = labeledField(fx, formY, fw, "pmchat.admin.shop.featurekey", 64);
-        formY += 30;
-
-        int halfW = (fw - 8) / 2;
-        shopPriceField = labeledField(fx, formY, halfW, "pmchat.admin.shop.price", 10);
-        shopDurationField = labeledField(fx + halfW + 8, formY, halfW, "pmchat.admin.shop.duration", 5);
-        formY += 30;
-
-        int btnW = (fw - 8) / 2;
-        addRenderableWidget(FlatButton.centered(font, fx, formY, btnW, 16,
-                Component.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
-                btn -> doSaveShopItem()));
-        addRenderableWidget(FlatButton.centered(font, fx + btnW + 8, formY, btnW, 16,
-                Component.translatable("pmchat.admin.shop.new"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
-                btn -> resetShopForm()));
-
-        loadShopItems();
-    }
-
-    private void loadShopItems() {
-        status = Component.translatable("pmchat.admin.loading");
-        statusColor = SUBTLE;
-        PmBackend.adminListShop((ok, list, err) -> {
-            if (ok) {
-                shopItems = list;
-                shopScroll = 0;
-                status = shopItems.isEmpty() ? Component.translatable("pmchat.admin.shop.empty") : Component.empty();
-            } else {
-                shopItems = Collections.emptyList();
-                status = Component.translatable("pmchat.admin.fail", String.valueOf(err));
-                statusColor = BAD;
-            }
-        });
-    }
-
-    private void resetShopForm() {
-        shopEditingId = 0;
-        shopNameField.setValue("");
-        shopDescField.setValue("");
-        shopFeatureKeyField.setValue("");
-        shopPriceField.setValue("");
-        shopDurationField.setValue("");
-    }
-
-    private void editShopItem(PmBackend.ShopItem item) {
-        shopEditingId = item.id;
-        shopNameField.setValue(item.name);
-        shopDescField.setValue(item.description);
-        shopFeatureKeyField.setValue(item.featureKey != null ? item.featureKey : "");
-        shopPriceField.setValue(String.valueOf(item.price));
-        shopDurationField.setValue(String.valueOf(item.durationDays));
-    }
-
-    private void doSaveShopItem() {
-        String name = shopNameField.getValue().trim();
-        if (name.isEmpty()) {
-            setStatus(Component.translatable("pmchat.admin.shop.needname"), BAD);
-            return;
-        }
-        long price;
-        int duration;
-        try {
-            price = Long.parseLong(shopPriceField.getValue().trim());
-            duration = Integer.parseInt(shopDurationField.getValue().trim());
-        } catch (NumberFormatException e) {
-            setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
-            return;
-        }
-        if (price < 0 || duration <= 0) {
-            setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
-            return;
-        }
-        PmBackend.adminUpsertShopItem(shopEditingId, name, shopDescField.getValue().trim(),
-                shopFeatureKeyField.getValue().trim(), price, duration, (ok, v, err) -> {
-                    if (ok) {
-                        setStatus(Component.translatable("pmchat.admin.ok"), OK);
-                        resetShopForm();
-                        loadShopItems();
-                    } else {
-                        setStatus(Component.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
-                    }
-                });
-    }
-
-    private void deleteShopItem(long id) {
-        PmBackend.adminDeleteShopItem(id, (ok, v, err) -> {
-            if (ok) {
-                if (shopEditingId == id) resetShopForm();
-                loadShopItems();
-            } else {
-                setStatus(Component.translatable("pmchat.admin.fail", String.valueOf(err)), BAD);
-            }
-        });
-    }
-
-    private void drawShop(GuiGraphicsExtractor context, int mouseX, int mouseY) {
-        shopRowRects.clear();
-        shopDeleteRects.clear();
-        int cardW = Math.min(420, width - 40);
-        int cx = width / 2;
-        int left = cx - cardW / 2;
-        int right = cx + cardW / 2;
-
-        int y = shopListTop;
-        for (int i = shopScroll; i < shopItems.size() && y + ROW_H <= shopListBottom; i++) {
-            PmBackend.ShopItem item = shopItems.get(i);
-            boolean editing = item.id == shopEditingId;
-            boolean hovered = mouseY >= y && mouseY < y + ROW_H - 2 && mouseX >= left && mouseX < right;
-            context.fill(left, y, right, y + ROW_H - 2, editing ? PANEL_LIGHT : (hovered ? BTN_HOVER : PANEL));
-            context.fill(left, y, left + 2, y + ROW_H - 2, NEON_DIM);
-
-            String line = item.name + " — " + item.price + "/" + item.durationDays + "d";
-            String trimmed = trim(line, right - left - 60);
-            context.text(font, trimmed, left + 8, y + 6, TEXT_MAIN, false);
-
-            int btnX = right - 46, btnY = y + 2, btnW = 40, btnH = ROW_H - 6;
-            boolean btnHover = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
-            context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnHover ? BTN_HOVER : BTN_BG);
-            context.outline(btnX, btnY, btnW, btnH, NEON_DIM);
-            Component del = Component.translatable("pmchat.admin.shop.delete");
-            context.text(font, del, btnX + (btnW - font.width(del)) / 2, btnY + 3, BAD, false);
-            shopDeleteRects.add(new Object[]{btnX, btnY, btnW, btnH, item.id});
-            shopRowRects.add(new Object[]{left, y, right - left - 46, ROW_H - 2, item.id});
-
-            y += ROW_H;
-        }
-
-        if (shopItems.isEmpty() && !status.getString().isEmpty()) {
-            context.text(font, status, left + 8, shopListTop + 2, statusColor, false);
-        } else if (!status.getString().isEmpty()) {
-            context.text(font, status, width / 2 - font.width(status) / 2, height - 46, statusColor, false);
-        }
-    }
-
-    // ---------- вкладка 7: должности (роли) игроков ----------
+    // ---------- вкладка 6: должности (роли) игроков ----------
 
     private void buildRoles(int y) {
         int cardW = Math.min(420, width - 40);
@@ -950,56 +760,18 @@ public class PmAdminScreen extends Screen {
         }
     }
 
-    // ---------- вкладка 8: боты — цены + заявки в магазин ----------
+    // ---------- вкладка 7: боты — заявки в магазин ----------
 
     private void buildBots(int y) {
         int cardW = Math.min(420, width - 40);
         int cx = width / 2;
         int fx = cx - cardW / 2 + 12;
-        int fw = cardW - 24;
 
-        section("pmchat.admin.bots.section.prices", fx, y - 2);
-        int halfW = (fw - 8) / 2;
-        botCreatePriceField = labeledField(fx, y + 12, halfW, "pmchat.admin.bots.createprice", 9);
-        botstoreSubmitPriceField = labeledField(fx + halfW + 8, y + 12, halfW, "pmchat.admin.bots.submitprice", 9);
-        addRenderableWidget(FlatButton.centered(font, fx, y + 42, fw, 16,
-                Component.translatable("pmchat.admin.shop.save"), BTN_BG, BTN_HOVER, NEON_DIM, TEXT_MAIN,
-                btn -> doSavePrices()));
-
-        int listY = y + 68;
-        section("pmchat.admin.bots.section.pending", fx, listY - 2);
-        botListTop = listY + 12;
+        section("pmchat.admin.bots.section.pending", fx, y - 2);
+        botListTop = y + 12;
         botListBottom = height - 32;
 
-        loadPrices();
         loadBotPending();
-    }
-
-    private void loadPrices() {
-        PmBackend.adminGetPrices((ok, prices, err) -> {
-            if (ok && prices != null) {
-                botCreatePriceField.setValue(String.valueOf(prices.botCreatePrice));
-                botstoreSubmitPriceField.setValue(String.valueOf(prices.botstoreSubmitPrice));
-            }
-        });
-    }
-
-    private void doSavePrices() {
-        long createPrice, submitPrice;
-        try {
-            createPrice = Long.parseLong(botCreatePriceField.getValue().trim());
-            submitPrice = Long.parseLong(botstoreSubmitPriceField.getValue().trim());
-        } catch (NumberFormatException e) {
-            setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
-            return;
-        }
-        if (createPrice < 0 || submitPrice < 0) {
-            setStatus(Component.translatable("pmchat.admin.badamount"), BAD);
-            return;
-        }
-        PmBackend.adminSetPrices(createPrice, submitPrice, (ok, v, err) ->
-                setStatus(ok ? Component.translatable("pmchat.admin.ok") : Component.translatable("pmchat.admin.fail", String.valueOf(err)),
-                        ok ? OK : BAD));
     }
 
     private void loadBotPending() {
@@ -1042,7 +814,7 @@ public class PmAdminScreen extends Screen {
             context.fill(left, y, right, y + ROW_H - 2, hovered ? PANEL_LIGHT : PANEL);
             context.fill(left, y, left + 2, y + ROW_H - 2, NEON_DIM);
 
-            String line = p.owner + ": " + p.name + " (" + p.price + ")";
+            String line = p.owner + ": " + p.name;
             context.text(font, trim(line, right - left - 100), left + 8, y + 6, TEXT_MAIN, false);
 
             int btnW = 44, btnH = ROW_H - 6, btnY = y + 2;
@@ -1194,7 +966,7 @@ public class PmAdminScreen extends Screen {
         for (Object[] entry : formLabels) {
             context.text(font, Component.translatable((String) entry[0]), (int) entry[1], (int) entry[2], SUBTLE, false);
         }
-        if (tab == 7 && roleColorField != null && rolePrefixField != null) {
+        if (tab == 6 && roleColorField != null && rolePrefixField != null) {
             int sx = rolePrefixField.getX() + rolePrefixField.getWidth() + 5;
             int sy = roleColorField.getY();
             context.fill(sx, sy, sx + 16, sy + 16, previewColor(roleColorField.getValue()));
@@ -1205,9 +977,8 @@ public class PmAdminScreen extends Screen {
             case 0 -> drawDashboard(context, mouseX, mouseY);
             case 3 -> drawList(context, mouseX, mouseY, true);
             case 4 -> drawList(context, mouseX, mouseY, false);
-            case 6 -> drawShop(context, mouseX, mouseY);
-            case 7 -> drawRoles(context, mouseX, mouseY);
-            case 8 -> drawBots(context, mouseX, mouseY);
+            case 6 -> drawRoles(context, mouseX, mouseY);
+            case 7 -> drawBots(context, mouseX, mouseY);
             default -> {
                 if (!status.getString().isEmpty()) {
                     context.text(font, status, width / 2 - font.width(status) / 2,
@@ -1243,30 +1014,6 @@ public class PmAdminScreen extends Screen {
         }
         if (tab == 6) {
             double mx = click.x(), my = click.y();
-            for (Object[] rect : shopDeleteRects) {
-                int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
-                long id = (long) rect[4];
-                if (mx >= x && mx < x + w && my >= y && my < y + h) {
-                    deleteShopItem(id);
-                    return true;
-                }
-            }
-            for (Object[] rect : shopRowRects) {
-                int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
-                long id = (long) rect[4];
-                if (mx >= x && mx < x + w && my >= y && my < y + h) {
-                    for (PmBackend.ShopItem item : shopItems) {
-                        if (item.id == id) {
-                            editShopItem(item);
-                            break;
-                        }
-                    }
-                    return true;
-                }
-            }
-        }
-        if (tab == 7) {
-            double mx = click.x(), my = click.y();
             for (Object[] rect : roleDeleteRects) {
                 int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
                 String key = (String) rect[4];
@@ -1289,7 +1036,7 @@ public class PmAdminScreen extends Screen {
                 }
             }
         }
-        if (tab == 8) {
+        if (tab == 7) {
             double mx = click.x(), my = click.y();
             for (Object[] rect : botApproveRects) {
                 int x = (int) rect[0], y = (int) rect[1], w = (int) rect[2], h = (int) rect[3];
@@ -1321,18 +1068,12 @@ public class PmAdminScreen extends Screen {
             return true;
         }
         if (tab == 6) {
-            int visible = Math.max(1, (shopListBottom - shopListTop) / ROW_H);
-            int maxScroll = Math.max(0, shopItems.size() - visible);
-            shopScroll = Math.max(0, Math.min(maxScroll, shopScroll - (int) Math.signum(verticalAmount)));
-            return true;
-        }
-        if (tab == 7) {
             int visible = Math.max(1, (roleListBottom - roleListTop) / ROW_H);
             int maxScroll = Math.max(0, roleDefs.size() - visible);
             roleScroll = Math.max(0, Math.min(maxScroll, roleScroll - (int) Math.signum(verticalAmount)));
             return true;
         }
-        if (tab == 8) {
+        if (tab == 7) {
             int visible = Math.max(1, (botListBottom - botListTop) / ROW_H);
             int maxScroll = Math.max(0, botPending.size() - visible);
             botScroll = Math.max(0, Math.min(maxScroll, botScroll - (int) Math.signum(verticalAmount)));

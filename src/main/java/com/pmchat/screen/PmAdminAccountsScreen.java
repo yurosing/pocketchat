@@ -120,9 +120,6 @@ public class PmAdminAccountsScreen extends Screen {
             String badge = (a.official ? "★ " : a.verified ? "✓ " : "");
             context.text(font, badge + a.username, px + 10, y + 2,
                     a.official ? 0xFFF0C34E : a.verified ? 0xFF4CC26A : LABEL, false);
-            String balanceStr = String.valueOf(a.balance);
-            context.text(font, balanceStr,
-                    px + PANEL_W - 14 - font.width(balanceStr), y + 2, VALUE, false);
             net.minecraft.network.chat.Component lastSeen = PmBackend.humanizeLastSeen(a.lastSeenAt, config.preciseLastSeen && a.sharePrecise);
             context.text(font, lastSeen, px + 10, y + 13, LABEL, false);
             y += ROW_H;

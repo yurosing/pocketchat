@@ -74,8 +74,7 @@ public class PmSettingsScreen extends Screen {
             case 2 -> 4;
             case 3 -> backendConfigured() && !editBackendUrl
                     ? (4 + (isAdminAccount() ? 1 : 0)) : 5;
-            case 4 -> 1 + (backendConfigured() && com.pmchat.client.PmBackend.hasAccount()
-                    ? (com.pmchat.client.PmBackend.hasActiveFeature("paid_dm") ? 2 : 3) : 0);
+            case 4 -> 1;
             default -> 11;
         };
     }
@@ -368,10 +367,6 @@ public class PmSettingsScreen extends Screen {
         return y;
     }
 
-    private EditBox dmPriceField;
-    private Component dmPriceStatus = Component.empty();
-    private int dmPriceStatusColor = 0xFFAAAAAA;
-
     private int buildPrivacyTab(int y) {
         y = addOption(y, "pmchat.set.preciseseen",
                 () -> Component.translatable(config.preciseLastSeen ? "pmchat.set.on" : "pmchat.set.off"),
@@ -382,52 +377,7 @@ public class PmSettingsScreen extends Screen {
                         com.pmchat.client.PmBackend.setPrecisePresence(config.preciseLastSeen, null);
                     }
                 });
-
-        if (backendConfigured() && com.pmchat.client.PmBackend.hasAccount()) {
-            y += 4;
-            optionLabels.add(new Object[]{"pmchat.privacy.dmprice.section", y});
-            y += 12;
-            int fx = px + 12, fw = PANEL_W - 24;
-            if (com.pmchat.client.PmBackend.hasActiveFeature("paid_dm")) {
-                dmPriceField = new EditBox(font, fx, y, fw - 62, 16, Component.translatable("pmchat.shop.dmprice.hint"));
-                dmPriceField.setMaxLength(8);
-                com.pmchat.client.PmBackend.AccountInfo self =
-                        com.pmchat.client.PmBackend.cachedAccountInfo(PmChatClient.selfName());
-                dmPriceField.setValue(self != null ? String.valueOf(self.dmPrice) : "");
-                String hint = Component.translatable("pmchat.shop.dmprice.hint").getString();
-                dmPriceField.setSuggestion(dmPriceField.getValue().isEmpty() ? hint : "");
-                dmPriceField.setResponder(s -> dmPriceField.setSuggestion(s.isEmpty() ? hint : ""));
-                addRenderableWidget(dmPriceField);
-                addRenderableWidget(FlatButton.centered(font, fx + fw - 58, y, 58, 16,
-                        Component.translatable("pmchat.shop.dmprice.save"), BTN_BG, BTN_HOVER, BTN_BORDER, VALUE,
-                        btn -> saveDmPrice()));
-                y += 20;
-            } else {
-                optionLabels.add(new Object[]{"pmchat.privacy.dmprice.needshop", y});
-                y += 12;
-                addRenderableWidget(FlatButton.centered(font, fx, y, fw, 16,
-                        Component.translatable("pmchat.tip.shop"), BTN_BG, BTN_HOVER, BTN_BORDER, 0xFFF0C34E,
-                        btn -> Minecraft.getInstance().gui.setScreen(new PmShopScreen(this))));
-                y += 20;
-            }
-        }
         return y;
-    }
-
-    private void saveDmPrice() {
-        long price;
-        try {
-            price = Long.parseLong(dmPriceField.getValue().trim());
-        } catch (NumberFormatException e) {
-            dmPriceStatus = Component.translatable("pmchat.admin.badamount");
-            dmPriceStatusColor = 0xFFE07A6A;
-            return;
-        }
-        if (price < 0) return;
-        com.pmchat.client.PmBackend.setDmPrice(price, (ok, v, err) -> {
-            dmPriceStatus = ok ? Component.translatable("pmchat.admin.ok") : Component.translatable("pmchat.admin.fail", String.valueOf(err));
-            dmPriceStatusColor = ok ? 0xFF8FD8A8 : 0xFFE07A6A;
-        });
     }
 
     private interface ValueSupplier {
@@ -471,10 +421,6 @@ public class PmSettingsScreen extends Screen {
         for (Object[] entry : optionLabels) {
             context.text(font, Component.translatable((String) entry[0]),
                     px + 10, (int) entry[1] + 3, LABEL, false);
-        }
-
-        if (tab == 4 && dmPriceField != null && !dmPriceStatus.getString().isEmpty()) {
-            context.text(font, dmPriceStatus, px + 12, py + panelH - 40, dmPriceStatusColor, false);
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);

@@ -52,7 +52,7 @@ PocketChat ставит реализацию во время своей иниц
 | `onMessageReceived(PmChatMessage)` | пришло сообщение — ЛС, группа, канал, общий чат |
 | `onMessageSent(PmChatMessage)` | игрок отправил сообщение |
 | `allowOutgoing(String, String)` | <span class="pc-badge cancel">вето</span> перед отправкой; `false` — сообщение не уйдёт |
-| `onGiftReceived(String, String, String)` | игроку подарили подарок |
+| `onGiftReceived(String, String, String)` | *(больше никогда не вызывается — подарки убраны из мода)* |
 | `onConversationOpened(String)` | открыли переписку в окне мессенджера |
 | `onServerTierChanged(ServerTier)` | сменился сервер или завершилось рукопожатие с плагином |
 
@@ -90,7 +90,7 @@ PocketChatClientApi api = PocketChatClient.get();
 api.modVersion();    // "1.11.0"
 api.selfName();      // ник игрока
 api.serverTier();    // NONE / FREE / PRO — что умеет плагин на сервере
-api.knownBalance();  // баланс строкой, "" если неизвестен
+api.knownBalance();  // всегда "" — баланс убран из мода
 api.isBlocked("Steve");
 
 // Список переписок, свежие сверху

@@ -52,8 +52,6 @@ public class PmChatClient implements ClientModInitializer {
     private static long nextBroadcastPollAt = 0;
     /** Следующий "пинг" присутствия на бэкенде — держит lastSeen свежим (см. PmBackend.ping). */
     private static long nextPresencePingAt = 0;
-    /** Следующая проверка новых подарков — показать анимированную всплывашку (см. PmBackend.checkNewGifts). */
-    private static long nextGiftPollAt = 0;
     /** Следующая проверка ролей всех игроков в таб-листе (см. cacheOnlineRoles). */
     private static long nextRoleCacheAt = 0;
     /** Следующий опрос почтового ящика офлайн-сообщений (см. PmBackend.pollMailbox). */
@@ -245,20 +243,6 @@ public class PmChatClient implements ClientModInitializer {
                     && PmBackend.isConfigured() && PmBackend.hasAccount()) {
                 nextPresencePingAt = System.currentTimeMillis() + 60_000L;
                 PmBackend.ping();
-            }
-            // Проверка новых подарков — раз в 20 секунд, показываем красивую
-            // анимированную всплывашку (4.2), а не просто тост, если сейчас нет
-            // другого открытого экрана (чтобы ничего не перекрыть).
-            if (client.level != null && System.currentTimeMillis() >= nextGiftPollAt
-                    && PmBackend.isConfigured() && PmBackend.hasAccount()) {
-                nextGiftPollAt = System.currentTimeMillis() + 20_000L;
-                PmBackend.checkNewGifts((g, gift) -> {
-                    if (client.gui.screen() == null) {
-                        client.gui.setScreen(new com.pmchat.screen.PmGiftPopupScreen(g.from, gift, g.giftId));
-                    } else {
-                        giftToast(g.from, gift != null ? gift.name : g.giftId, gift != null ? gift.icon : null);
-                    }
-                });
             }
             // Кэшируем роль КАЖДОГО игрока в таб-листе, а не только того, чей чат/профиль
             // сейчас открыт — иначе после выхода игрока, чей ник мы ни разу не посмотрели,
@@ -2157,21 +2141,6 @@ public class PmChatClient implements ClientModInitializer {
     }
 
     /**
-     * Последний известный баланс игрока для показа в своём профиле (4.5).
-     * Достоверный источник — серверный плагин/Vault; без него значение
-     * неизвестно (null → в профиле показывается «—»).
-     */
-    private static volatile String knownBalance = null;
-
-    public static String knownBalance() {
-        return knownBalance;
-    }
-
-    public static void setKnownBalance(String value) {
-        knownBalance = value;
-    }
-
-    /**
      * Объявляет замучивание/бан тостом сразу, как только пинг присутствия (раз в
      * минуту, см. {@link PmBackend#ping}) его обнаружит — раньше об этом узнавали
      * только постфактум, при попытке отправить сообщение (анимация отказа ✋).
@@ -2193,14 +2162,6 @@ public class PmChatClient implements ClientModInitializer {
         if (minutes < 60) return minutes + " " + Component.translatable("pmchat.restrict.minutes").getString();
         long hours = minutes / 60;
         return hours + " " + Component.translatable("pmchat.restrict.hours").getString();
-    }
-
-    /** Всплывашка о полученном подарке (4.2). */
-    public static void giftToast(String from, String giftName, String icon) {
-        Minecraft client = Minecraft.getInstance();
-        client.execute(() -> client.gui.toastManager().addToast(
-                new PmToast((icon == null ? "🎁" : icon) + " " + from, giftName)));
-        com.pmchat.client.api.PocketChatClientImpl.fireGift(from, giftName, icon);
     }
 
     /**

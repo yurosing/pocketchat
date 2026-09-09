@@ -98,8 +98,6 @@ public class PmConfig {
     public String backendAdminSecret = "";
     /** Последний увиденный id рассылки официального аккаунта — чтобы не показывать повторно. */
     public long lastBroadcastId = 0;
-    /** Эпоха мс последнего показанного всплывающего анимированного подарка — чтобы не показывать повторно. */
-    public long lastGiftNotifiedAt = 0;
     /** Громкость медиаплеера (музыка/видео), 0-150%, сохраняется между запусками. */
     public int mediaVolume = 100;
     /**

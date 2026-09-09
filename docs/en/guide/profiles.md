@@ -1,4 +1,4 @@
-# Profiles, roles & gifts
+# Profiles & roles
 
 New in 1.8.4: every player has a profile — Telegram-style.
 
@@ -24,8 +24,6 @@ opened **your own** profile.
 - **Avatar** (skin) and **online / offline** status.
 - **Birthday** and **description** — you can set these on your own profile
   (“My profile”).
-- **Balance** — on your own profile only, next to the nick (requires the server
-  plugin + Vault).
 
 ## The role is detected automatically
 
@@ -98,31 +96,13 @@ photo sending blocked — trying anyway plays a denial animation (✋) and shows
 the mute/ban is enforced client-side the next time it checks its status (up to
 a minute of delay).
 
-## Gifts for coins (Vault)
-
-The **“Gifts”** section works when the server runs the **PocketChat** plugin +
-**Vault** and an economy (e.g. EssentialsX).
-
-- Open **another** player's profile → the “Gifts” section → **click a gift**.
-- The price is withdrawn from your Vault balance; the recipient is notified.
-- Received gifts show up on the player's profile.
-- The gift catalog is configured in the plugin's `config.yml` (`gifts:` section).
-
-Without the plugin the section shows “requires the plugin”.
-
-## Streams + donations (Vault)
+## Streams
 
 The camera icon at the bottom of the messenger opens a list of players who are
 currently live on an external service (Twitch/YouTube — the mod doesn't
-stream video itself, it only shows the status and link):
-
-- **“Start streaming”** — a title + link, visible to everyone with the
-  plugin installed;
-- **Donate** — next to a streamer's name, withdraws Vault coins from your
-  balance and deposits them to the streamer.
-
-The stream list and donations only work with the server **PocketChat** plugin
-+ **Vault** and an economy — without the plugin the section shows “requires
+stream video itself, it only shows the status and link). **“Start
+streaming”** (a title + link) is visible to everyone with the server
+PocketChat plugin installed — without the plugin the section shows “requires
 the plugin”.
 
 ## Interface themes

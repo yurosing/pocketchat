@@ -52,7 +52,7 @@ holding them up is not.
 | `onMessageReceived(PmChatMessage)` | a message arrived — DM, group, channel, global chat |
 | `onMessageSent(PmChatMessage)` | the player sent a message |
 | `allowOutgoing(String, String)` | <span class="pc-badge cancel">veto</span> before sending; `false` drops the message |
-| `onGiftReceived(String, String, String)` | somebody sent the player a gift |
+| `onGiftReceived(String, String, String)` | *(never fires anymore — gifts were removed from the mod)* |
 | `onConversationOpened(String)` | a conversation was opened in the messenger |
 | `onServerTierChanged(ServerTier)` | the server changed, or the plugin handshake completed |
 
@@ -89,7 +89,7 @@ PocketChatClientApi api = PocketChatClient.get();
 api.modVersion();    // "1.11.0"
 api.selfName();      // the player's name
 api.serverTier();    // NONE / FREE / PRO — what the server's plugin offers
-api.knownBalance();  // balance as a string, "" when unknown
+api.knownBalance();  // always "" — balances were removed from the mod
 api.isBlocked("Steve");
 
 // Conversation list, newest activity first
