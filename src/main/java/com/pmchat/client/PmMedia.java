@@ -38,6 +38,7 @@ public final class PmMedia {
 
     private PmVlc.Session session;
     private String title = "";
+    private String channel = "";          // имя канала (YouTube), пусто — не YouTube/не добыли
     private String description;          // описание ролика (YouTube), подгружается лениво по запросу
     private String sourceUrl;            // для видео — исходная ссылка (кнопка «в браузере»)
     private boolean music;               // true — играет плейлист mp3
@@ -74,12 +75,19 @@ public final class PmMedia {
 
     /** Запустить видео (готовый VLC-сеанс от yt-dlp). Вызывать на клиентском потоке. */
     public void startVideo(PmVlc.Session s, File videoFile, File audioFile, String sourceUrl, String title) {
+        startVideo(s, videoFile, audioFile, sourceUrl, title, null);
+    }
+
+    /** То же самое, плюс имя канала (YouTube) — показывается под названием ролика. */
+    public void startVideo(PmVlc.Session s, File videoFile, File audioFile, String sourceUrl,
+                            String title, String channel) {
         stop();
         this.session = s;
         this.videoFile = videoFile;
         this.audioFile = audioFile;
         this.sourceUrl = sourceUrl;
         this.title = title != null ? title : "";
+        this.channel = channel != null ? channel : "";
         this.description = null;
         this.music = false;
         this.minimized = false;
@@ -260,6 +268,7 @@ public final class PmMedia {
         trackIndex = -1;
         playlistName = "";
         title = "";
+        channel = "";
         description = null;
         sourceUrl = null;
         music = false;
@@ -292,6 +301,11 @@ public final class PmMedia {
 
     public String title() {
         return title;
+    }
+
+    /** Имя канала (YouTube) — пусто, если не YouTube или не удалось добыть. */
+    public String channel() {
+        return channel;
     }
 
     /** Описание ролика (YouTube) — null, пока не подгружено или недоступно. */

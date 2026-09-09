@@ -19,8 +19,9 @@ public final class PmYouTube {
 
     private static final Pattern VIDEO_ID = Pattern.compile(
             "(?:youtube\\.com/(?:watch\\?[^#]*v=|shorts/|live/|embed/)|youtu\\.be/)([A-Za-z0-9_-]{11})");
-    // "title":"..." из oEmbed-ответа (значение — JSON-строка с экранированием).
+    // "title":"..." / "author_name":"..." из oEmbed-ответа (значения — JSON-строки с экранированием).
     private static final Pattern OEMBED_TITLE = Pattern.compile("\"title\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+    private static final Pattern OEMBED_AUTHOR = Pattern.compile("\"author_name\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
 
     private PmYouTube() {
     }
@@ -47,12 +48,16 @@ public final class PmYouTube {
         return id == null ? null : "https://img.youtube.com/vi/" + id + "/hqdefault.jpg";
     }
 
+    /** Название ролика + имя канала, из одного oEmbed-ответа. */
+    public record Info(String title, String channel) {
+    }
+
     /**
-     * Название ролика через публичный oEmbed-эндпоинт YouTube (быстрый HTTP-запрос,
-     * без ключа и без входа). Звать с фонового потока — блокирует. null, если не
-     * удалось (нет сети / ролик приватный).
+     * Название ролика и имя канала через публичный oEmbed-эндпоинт YouTube (быстрый
+     * HTTP-запрос, без ключа и без входа). Звать с фонового потока — блокирует.
+     * null, если не удалось (нет сети / ролик приватный).
      */
-    public static String fetchTitle(String url) {
+    public static Info fetchInfo(String url) {
         String id = videoId(url);
         if (id == null) return null;
         try {
@@ -68,10 +73,12 @@ public final class PmYouTube {
                     .GET().build();
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (resp.statusCode() != 200) return null;
-            Matcher m = OEMBED_TITLE.matcher(resp.body());
-            if (!m.find()) return null;
-            String title = unescapeJson(m.group(1)).trim();
-            return title.isEmpty() ? null : title;
+            Matcher tm = OEMBED_TITLE.matcher(resp.body());
+            String title = tm.find() ? unescapeJson(tm.group(1)).trim() : "";
+            Matcher am = OEMBED_AUTHOR.matcher(resp.body());
+            String author = am.find() ? unescapeJson(am.group(1)).trim() : "";
+            if (title.isEmpty() && author.isEmpty()) return null;
+            return new Info(title.isEmpty() ? null : title, author.isEmpty() ? null : author);
         } catch (Exception e) {
             return null;
         }

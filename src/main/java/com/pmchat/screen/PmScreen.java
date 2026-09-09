@@ -2421,9 +2421,11 @@ public class PmScreen extends Screen {
             videoResolving = true;
             videoStatusText = null;
             Thread t = new Thread(() -> {
-                // название ролика через oEmbed (быстро, параллельно самой загрузке нам не
-                // критично — заголовок нужен лишь к моменту показа плеера)
-                String ytTitle = com.pmchat.client.PmYouTube.fetchTitle(url);
+                // название ролика и канал через oEmbed (быстро, параллельно самой загрузке
+                // нам не критично — нужны лишь к моменту показа плеера)
+                com.pmchat.client.PmYouTube.Info ytInfo = com.pmchat.client.PmYouTube.fetchInfo(url);
+                String ytTitle = ytInfo != null ? ytInfo.title() : null;
+                String ytChannel = ytInfo != null ? ytInfo.channel() : null;
                 com.pmchat.client.PmYtDlp.Media media = com.pmchat.client.PmYtDlp.download(url, st ->
                         Minecraft.getInstance().execute(() -> {
                             if (seq == videoSeq) videoStatusText = st;
@@ -2449,7 +2451,7 @@ public class PmScreen extends Screen {
                         String audioUriStr = media.audio() != null
                                 ? com.pmchat.client.PmMedia.fileUri(media.audio()) : null;
                         startVideoSession(videoUriStr, audioUriStr,
-                                media.video(), media.audio(), url, ytTitle);
+                                media.video(), media.audio(), url, ytTitle, ytChannel);
                     } else {
                         // yt-dlp не смог (бот-проверка/нет бинарника) — состояние
                         // ошибки с кнопкой «Открыть в браузере».
@@ -2461,20 +2463,20 @@ public class PmScreen extends Screen {
             t.setDaemon(true);
             t.start();
         } else {
-            startVideoSession(url, null, null, null, url, null);
+            startVideoSession(url, null, null, null, url, null, null);
         }
     }
 
     /** Создаёт VLC-сеанс и передаёт владение персистентному PmMedia. */
     private void startVideoSession(String mediaUrl, String audioSlaveUrl,
                                    java.io.File videoFile, java.io.File audioFile, String sourceUrl,
-                                   String title) {
+                                   String title, String channel) {
         try {
             com.pmchat.client.PmVlc.Session s = com.pmchat.client.PmVlc.open(mediaUrl, audioSlaveUrl);
             // название ролика (напр. с YouTube); если не добыли — ссылка без протокола
             String shown = title != null && !title.isBlank() ? title.trim()
                     : (sourceUrl != null ? sourceUrl.replaceFirst("^https?://(www\\.)?", "") : "");
-            com.pmchat.client.PmMedia.get().startVideo(s, videoFile, audioFile, sourceUrl, shown);
+            com.pmchat.client.PmMedia.get().startVideo(s, videoFile, audioFile, sourceUrl, shown, channel);
         } catch (Exception e) {
             videoOpenFailed = true;
         }
@@ -2531,28 +2533,6 @@ public class PmScreen extends Screen {
         // Затемнение
         context.fill(0, 0, width, height, 0xF0070B09);
 
-        // ---- Заголовок: название ролика (если добыли), иначе ссылка без протокола ----
-        String title = media.title() != null && !media.title().isBlank()
-                ? media.title()
-                : (url != null ? url.replaceFirst("^https?://(www\\.)?", "") : "");
-        if (title.length() > 64) title = title.substring(0, 61) + "…";
-        context.text(font, "▶ " + title, 14, 13, 0xFF9CC4DC, false);
-
-        // Описание ролика (YouTube) — значок рядом с заголовком, подгружаем лениво
-        videoDescBtnRect = null;
-        boolean isYt = url != null && com.pmchat.client.PmYouTube.isYouTube(url);
-        if (isYt) {
-            int dbx = 14 + font.width("▶ " + title) + 6;
-            int dby = 6;
-            videoDescBtnRect = new int[]{dbx, dby, 14, 14};
-            boolean hovDesc = inRect(mouseX, mouseY, videoDescBtnRect);
-            PmIcons.draw(context, PmIcons.INFO, dbx, dby, 14, 14,
-                    videoDescOpen ? 0xFFF0C34E : (hovDesc ? 0xFFEDF3F0 : 0xFF8FA6B4));
-        }
-        if (videoDescOpen) {
-            renderVideoDescription(context, url);
-        }
-
         int closeSz = 20;
         int closeX = width - 12 - closeSz, closeY = 9;
         videoCloseRect = new int[]{closeX, closeY, closeSz, closeSz};
@@ -2570,6 +2550,37 @@ public class PmScreen extends Screen {
                 hovMin ? 0xFFEDF3F0 : 0xFFB8C6CE);
 
         int barH = 38;
+        int barW = Math.min(560, width - 28);
+        int barX = (width - barW) / 2;
+        int barY = height - barH - 12;
+
+        // ---- Заголовок и канал: над панелью управления, а не сверху экрана ----
+        String title = media.title() != null && !media.title().isBlank()
+                ? media.title()
+                : (url != null ? url.replaceFirst("^https?://(www\\.)?", "") : "");
+        if (title.length() > 64) title = title.substring(0, 61) + "…";
+        String channel = media.channel();
+        int titleY = barY - (channel != null && !channel.isBlank() ? 34 : 20);
+        context.text(font, "▶ " + title, barX + 4, titleY, 0xFF9CC4DC, false);
+        if (channel != null && !channel.isBlank()) {
+            String shownChannel = channel.length() > 48 ? channel.substring(0, 45) + "…" : channel;
+            context.text(font, shownChannel, barX + 4, titleY + 13, 0xFF8FA6B4, false);
+        }
+
+        // Описание ролика (YouTube) — значок рядом с заголовком, подгружаем лениво
+        videoDescBtnRect = null;
+        boolean isYt = url != null && com.pmchat.client.PmYouTube.isYouTube(url);
+        if (isYt) {
+            int dbx = barX + 4 + font.width("▶ " + title) + 6;
+            int dby = titleY - 1;
+            videoDescBtnRect = new int[]{dbx, dby, 14, 14};
+            boolean hovDesc = inRect(mouseX, mouseY, videoDescBtnRect);
+            PmIcons.draw(context, PmIcons.INFO, dbx, dby, 14, 14,
+                    videoDescOpen ? 0xFFF0C34E : (hovDesc ? 0xFFEDF3F0 : 0xFF8FA6B4));
+        }
+        if (videoDescOpen) {
+            renderVideoDescription(context, url);
+        }
         boolean failed = videoOpenFailed || (s != null && s.hasError());
         boolean noFrames = s == null || s.width() <= 0 || s.height() <= 0;
         boolean stuck = failed
@@ -2662,9 +2673,6 @@ public class PmScreen extends Screen {
         videoBrowserRect = null;
         if (s == null || failed) return;
 
-        int barW = Math.min(560, width - 28);
-        int barX = (width - barW) / 2;
-        int barY = height - barH - 12;
         context.fill(barX, barY, barX + barW, barY + barH, 0xE8101A16);
         context.outline(barX, barY, barW, barH, 0xFF2A4A5C);
 
